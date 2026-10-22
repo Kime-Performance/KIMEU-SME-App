@@ -1,0 +1,219 @@
+KIMEU SME App — Replit Build Spec
+Oct 22, 2026 · @Aaron Crouch
+Purpose and ground rules
+A standalone web app (phone-first) where SMEs of every tier, RDs and Russ/Tony record workshop work in the moment, while the KIMEU Master Database Google Sheet stays the single source of truth. The app is a front door to the sheet, not a second database.
+• Sheet: "KIMEU Master Database — New KIMEU Tabs" (ID 1cXPmoIV0El9aGjwsac9sszhjFYOpz0C0QFx4GoxSaxM).
+• Write only input columns a role owns. Every Auto column is a formula and is never written, cleared or overwritten.
+• 03-KIMEU Summary is never written. It keeps rolling up from 03b, 03c, 03d and 03e, and the KIME MASTER DATABASE keeps reading it by PT Email.
+• Notes never overwrite. Clinician and session notes go to append-only tabs (03g, 03f), so history is kept.
+• No patient identifiers anywhere in the app. Notes are about the clinician's skills.
+• The sheet uses Pass / Refocus for Fellowship reviews (not Pass / Fail). The app keeps that wording so the Summary formulas still match.
+Sheet changes already made on Oct 22, 2026 to support the app: new tabs 03f-Session Log, 03g-Clinician Notes and 03h-App Users; new 03d columns U–W (Refocus Strategy, Last Updated By, Last Updated); warning-only protection on all header rows and on 03-KIMEU Summary; an app section in READ ME. None of these feed the Summary, and Summary values were checked unchanged afterward.
+Roles
+Roles come from 03h-App Users: Email, Name in Sheets, App Role(s), Workshop IDs, Active. A person can hold several roles; the app shows one home screen with a section per role. Name in Sheets must match how the logs name them (Lead SME in 03a, RD in 03b/03c, Reviewed By in 03d), because that is how the app finds "my" rows.
+Role
+Sees
+Can write
+Foundations SME
+Sessions of their Foundations workshops; enrolled PTs
+Attendance, session notes, clinician notes
+Elite SME
+Their Fellowship workshops; enrolled PTs; adoption loop; Refocus items routed to them
+Attendance, adoption loop, 1:1 and re-demonstration, notes
+RD
+Their PTs with practicals due within 7 days of a session
+Practical date, result, scorer; notes
+Fellowship Reviewer (Russ, Tony)
+All Fellowship candidates, review history, open Refocus items
+New reviews, result, score, specific need, refocus strategy; notes
+CEU Admin (Jessie)
+Workshops with Status = Pass and CEU not issued
+CEU Issued
+Admin (Aaron)
+Everything, plus overdue lists
+Sessions, enrollment, Kajabi %, exam scores, users
+Open: emails for Jonathan, Drew, Tony, Russ and Jessie, and the Foundations SMEs and RDs once named, need adding to 03h before launch.
+Screens and workflows
+The home screen is a "Today / Due" list: sessions happening today, then anything the signed-in person owes, oldest first.
+1. Live workshop (any SME)
+1. Open the session from Today. If no 03f row exists, the app creates it (Session ID = Workshop ID-YYYYMMDD) and sets Status = Live.
+2. Roster shows every PT enrolled for that workshop and date, with photo-free name cards and a large Present / Absent toggle.
+3. Each tap writes immediately: Attended = Yes/No and Attendance Confirmed By = the SME's Name in Sheets.
+4. Walk-in: SME can add a PT from the roster (03e). The app creates the row and flags it for Aaron to confirm enrollment.
+5. Tap a PT to add a quick note (Note Type = Session observation or Strength).
+6. End session: Status = Complete, prompt for session notes and "changes for next time". Anyone left unmarked is listed before closing.
+2. After the workshop — Fellowship adoption loop (elite SME)
+1. Per PT, a card shows four steps with due dates: task assigned (day 7), submitted (day 30), check-in (day 45), Adoption Status (day 60).
+2. SME ticks each step; the app writes the date or Yes, and Adoption Status = Adopted or Not Yet.
+3. Overdue steps turn red, driven by the sheet's own Adoption Flag column.
+3. RD practical (RD)
+1. List of the RD's PTs who attended a session and have no practical result. Due date = session + 7 days.
+2. RD enters practical date and Pass / Fail; the app writes the scorer. This replaces the Google Form and the manual copy.
+3. The sheet decides ✓ / Late / Redo. The app only displays it.
+4. Fellowship review (Russ / Tony)
+1. New review: PT, date, type (Fellowship Exam or Readiness Review), score, result Pass or Refocus.
+2. Refocus requires the workshop, the specific need and a refocus strategy. The sheet assigns the SME and the 14-day 1:1 due date.
+3. The Refocus then appears on that SME's Due list.
+5. Refocus 1:1 (elite SME)
+1. SME logs 1:1 date, re-demonstration date and result, and Verified By. The row closes on Pass.
+6. Clinician profile (all roles)
+One page per PT: Foundations and Fellowship status (read from 03-KIMEU Summary), workshop history, open items and the notes timeline from 03g, newest first. Notes marked "Aaron + author" are hidden from everyone else.
+7. Admin (Aaron)
+Schedule sessions, enroll PTs (creates 03b or 03c rows), enter Kajabi % and exam scores, manage 03h users, and one overdue board across all roles.
+Sheet read/write map
+Headers are in row 2 of every tab; data starts in row 4 on 03b–03d (row 3 is the EXAMPLE row, delete before launch) and row 3 on 03f–03h. Column letters are as of Oct 22, 2026; the app must still find columns by header name (see Technical rules).
+Tab
+Key
+Admin (Aaron)
+SME
+RD
+Russ / Tony
+Auto — never write
+03a-KIMEU Workshops
+Workshop ID
+All (read-only in app v1)
+—
+—
+—
+—
+03b-Advanced Workshop Log
+Record ID (PT Email + Workshop ID + Session Date)
+B PT Email, C PT Name, D RD, E Workshop ID, I Session Date, J Kajabi %, N Exam Score, O Exam Result
+L Attended, M Attendance Confirmed By, V Adoption Task Assigned, W Adoption Task Submitted, X Check-in Date, Y Adoption Status, AB Notes
+P Practical Date, Q Practical Result, R Practical Scored By
+—
+A, F, G, H, K, S, T, Z, AA
+03c-Foundations Tracker
+PT Email (one row per PT)
+A PT Email, C RD, D Start Date, E Kajabi Course %, G Exam Score, H Exam Result
+Per workshop block: Session Date, Attended (SME)
+Per block: Practical Date, Practical Result
+—
+B, F, I, J and each block's Complete (O, T, Y, AD, AI, AN, AS)
+03d-Fellowship Review Log
+Review ID
+—
+N 1:1 Date, O Re-demonstration Date, P Re-demonstration Result, Q Verified By
+—
+B Review Date, C Reviewed By, D Review Type, E PT Email, F PT Name, G Result, H Score, I Workshop ID, L Specific Need, T Notes, U Refocus Strategy
+A, J, K, M, R, S
+03e-KIMEU Prior Status
+PT Email
+Roster (read-only in app)
+—
+—
+—
+—
+03f-Session Log
+Session ID
+A, B, E–J
+G–L
+—
+—
+C, D
+03g-Clinician Notes
+Note ID
+Append
+Append
+Append
+Append
+D
+03h-App Users
+Email
+All
+—
+—
+—
+—
+03-KIMEU Summary
+PT Email
+Read only
+Read only
+Read only
+Read only
+Whole tab
+Every write also sets the tab's Last Updated By and Last Updated columns (03b AC–AD, 03c AU–AV, 03d V–W, 03f M–N).
+03c workshop blocks (Session Date, Attended (SME), Practical Date, Practical Result, Complete):
+Workshop ID
+Columns
+F-12 Workshop 1.2 — Eval
+K–O
+F-UE-G
+P–T
+F-UE-PO
+U–Y
+F-LE-G
+Z–AD
+F-LE-PO
+AE–AI
+F-SP-G
+AJ–AN
+F-SP-PO
+AO–AS
+The app locates a block by the workshop ID in row 1 (e.g. "F-UE-G — UE — General"), then the field by its row-2 header within that block.
+Technical rules
+These are the rules that keep the Summary safe. Each one maps to a way the app could otherwise break the sheet.
+• Sign-in: Google sign-in limited to @kimeperformance.com. After sign-in, the email must be in 03h with Active = Yes, or access is refused.
+• Sheet access: a Google service account added to the sheet as Editor. Its key lives in Replit Secrets, never in code.
+• Find columns by header name (row 2; for 03c, row 1 block label plus row 2 field). Never hard-code letters. If an expected header is missing, stop writing and show Aaron an error.
+• Find rows by key at the moment of writing (PT Email, Record ID, Review ID, Session ID). Never cache a row number, because someone may sort or insert rows by hand.
+• Write cell by cell, input columns only. Never write an empty string into an Auto column: on 03f and 03g that breaks the ARRAYFORMULA in C/D.
+• New rows on 03b, 03c, 03d carry their formulas. Those tabs hold formulas row by row, not as array formulas. To add a row: insert it, copy formulas from the row above (paste type: formulas only), then write the input cells. A row without formulas would never reach the Summary.
+• Dates as real dates: write with value input option USER_ENTERED in yyyy-mm-dd, so the sheet's 7-day, 14-day and 60-day date math works. Times in America/Los_Angeles.
+• Allowed values match the sheet exactly: Yes / No; Pass / Fail / Retake; Pass / Refocus; Adopted / Not Yet; Scheduled / Live / Complete / Cancelled; Fellowship Exam / Readiness Review.
+• After each write, re-read the row and show the sheet's own computed status (✓, Late, Redo, Pass, Overdue), so the app never calculates status itself.
+• Weak signal at venues: queue taps on the phone, show "saved" vs "syncing", retry automatically.
+• Quota: batch writes for a whole roster into one request and cache reads for 30–60 seconds; 40 PTs and ~30 sessions a year sit far below Google's limits.
+Build phases and testing
+Phases 1 and 2 need to be live before the first January 2027 Foundations sessions, since RD practicals are required for sessions from Jan 1, 2027.
+Phase
+Scope
+Target
+1
+Sign-in, roles from 03h, Today list, live attendance (03b and 03c), session log (03f), clinician notes (03g)
+Mid-Dec 2026
+2
+RD practicals (replaces the Google Form), clinician profile page
+Before first Jan 2027 session
+3
+Fellowship adoption loop, Russ/Tony reviews, Refocus routing and 1:1
+Before Force Plates, Feb 2027
+4
+Admin: scheduling, enrollment, Kajabi/exam entry, overdue board, CEU list
+Spring 2027
+Testing on a copy first. Make a copy of the sheet, point the app at the copy, and run these checks before switching to the real ID:
+[ ] Mark attendance for a Fellowship PT; 03b Workshop Status and 03-KIMEU Summary update as they do by hand
+[ ] Mark a Foundations block with a practical at 5 days (✓) and at 10 days (Late)
+[ ] Add a new 03b row through the app; formulas are present in A, F, G, H, K, S, T, Z, AA
+[ ] Log a Refocus; Assigned SME and 1:1 due fill in, Summary Open Refocus goes to 1, then 0 after re-demonstration Pass
+[ ] Add two notes on one PT; both rows exist in 03g and PT Name fills in
+[ ] Rename a header on the copy; the app refuses to write and shows an error
+[ ] Sign in with an email not in 03h; access refused
+[ ] Compare 03-KIMEU Summary before and after the full test: only the intended rows changed
+Prompt for Replit Agent (Phase 1)
+Paste this into a new Replit app, then paste the "Sheet read/write map" and "Technical rules" sections of this doc right after it. Use later phases as follow-up prompts by naming the phase and its workflow from "Screens and workflows".
+Build a mobile-first web app called "KIMEU SME App" for a physical therapy company's continuing-education program. It is a front end to an existing Google Sheet, which stays the single source of truth. Do not create a separate database for workshop data.
+
+Stack: Node/TypeScript, a simple React front end, Google Sheets API v4 via a service account (key in Replit Secrets as GOOGLE_SERVICE_ACCOUNT_JSON). Spreadsheet ID in Secrets as KIMEU_SHEET_ID. Sign-in with Google, restricted to @kimeperformance.com.
+
+Access: after sign-in, read tab "03h-App Users" (headers in row 2: Email, Name in Sheets, App Role(s), Workshop IDs, Active). Allow only rows with Active = Yes. Roles: Admin, Elite SME, Foundations SME, RD, Fellowship Reviewer, CEU Admin; a user may have several, comma-separated. "Name in Sheets" is how the logs refer to the person.
+
+Phase 1 features:
+1. Home "Today / Due": sessions today for the user's workshops, then items they owe.
+2. Live attendance: open a session (Workshop ID + date). Ensure a row exists in "03f-Session Log" (Session ID = WorkshopID-YYYYMMDD; set Session Status = Live). Show enrolled PTs: for Fellowship/Enrichment workshops, rows in "03b-Advanced Workshop Log" matching Workshop ID and Session Date; for Foundations workshops, all rows in "03c-Foundations Tracker" (one row per PT, one column block per workshop). Big Present/Absent toggles write Attended = Yes/No and, in 03b, Attendance Confirmed By = user's Name in Sheets. In 03c, write the block's Session Date and Attended (SME).
+3. End session: Session Status = Complete, Session Notes, Changes for Next Session.
+4. Clinician notes: append a row to "03g-Clinician Notes" (Note ID, Created, PT Email, Note Type, Workshop ID, Session ID, Note, Follow-up fields, Author, Author Role, Visibility). Never edit or delete existing notes.
+
+Hard rules (do not break):
+- Never write to tab "03-KIMEU Summary".
+- Find columns by header text, never by fixed letters. Headers are in row 2; 03c also uses row 1 block labels like "F-UE-G — UE — General". If a needed header is missing, stop and show an error.
+- Only write the input columns listed in the read/write map. Never write any value, including an empty string, into formula columns.
+- Find a row by its key at write time; never cache row numbers.
+- When adding a row to 03b, 03c or 03d, insert it and copy formulas from the row above (paste formulas only) before writing inputs.
+- Write dates as yyyy-mm-dd with valueInputOption USER_ENTERED. Timezone America/Los_Angeles.
+- Allowed values must match the sheet exactly (Yes/No, Pass/Fail/Retake, Pass/Refocus, Adopted/Not Yet, Scheduled/Live/Complete/Cancelled).
+- Also set Last Updated By and Last Updated on every row you change.
+- After writing, re-read the row and display the sheet's computed status; do not compute statuses in the app.
+- Queue writes offline and retry; show saved vs syncing.
+
+Start by building against a COPY of the sheet. Include a settings page showing which sheet ID is in use.
