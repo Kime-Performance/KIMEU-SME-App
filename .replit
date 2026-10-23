@@ -18,3 +18,8 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+KIMEU_SHEET_ID = "1D-tA9f3NxaJ1ik3FW_Q4nd75kfic8CF45GrEbSjj3kY"

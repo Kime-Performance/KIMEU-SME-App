@@ -36,6 +36,7 @@ import {
   normalizeEmail,
   readTab,
   appendSparseInputRow,
+  testCopyReadiness,
 } from "../lib/kimeu/sheets";
 import {
   completeSession,
@@ -47,6 +48,25 @@ import {
 } from "../lib/kimeu/sessions";
 
 const router: IRouter = Router();
+
+// Safe, unauthenticated configuration probe for development; never exposes sheet IDs or data.
+router.get("/kimeu/dev-readiness", async (_req, res, next): Promise<void> => {
+  if (process.env.NODE_ENV !== "development") {
+    res.sendStatus(404);
+    return;
+  }
+  try {
+    const result = await testCopyReadiness();
+    res.json({
+      configured: result.configured,
+      notePrivacyReady: result.notePrivacyReady,
+      writeEnabled: result.writeEnabled,
+      missing: result.missing,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 function requireValidRequest<T>(
   result: { success: boolean; data?: T; error?: { message: string } },
