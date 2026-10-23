@@ -1,2 +1,3 @@
 - [Clerk package compatibility](clerk-package-compatibility.md) — canonical managed-auth wiring requires current Clerk React APIs, not the older v5 major.
 - [Google connector permissions](google-connector-permissions.md) — assess each API scope; Drive read-only does not imply Sheets read-only.
+- [Workshop scheduling](workshop-scheduling.md) — repeated Foundations offerings and regional Advanced dates; annual schedules can shift last minute.
