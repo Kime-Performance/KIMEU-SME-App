@@ -9,4 +9,8 @@ Foundations workshops each occur a few times during the year and need a time poi
 
 The user confirmed that the team currently maintains the official KIMEU workshop schedule in Google Calendar.
 
-**How to apply:** Account for multiple dated offerings per workshop, regional locations, and rescheduling when designing the schedule. Google Calendar is the existing official scheduling source; connecting it to the app is recommended but has not yet been authorized or implemented.
+The user confirmed: "Google calendar one way to reference occurence, do not take calendar attendance as real attendance, SME will take that real time in the app."
+
+**Why:** Calendar occurrences supply scheduling context, not evidence of attendance.
+
+**How to apply:** Use a one-way Calendar connection for scheduled occurrences. Never import invitations, guests, or RSVPs as actual attendance. SMEs record actual attendance live in the app. Account for multiple dated offerings per workshop, regional locations, and rescheduling.

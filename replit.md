@@ -37,6 +37,7 @@ Phone-first workshop operations for KIMEU SMEs. Current scope is Phase 1: Today,
 - Clinician notes fail closed unless 03g has a Visibility header. Do not weaken “Aaron + author” privacy.
 - All server permissions require a permitted organisation email and an active 03h user record, including assigned workshop checks.
 - No patient identifiers. Timestamps follow America/Los_Angeles.
+- Google Calendar is the official workshop schedule. Connect one-way for occurrence reference only; never use calendar guests or RSVPs as real attendance. SMEs take actual attendance live in the app.
 
 ## Product
 
