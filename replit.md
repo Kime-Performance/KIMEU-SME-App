@@ -48,6 +48,8 @@ The SME app is intended to influence the KIMEU Progress Tracker, while keeping t
 
 When it fits the build flow, keep the visual brand and theme consistent with the Clinician Development App in the user's other project.
 
+Use the user-supplied KIME Pay Path HTML as the visual reference for that alignment: blue accents, cool gray backgrounds, white panels, Teko headings, and Open Sans body text.
+
 ## Gotchas
 
 - Check every OAuth scope before judging a connector's permissions: `drive.readonly` can coexist with the separate `spreadsheets` edit scope.
