@@ -40,6 +40,22 @@ paths:
                 $ref: "#/components/schemas/BootstrapResponse"
         "401":
           description: Sign-in required
+  /kimeu/upcoming:
+    get:
+      operationId: getKimeuUpcoming
+      tags: [kimeu]
+      summary: Read workshop occurrences from KIMEU Calendar; never imports attendance
+      responses:
+        "200":
+          description: Read-only workshop schedule for the next twelve months
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpcomingSchedule"
+        "401":
+          description: Sign-in required
+        "503":
+          description: Calendar or workshop catalog unavailable
   /kimeu/today:
     get:
       operationId: getKimeuToday
@@ -184,6 +200,33 @@ paths:
           description: Test spreadsheet or service account is not configured
 components:
   schemas:
+    UpcomingSchedule:
+      type: object
+      required: [calendarName, refreshedAt, throughDate, occurrences]
+      properties:
+        calendarName: { type: string }
+        refreshedAt: { type: string }
+        throughDate: { type: string }
+        occurrences:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkshopOccurrence"
+    WorkshopOccurrence:
+      type: object
+      required: [occurrenceId, title, start, end, allDay, location, status, calendarUrl, workshopId, stage]
+      properties:
+        occurrenceId: { type: string }
+        title: { type: string }
+        start: { type: string }
+        end: { type: string }
+        allDay: { type: boolean }
+        location: { type: ["string", "null"] }
+        status:
+          type: string
+          enum: [confirmed, tentative, cancelled]
+        calendarUrl: { type: ["string", "null"] }
+        workshopId: { type: ["string", "null"] }
+        stage: { type: ["string", "null"] }
     HealthStatus:
       type: object
       properties:

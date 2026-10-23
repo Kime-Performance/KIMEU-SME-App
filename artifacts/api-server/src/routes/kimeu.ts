@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { getUpcomingWorkshops } from "../lib/kimeu/calendar";
+import { GetKimeuUpcomingResponse } from "@workspace/api-zod";
 import { Router, type IRouter } from "express";
 import {
   AppendKimeuClinicianNoteBody,
@@ -48,6 +50,16 @@ import {
 } from "../lib/kimeu/sessions";
 
 const router: IRouter = Router();
+
+router.get("/kimeu/upcoming", async (req, res, next): Promise<void> => {
+  try {
+    await requireActiveAppUser(req);
+    res.setHeader("Cache-Control", "no-store");
+    res.json(GetKimeuUpcomingResponse.parse(await getUpcomingWorkshops()));
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Safe, unauthenticated configuration probe for development; never exposes sheet IDs or data.
 router.get("/kimeu/dev-readiness", async (_req, res, next): Promise<void> => {

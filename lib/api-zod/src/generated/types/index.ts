@@ -33,3 +33,6 @@ export * from './sessionSummarySessionStatus';
 export * from './setupReadiness';
 export * from './todayResponse';
 export * from './unmarkedAttendance';
+export * from './upcomingSchedule';
+export * from './workshopOccurrence';
+export * from './workshopOccurrenceStatus';

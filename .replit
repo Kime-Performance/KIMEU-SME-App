@@ -23,3 +23,4 @@ timeoutMs = 20000
 
 [userenv.shared]
 KIMEU_SHEET_ID = "1D-tA9f3NxaJ1ik3FW_Q4nd75kfic8CF45GrEbSjj3kY"
+KIMEU_CALENDAR_ID = "c_classroom7f2d8955@group.calendar.google.com"

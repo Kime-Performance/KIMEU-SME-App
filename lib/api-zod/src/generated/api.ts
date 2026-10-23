@@ -40,6 +40,28 @@ export const GetKimeuBootstrapResponse = zod.object({
 
 
 /**
+ * @summary Read workshop occurrences from KIMEU Calendar; never imports attendance
+ */
+export const GetKimeuUpcomingResponse = zod.object({
+  "calendarName": zod.string(),
+  "refreshedAt": zod.string(),
+  "throughDate": zod.string(),
+  "occurrences": zod.array(zod.object({
+  "occurrenceId": zod.string(),
+  "title": zod.string(),
+  "start": zod.string(),
+  "end": zod.string(),
+  "allDay": zod.boolean(),
+  "location": zod.string().nullable(),
+  "status": zod.enum(['confirmed', 'tentative', 'cancelled']),
+  "calendarUrl": zod.string().nullable(),
+  "workshopId": zod.string().nullable(),
+  "stage": zod.string().nullable()
+}))
+})
+
+
+/**
  * @summary List today's sessions and outstanding attendance work
  */
 export const GetKimeuTodayResponse = zod.object({

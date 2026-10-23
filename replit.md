@@ -38,6 +38,8 @@ Phone-first workshop operations for KIMEU SMEs. Current scope is Phase 1: Today,
 - All server permissions require a permitted organisation email and an active 03h user record, including assigned workshop checks.
 - No patient identifiers. Timestamps follow America/Los_Angeles.
 - Google Calendar is the official workshop schedule. Connect one-way for occurrence reference only; never use calendar guests or RSVPs as real attendance. SMEs take actual attendance live in the app.
+- Upcoming Calendar reference lists Foundations and Advanced workshops only, not all KIMEU educational meetings. Calendar refresh never creates, changes, or reschedules an attendance session automatically.
+- The new Foundations workshops are planned for 2027 and are not yet on the calendar. The user wants only the Calendar connection for now; do not commit dates or proceed with workshop mapping/session-linking work until requested.
 
 ## Product
 

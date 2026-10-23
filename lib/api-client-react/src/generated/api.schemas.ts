@@ -5,6 +5,39 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type WorkshopOccurrenceStatus = typeof WorkshopOccurrenceStatus[keyof typeof WorkshopOccurrenceStatus];
+
+
+export const WorkshopOccurrenceStatus = {
+  confirmed: 'confirmed',
+  tentative: 'tentative',
+  cancelled: 'cancelled',
+} as const;
+
+export interface WorkshopOccurrence {
+  occurrenceId: string;
+  title: string;
+  start: string;
+  end: string;
+  allDay: boolean;
+  /** @nullable */
+  location: string | null;
+  status: WorkshopOccurrenceStatus;
+  /** @nullable */
+  calendarUrl: string | null;
+  /** @nullable */
+  workshopId: string | null;
+  /** @nullable */
+  stage: string | null;
+}
+
+export interface UpcomingSchedule {
+  calendarName: string;
+  refreshedAt: string;
+  throughDate: string;
+  occurrences: WorkshopOccurrence[];
+}
+
 export interface HealthStatus {
   status: string;
 }

@@ -18,6 +18,7 @@ import type { BootstrapResponse, ClinicianNoteInput, SessionSummary } from '@wor
 import { Link, Redirect, Route, Router as WouterRouter, Switch, useLocation, useParams } from 'wouter';
 import NotFound from '@/pages/not-found';
 import { useAttendanceQueue } from './hooks/use-attendance-queue';
+import { UpcomingWorkshops } from './components/upcoming-workshops';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 15_000 } },
@@ -263,6 +264,7 @@ function TodayPage() {
     <section className="pending-strip">
       <div className="pending-icon"><Clock3 size={19} /></div><div className="pending-copy"><span>ATTENDANCE CHECK</span><strong>{data ? (data.dueCount === 0 ? 'All attendance is up to date.' : `${data.dueCount} attendance item${data.dueCount === 1 ? '' : 's'} still need a mark.`) : 'Waiting for session data.'}</strong></div><span className={`pending-state ${data && data.dueCount === 0 ? 'pending-state-good' : ''}`}>{data && data.dueCount === 0 ? 'CLEAR' : 'IN PROGRESS'}</span>
     </section>
+    <UpcomingWorkshops />
   </div>;
 }
 

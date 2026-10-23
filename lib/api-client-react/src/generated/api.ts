@@ -31,7 +31,8 @@ import type {
   SessionDetail,
   SessionSummary,
   TodayResponse,
-  UnmarkedAttendance
+  UnmarkedAttendance,
+  UpcomingSchedule
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -204,6 +205,83 @@ export function useGetKimeuBootstrap<TData = Awaited<ReturnType<typeof getKimeuB
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetKimeuBootstrapQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetKimeuUpcomingUrl = () => {
+
+
+
+
+  return `/api/kimeu/upcoming`
+}
+
+/**
+ * @summary Read workshop occurrences from KIMEU Calendar; never imports attendance
+ */
+export const getKimeuUpcoming = async ( options?: Parameters<typeof customFetch>[1]): Promise<UpcomingSchedule> => {
+
+  return customFetch<UpcomingSchedule>(getGetKimeuUpcomingUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKimeuUpcomingQueryKey = () => {
+    return [
+    `/api/kimeu/upcoming`
+    ] as const;
+    }
+
+
+export const getGetKimeuUpcomingQueryOptions = <TData = Awaited<ReturnType<typeof getKimeuUpcoming>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKimeuUpcoming>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKimeuUpcomingQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKimeuUpcoming>>> = ({ signal }) => getKimeuUpcoming({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKimeuUpcoming>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetKimeuUpcomingQueryResult = NonNullable<Awaited<ReturnType<typeof getKimeuUpcoming>>>
+export type GetKimeuUpcomingQueryError = ErrorType<void>
+
+
+/**
+ * @summary Read workshop occurrences from KIMEU Calendar; never imports attendance
+ */
+
+export function useGetKimeuUpcoming<TData = Awaited<ReturnType<typeof getKimeuUpcoming>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKimeuUpcoming>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetKimeuUpcomingQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
