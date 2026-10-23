@@ -9,7 +9,7 @@ Phone-first workshop operations for KIMEU SMEs. Current scope is Phase 1: Today,
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/kimeu-sme-app run dev` — frontend (managed workflow supplies PORT and BASE_PATH)
-- Required sheet configuration: `KIMEU_SHEET_ID` must identify a test copy; `GOOGLE_SERVICE_ACCOUNT_JSON` is a secret for a service account with edit access to that copy.
+- Required sheet configuration: `KIMEU_SHEET_ID` must identify a test copy. Reads and writes use the existing Google Sheets integration through Replit Connectors; no service-account JSON is required.
 - Clerk credentials are managed through the workspace Auth pane.
 
 ## Stack
@@ -46,10 +46,12 @@ Sign in, see today's sessions, open a session, mark clinician attendance, close 
 
 The SME app is intended to influence the KIMEU Progress Tracker, while keeping the Google Sheet as the shared source of truth.
 
+When it fits the build flow, keep the visual brand and theme consistent with the Clinician Development App in the user's other project.
+
 ## Gotchas
 
-- The existing connector was read-only; app writes use a separately configured service account.
-- Live read/write acceptance testing is blocked until the test-copy sheet and service-account secret are supplied. Never substitute seeded/demo records.
+- Check every OAuth scope before judging a connector's permissions: `drive.readonly` can coexist with the separate `spreadsheets` edit scope.
+- Before rollout, verify a full session/attendance write-and-reread on the test copy. Never substitute seeded/demo records.
 - Deployment is not ready until real-sheet acceptance testing is complete.
 
 ## Pointers

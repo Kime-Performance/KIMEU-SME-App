@@ -415,7 +415,7 @@ function SettingsPage() {
       {!isAdmin && <div className="admin-notice"><LockKeyhole size={17} /><div><strong>Administrator view</strong><span>Some settings are visible only to accounts with the admin role. Your access is enforced by the server.</span></div></div>}
       <section className="settings-card"><div className="settings-card-head"><div className="panel-icon"><Cloud size={19} /></div><div><span className="section-kicker">CONNECTED SOURCE</span><h2>Sheet readiness</h2></div><span className={`readiness-badge ${data.readiness.configured ? 'ready' : 'blocked'}`}><span />{data.readiness.configured ? 'Configured' : 'Blocked'}</span></div>
         <div className="readiness-grid">
-          <ReadinessRow label="Sheet connection" ready={data.readiness.configured} detail={data.readiness.configured ? 'Connected source is configured.' : 'Missing sheet credential or test-copy configuration.'} />
+          <ReadinessRow label="Sheet connection" ready={data.readiness.configured} detail={data.readiness.configured ? 'Connected through the workspace Google Sheets integration.' : 'Check the Google Sheets connection and test-copy configuration. No JSON credential is required.'} />
           <ReadinessRow label="Writes enabled" ready={data.readiness.writeEnabled} detail={data.readiness.writeEnabled ? 'Session updates can be submitted.' : 'Writes are disabled until setup allows them.'} />
           <ReadinessRow label="Clinician note privacy" ready={data.readiness.notePrivacyReady} detail={data.readiness.notePrivacyReady ? 'Visibility field is ready.' : 'Notes fail closed until the Visibility header is available.'} />
         </div>

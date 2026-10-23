@@ -78,7 +78,7 @@ export async function findActiveAppUser(email: string): Promise<AppUser | null> 
   const readiness = getBasicReadiness();
   if (!readiness.configured) {
     throw new KimeuError(
-      "KIMEU is waiting for a service account and test-copy spreadsheet ID.",
+      "KIMEU is waiting for a test-copy spreadsheet ID and Google Sheets connection.",
       503,
       "SHEET_NOT_CONFIGURED",
     );

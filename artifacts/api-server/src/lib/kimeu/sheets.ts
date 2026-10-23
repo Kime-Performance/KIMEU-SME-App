@@ -1,11 +1,10 @@
-import { google, type sheets_v4 } from "googleapis";
+import { ReplitConnectors, type ProxyOptions } from "@replit/connectors-sdk";
 
 export const MASTER_SHEET_ID = "1cXPmoIV0El9aGjwsac9sszhjFYOpz0C0QFx4GoxSaxM";
 export const NOTE_VISIBILITY_HEADER = "Visibility";
 export const APP_TIME_ZONE = "America/Los_Angeles";
 
 const READ_CACHE_MS = 30_000;
-const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
 const ALLOWED_TABS = new Set([
   "03a-KIMEU Workshops",
   "03b-Advanced Workshop Log",
@@ -82,24 +81,18 @@ export type SheetSnapshot = {
 type CachedSnapshot = { expiresAt: number; value: SheetSnapshot };
 
 const snapshotCache = new Map<string, CachedSnapshot>();
-let sheetsClient: sheets_v4.Sheets | undefined;
-let sheetsClientSecretFingerprint: string | undefined;
+let sheetsConnector: ReplitConnectors | undefined;
 
 function configuration() {
   const sheetId = process.env.KIMEU_SHEET_ID?.trim() || "";
-  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim() || "";
   const missing: string[] = [];
   if (!sheetId) missing.push("KIMEU_SHEET_ID");
-  if (!serviceAccountJson) missing.push("GOOGLE_SERVICE_ACCOUNT_JSON");
   if (sheetId && sheetId === MASTER_SHEET_ID) {
     missing.push("The master spreadsheet is blocked; configure a test copy.");
   }
   return {
     sheetId,
-    serviceAccountJson,
-    configured: Boolean(
-      sheetId && serviceAccountJson && sheetId !== MASTER_SHEET_ID,
-    ),
+    configured: Boolean(sheetId && sheetId !== MASTER_SHEET_ID),
     missing,
   };
 }
@@ -120,54 +113,6 @@ export function getSheetIdForAdmin(): string | null {
   return config.configured ? config.sheetId : null;
 }
 
-function getSheetsClient(): sheets_v4.Sheets {
-  const config = configuration();
-  if (!config.configured) {
-    throw new KimeuError(
-      "Google Sheets is not configured for a test copy.",
-      503,
-      "SHEET_NOT_CONFIGURED",
-    );
-  }
-  if (sheetsClient && sheetsClientSecretFingerprint === config.serviceAccountJson) {
-    return sheetsClient;
-  }
-
-  try {
-    const credentials = JSON.parse(config.serviceAccountJson) as {
-      type?: string;
-      project_id?: string;
-      private_key?: string;
-      client_email?: string;
-    };
-    if (
-      credentials.type !== "service_account" ||
-      !credentials.private_key ||
-      !credentials.client_email
-    ) {
-      throw new Error("Invalid service-account fields");
-    }
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        type: "service_account",
-        project_id: credentials.project_id,
-        private_key: credentials.private_key,
-        client_email: credentials.client_email,
-      },
-      scopes: SCOPES,
-    });
-    sheetsClient = google.sheets({ version: "v4", auth });
-    sheetsClientSecretFingerprint = config.serviceAccountJson;
-    return sheetsClient;
-  } catch {
-    throw new KimeuError(
-      "The Google service-account secret is invalid.",
-      503,
-      "SHEET_CREDENTIAL_INVALID",
-    );
-  }
-}
-
 function getSheetId(): string {
   const config = configuration();
   if (!config.configured) {
@@ -178,6 +123,43 @@ function getSheetId(): string {
     );
   }
   return config.sheetId;
+}
+
+async function requestSheets<T>(
+  suffix: string,
+  options: ProxyOptions = {},
+): Promise<T> {
+  // The connector manages OAuth and refresh. No service-account JSON is needed.
+  const sheetId = getSheetId();
+  sheetsConnector ??= new ReplitConnectors();
+  const response = await sheetsConnector.proxy(
+    "google-sheet",
+    `/v4/spreadsheets/${encodeURIComponent(sheetId)}${suffix}`,
+    options,
+  );
+  if (!response.ok) {
+    throw new KimeuError(
+      response.status === 401 || response.status === 403
+        ? "The Google Sheets connection needs access to the test copy. Check the connected Google account's permissions."
+        : response.status === 404
+          ? "The test spreadsheet could not be found by the connected Google account."
+          : "Google Sheets could not complete the request. Please retry.",
+      503,
+      response.status === 401 || response.status === 403
+        ? "SHEET_ACCESS_DENIED"
+        : "SHEET_REQUEST_FAILED",
+    );
+  }
+  return await response.json() as T;
+}
+
+async function batchWriteValues(
+  data: Array<{ range: string; values: CellValue[][] }>,
+): Promise<void> {
+  await requestSheets("/values:batchUpdate", {
+    method: "POST",
+    body: { valueInputOption: "USER_ENTERED", data },
+  });
 }
 
 export function quoteSheetName(name: string): string {
@@ -223,15 +205,16 @@ export async function readTab(
     return cached.value;
   }
 
-  const client = getSheetsClient();
   try {
-    const response = await client.spreadsheets.values.get({
-      spreadsheetId: getSheetId(),
-      range: `${quoteSheetName(name)}!A1:AZ`,
+    const query = new URLSearchParams({
       valueRenderOption: "FORMATTED_VALUE",
       majorDimension: "ROWS",
     });
-    const rows = (response.data.values ?? []).map((row) =>
+    const range = encodeURIComponent(`${quoteSheetName(name)}!A1:AZ`);
+    const response = await requestSheets<{
+      values?: Array<Array<string | number | boolean | null>>;
+    }>(`/values/${range}?${query}`);
+    const rows = (response.values ?? []).map((row) =>
       row.map((value) => (value == null ? "" : String(value))),
     );
     if (!rows[headerRow - 1]?.length) {
@@ -250,7 +233,7 @@ export async function readTab(
   } catch (error) {
     if (error instanceof KimeuError) throw error;
     throw new KimeuError(
-      "The configured test spreadsheet could not be read. Check its ID and service-account access.",
+      "The configured test spreadsheet could not be read through the Google Sheets connection.",
       503,
       "SHEET_READ_FAILED",
     );
@@ -365,13 +348,7 @@ export async function writeInputCells(
     };
   });
   try {
-    await getSheetsClient().spreadsheets.values.batchUpdate({
-      spreadsheetId: getSheetId(),
-      requestBody: {
-        valueInputOption: "USER_ENTERED",
-        data,
-      },
-    });
+    await batchWriteValues(data);
     invalidateTab(tabName);
   } catch (error) {
     if (error instanceof KimeuError) throw error;
@@ -410,10 +387,7 @@ export async function writeInputCellsAtColumns(
     };
   });
   try {
-    await getSheetsClient().spreadsheets.values.batchUpdate({
-      spreadsheetId: getSheetId(),
-      requestBody: { valueInputOption: "USER_ENTERED", data },
-    });
+    await batchWriteValues(data);
     invalidateTab(tabName);
   } catch (error) {
     if (error instanceof KimeuError) throw error;
@@ -463,10 +437,7 @@ export async function writeMultipleInputCells(
     };
   });
   try {
-    await getSheetsClient().spreadsheets.values.batchUpdate({
-      spreadsheetId: getSheetId(),
-      requestBody: { valueInputOption: "USER_ENTERED", data },
-    });
+    await batchWriteValues(data);
     for (const tabName of new Set(updates.map((item) => item.tabName))) {
       invalidateTab(tabName);
     }
@@ -528,10 +499,7 @@ export async function appendSparseInputRow(
     };
   });
   try {
-    await getSheetsClient().spreadsheets.values.batchUpdate({
-      spreadsheetId: getSheetId(),
-      requestBody: { valueInputOption: "USER_ENTERED", data },
-    });
+    await batchWriteValues(data);
     invalidateTab(tabName);
     return rowNumber;
   } catch (error) {
@@ -593,13 +561,18 @@ export async function testCopyReadiness() {
       ),
       missing,
     };
-  } catch {
+  } catch (error) {
     return {
       configured: false,
       sheetId: null as string | null,
       notePrivacyReady: false,
       writeEnabled: false,
-      missing: [...missing, "The test spreadsheet is not readable by the service account."],
+      missing: [
+        ...missing,
+        error instanceof KimeuError
+          ? error.message
+          : "The test spreadsheet could not be reached through the Google Sheets connection.",
+      ],
     };
   }
 }
