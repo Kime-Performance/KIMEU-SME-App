@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: kimeu
+    description: KIMEU workshop operations backed by Google Sheets
 paths:
   /healthz:
     get:
@@ -24,6 +26,162 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /kimeu/bootstrap:
+    get:
+      operationId: getKimeuBootstrap
+      tags: [kimeu]
+      summary: Resolve current access and setup readiness
+      responses:
+        "200":
+          description: Current user's KIMEU access and sheet readiness
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BootstrapResponse"
+        "401":
+          description: Sign-in required
+  /kimeu/today:
+    get:
+      operationId: getKimeuToday
+      tags: [kimeu]
+      summary: List today's sessions and outstanding attendance work
+      responses:
+        "200":
+          description: Sessions and due work for the current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodayResponse"
+  /kimeu/sessions:
+    post:
+      operationId: openKimeuSession
+      tags: [kimeu]
+      summary: Open a session and ensure its session-log row exists
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenSessionInput"
+      responses:
+        "200":
+          description: Session and roster
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
+        "400":
+          description: Invalid request or required sheet header missing
+        "403":
+          description: User does not have access to this workshop
+        "503":
+          description: Test spreadsheet or service account is not configured
+  /kimeu/sessions/{sessionId}:
+    get:
+      operationId: getKimeuSession
+      tags: [kimeu]
+      summary: Get a session and its roster
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session and roster
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionDetail"
+        "404":
+          description: Session not found
+  /kimeu/sessions/{sessionId}/attendance:
+    post:
+      operationId: saveKimeuAttendance
+      tags: [kimeu]
+      summary: Save attendance marks for one or more clinicians
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendanceBatchInput"
+      responses:
+        "200":
+          description: Saved attendance and sheet-computed statuses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceBatchResponse"
+        "400":
+          description: Invalid request or required sheet header missing
+        "403":
+          description: User does not have permission
+        "503":
+          description: Test spreadsheet or service account is not configured
+  /kimeu/sessions/{sessionId}/complete:
+    post:
+      operationId: completeKimeuSession
+      tags: [kimeu]
+      summary: Complete a session and append its closing notes
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteSessionInput"
+      responses:
+        "200":
+          description: Session completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionSummary"
+        "409":
+          description: Attendance still needs confirmation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnmarkedAttendance"
+        "503":
+          description: Test spreadsheet or service account is not configured
+  /kimeu/clinician-notes:
+    post:
+      operationId: appendKimeuClinicianNote
+      tags: [kimeu]
+      summary: Append a clinician note without editing prior notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClinicianNoteInput"
+      responses:
+        "201":
+          description: Appended note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClinicianNoteResponse"
+        "400":
+          description: Invalid request or required sheet header missing
+        "403":
+          description: User does not have permission
+        "503":
+          description: Test spreadsheet or service account is not configured
 components:
   schemas:
     HealthStatus:
@@ -33,4 +191,269 @@ components:
           type: string
       required:
         - status
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+      required: [error]
+    SetupReadiness:
+      type: object
+      properties:
+        configured:
+          type: boolean
+        sheetId:
+          type: [string, "null"]
+        notePrivacyReady:
+          type: boolean
+        writeEnabled:
+          type: boolean
+        missing:
+          type: array
+          items:
+            type: string
+      required: [configured, sheetId, notePrivacyReady, writeEnabled, missing]
+    AppUser:
+      type: object
+      properties:
+        email:
+          type: string
+        nameInSheets:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        workshopIds:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
+      required: [email, nameInSheets, roles, workshopIds, active]
+    BootstrapResponse:
+      type: object
+      properties:
+        readiness:
+          $ref: "#/components/schemas/SetupReadiness"
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/AppUser"
+            - type: "null"
+        access:
+          type: string
+          enum: [allowed, domain_denied, inactive, not_configured]
+      required: [readiness, user, access]
+    SessionSummary:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        workshopId:
+          type: string
+        workshopName:
+          type: string
+        stage:
+          type: [string, "null"]
+        sessionDate:
+          type: string
+          format: date
+        startTime:
+          type: [string, "null"]
+        location:
+          type: [string, "null"]
+        leadSme:
+          type: [string, "null"]
+        sessionStatus:
+          type: string
+          enum: [Scheduled, Live, Complete, Cancelled]
+        rosterCount:
+          type: integer
+        presentCount:
+          type: integer
+        absentCount:
+          type: integer
+        unmarkedCount:
+          type: integer
+      required:
+        - sessionId
+        - workshopId
+        - workshopName
+        - stage
+        - sessionDate
+        - startTime
+        - location
+        - leadSme
+        - sessionStatus
+        - rosterCount
+        - presentCount
+        - absentCount
+        - unmarkedCount
+    TodayResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionSummary"
+        dueCount:
+          type: integer
+      required: [date, sessions, dueCount]
+    OpenSessionInput:
+      type: object
+      properties:
+        workshopId:
+          type: string
+          minLength: 1
+        sessionDate:
+          type: string
+          format: date
+      required: [workshopId, sessionDate]
+    RosterPerson:
+      type: object
+      properties:
+        clinicianEmail:
+          type: string
+        name:
+          type: string
+        attended:
+          type: [string, "null"]
+          enum: [Yes, No, null]
+        sourceTab:
+          type: string
+          enum: ["03b-Advanced Workshop Log", "03c-Foundations Tracker"]
+        computedStatus:
+          type: [string, "null"]
+        practicalStatus:
+          type: [string, "null"]
+      required: [clinicianEmail, name, attended, sourceTab, computedStatus, practicalStatus]
+    SessionDetail:
+      type: object
+      properties:
+        session:
+          $ref: "#/components/schemas/SessionSummary"
+        roster:
+          type: array
+          items:
+            $ref: "#/components/schemas/RosterPerson"
+        sessionNotes:
+          type: string
+        changesForNextSession:
+          type: string
+      required: [session, roster, sessionNotes, changesForNextSession]
+    AttendanceMark:
+      type: object
+      properties:
+        clinicianEmail:
+          type: string
+          format: email
+        attended:
+          type: string
+          enum: [Yes, No]
+      required: [clinicianEmail, attended]
+    AttendanceBatchInput:
+      type: object
+      properties:
+        marks:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/AttendanceMark"
+      required: [marks]
+    AttendanceMarkResult:
+      type: object
+      properties:
+        clinicianEmail:
+          type: string
+          format: email
+        attended:
+          type: string
+          enum: [Yes, No]
+        computedStatus:
+          type: [string, "null"]
+      required: [clinicianEmail, attended, computedStatus]
+    AttendanceBatchResponse:
+      type: object
+      properties:
+        session:
+          $ref: "#/components/schemas/SessionSummary"
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttendanceMarkResult"
+      required: [session, results]
+    CompleteSessionInput:
+      type: object
+      properties:
+        sessionNotes:
+          type: string
+        changesForNextSession:
+          type: string
+        confirmUnmarked:
+          type: boolean
+      required: [sessionNotes, changesForNextSession, confirmUnmarked]
+    UnmarkedAttendance:
+      type: object
+      properties:
+        error:
+          type: string
+        unmarked:
+          type: array
+          items:
+            type: string
+      required: [error, unmarked]
+    ClinicianNoteInput:
+      type: object
+      properties:
+        clinicianEmail:
+          type: string
+          format: email
+        noteType:
+          type: string
+          enum: ["Session observation", Strength]
+        workshopId:
+          type: string
+        sessionId:
+          type: string
+        note:
+          type: string
+          minLength: 1
+        followUpNeeded:
+          type: boolean
+        followUpDue:
+          type: [string, "null"]
+          format: date
+        visibility:
+          type: string
+          enum: [All, "Aaron + author"]
+      required:
+        - clinicianEmail
+        - noteType
+        - workshopId
+        - sessionId
+        - note
+        - followUpNeeded
+        - followUpDue
+        - visibility
+    ClinicianNoteResponse:
+      type: object
+      properties:
+        noteId:
+          type: string
+        created:
+          type: string
+          format: date-time
+        clinicianEmail:
+          type: string
+          format: email
+        visibility:
+          type: string
+          enum: [All, "Aaron + author"]
+      required: [noteId, created, clinicianEmail, visibility]
 

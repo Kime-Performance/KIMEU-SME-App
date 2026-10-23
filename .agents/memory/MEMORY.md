@@ -1,0 +1,1 @@
+- [Clerk package compatibility](clerk-package-compatibility.md) — canonical managed-auth wiring requires current Clerk React APIs, not the older v5 major.

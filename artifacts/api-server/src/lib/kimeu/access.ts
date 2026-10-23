@@ -1,0 +1,185 @@
+import { clerkClient, getAuth } from "@clerk/express";
+import type { Request } from "express";
+import {
+  cell,
+  getBasicReadiness,
+  KimeuError,
+  normalizeEmail,
+  normalizeChoice,
+  readTab,
+  headersFor,
+  headerIndex,
+  testCopyReadiness,
+  getSheetIdForAdmin,
+} from "./sheets";
+
+export const KIMEU_EMAIL_DOMAIN = "kimeperformance.com";
+export const KIMEU_ROLES = [
+  "Foundations SME",
+  "Elite SME",
+  "RD",
+  "Fellowship Reviewer",
+  "CEU Admin",
+  "Admin",
+] as const;
+
+export type KimeuRole = (typeof KIMEU_ROLES)[number];
+export type AppUser = {
+  email: string;
+  nameInSheets: string;
+  roles: string[];
+  workshopIds: string[];
+  active: boolean;
+};
+
+export async function signedInEmail(req: Request): Promise<string> {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    throw new KimeuError("Sign in to continue.", 401, "SIGN_IN_REQUIRED");
+  }
+
+  try {
+    const user = await clerkClient.users.getUser(userId);
+    const email =
+      user.primaryEmailAddress?.emailAddress ??
+      user.emailAddresses.find((item) => item.id === user.primaryEmailAddressId)
+        ?.emailAddress ??
+      "";
+    if (!email) {
+      throw new KimeuError(
+        "Your sign-in account does not have a verified email address.",
+        403,
+        "EMAIL_REQUIRED",
+      );
+    }
+    return normalizeEmail(email);
+  } catch (error) {
+    if (error instanceof KimeuError) throw error;
+    throw new KimeuError(
+      "The signed-in account could not be verified.",
+      401,
+      "IDENTITY_UNAVAILABLE",
+    );
+  }
+}
+
+export function hasKimeuDomain(email: string): boolean {
+  return email.endsWith(`@${KIMEU_EMAIL_DOMAIN}`);
+}
+
+function splitList(value: string): string[] {
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+export async function findActiveAppUser(email: string): Promise<AppUser | null> {
+  const readiness = getBasicReadiness();
+  if (!readiness.configured) {
+    throw new KimeuError(
+      "KIMEU is waiting for a service account and test-copy spreadsheet ID.",
+      503,
+      "SHEET_NOT_CONFIGURED",
+    );
+  }
+  const snapshot = await readTab("03h-App Users");
+  const headers = headersFor(snapshot);
+  const emailIndex = headerIndex(headers, "Email");
+  const nameIndex = headerIndex(headers, "Name in Sheets");
+  const rolesIndex = headerIndex(headers, "App Role(s)");
+  const workshopIndex = headerIndex(headers, "Workshop IDs");
+  const activeIndex = headerIndex(headers, "Active");
+  const rows = snapshot.rows
+    .map((values, index) => ({ values, rowNumber: index + 1 }))
+    .filter(
+      ({ values, rowNumber }) =>
+        rowNumber >= snapshot.dataStartRow &&
+        normalizeEmail(cell(values, emailIndex)) === email,
+    );
+  if (rows.length > 1) {
+    throw new KimeuError(
+      "More than one app-user row matches this email. Ask an administrator to resolve the duplicate.",
+      409,
+      "APP_USER_DUPLICATE",
+    );
+  }
+  const row = rows[0]?.values;
+  if (!row || normalizeChoice(cell(row, activeIndex)) !== "yes") return null;
+  return {
+    email,
+    nameInSheets: cell(row, nameIndex),
+    roles: splitList(cell(row, rolesIndex)).filter((role) =>
+      (KIMEU_ROLES as readonly string[]).includes(role),
+    ),
+    workshopIds: splitList(cell(row, workshopIndex)),
+    active: true,
+  };
+}
+
+export async function requireActiveAppUser(req: Request): Promise<AppUser> {
+  const email = await signedInEmail(req);
+  if (!hasKimeuDomain(email)) {
+    throw new KimeuError(
+      `Sign in with a @${KIMEU_EMAIL_DOMAIN} account.`,
+      403,
+      "DOMAIN_NOT_ALLOWED",
+    );
+  }
+  const user = await findActiveAppUser(email);
+  if (!user) {
+    throw new KimeuError(
+      "Your KIMEU account is not active in the app-user sheet.",
+      403,
+      "APP_USER_INACTIVE",
+    );
+  }
+  return user;
+}
+
+export function requireRole(user: AppUser, ...roles: KimeuRole[]): void {
+  if (user.roles.includes("Admin")) return;
+  if (!roles.some((role) => user.roles.includes(role))) {
+    throw new KimeuError(
+      "Your KIMEU role does not allow this action.",
+      403,
+      "ROLE_NOT_ALLOWED",
+    );
+  }
+}
+
+export function requireWorkshopAccess(user: AppUser, workshopId: string): void {
+  if (user.roles.includes("Admin")) return;
+  if (!user.workshopIds.includes(workshopId)) {
+    throw new KimeuError(
+      "This workshop is not assigned to your KIMEU account.",
+      403,
+      "WORKSHOP_NOT_ASSIGNED",
+    );
+  }
+}
+
+export async function getBootstrapForRequest(req: Request) {
+  const email = await signedInEmail(req);
+  if (!hasKimeuDomain(email)) {
+    const readiness = await testCopyReadiness();
+    return {
+      readiness,
+      user: null,
+      access: "domain_denied" as const,
+    };
+  }
+
+  const readiness = await testCopyReadiness();
+  if (!readiness.configured) {
+    return { readiness, user: null, access: "not_configured" as const };
+  }
+  const user = await findActiveAppUser(email);
+  if (!user) {
+    return { readiness, user: null, access: "inactive" as const };
+  }
+  if (user.roles.includes("Admin")) {
+    readiness.sheetId = getSheetIdForAdmin();
+  }
+  return { readiness, user, access: "allowed" as const };
+}

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "KIMEU SME App"
+description = "A phone-first workshop operations app for KIMEU SMEs, RDs, reviewers, and admins. It reads and writes only allowed input cells in a configured Google Sheets test copy, while the sheet remains the source of truth."
+version = "1.0.0"
+id = "artifacts/kimeu-sme-app"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25807
+
+[services.development]
+run = "pnpm --filter @workspace/kimeu-sme-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/kimeu-sme-app", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/kimeu-sme-app/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25807"
+BASE_PATH = "/"
