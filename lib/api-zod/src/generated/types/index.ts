@@ -22,6 +22,8 @@ export * from './clinicianNoteInputVisibility';
 export * from './clinicianNoteResponse';
 export * from './clinicianNoteResponseVisibility';
 export * from './completeSessionInput';
+export * from './courseCatalog';
+export * from './courseSummary';
 export * from './healthStatus';
 export * from './openSessionInput';
 export * from './rosterPerson';

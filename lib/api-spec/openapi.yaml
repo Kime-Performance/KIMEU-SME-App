@@ -40,6 +40,22 @@ paths:
                 $ref: "#/components/schemas/BootstrapResponse"
         "401":
           description: Sign-in required
+  /kimeu/courses:
+    get:
+      operationId: getKimeuCourses
+      tags: [kimeu]
+      summary: List workshop catalog courses permitted for the signed-in SME
+      responses:
+        "200":
+          description: Authorized course frames sourced from the workshop catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseCatalog"
+        "401":
+          description: Sign-in required
+        "403":
+          description: Active app access required
   /kimeu/upcoming:
     get:
       operationId: getKimeuUpcoming
@@ -200,6 +216,23 @@ paths:
           description: Test spreadsheet or service account is not configured
 components:
   schemas:
+    CourseCatalog:
+      type: object
+      required: [courses]
+      properties:
+        courses:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseSummary"
+    CourseSummary:
+      type: object
+      required: [workshopId, name, stage, topic, leadSme]
+      properties:
+        workshopId: { type: string }
+        name: { type: string }
+        stage: { type: string }
+        topic: { type: ["string", "null"] }
+        leadSme: { type: ["string", "null"] }
     UpcomingSchedule:
       type: object
       required: [calendarName, refreshedAt, throughDate, occurrences]

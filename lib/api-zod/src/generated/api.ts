@@ -40,6 +40,20 @@ export const GetKimeuBootstrapResponse = zod.object({
 
 
 /**
+ * @summary List workshop catalog courses permitted for the signed-in SME
+ */
+export const GetKimeuCoursesResponse = zod.object({
+  "courses": zod.array(zod.object({
+  "workshopId": zod.string(),
+  "name": zod.string(),
+  "stage": zod.string(),
+  "topic": zod.string().nullable(),
+  "leadSme": zod.string().nullable()
+}))
+})
+
+
+/**
  * @summary Read workshop occurrences from KIMEU Calendar; never imports attendance
  */
 export const GetKimeuUpcomingResponse = zod.object({

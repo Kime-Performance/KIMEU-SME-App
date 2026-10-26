@@ -5,6 +5,20 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface CourseSummary {
+  workshopId: string;
+  name: string;
+  stage: string;
+  /** @nullable */
+  topic: string | null;
+  /** @nullable */
+  leadSme: string | null;
+}
+
+export interface CourseCatalog {
+  courses: CourseSummary[];
+}
+
 export type WorkshopOccurrenceStatus = typeof WorkshopOccurrenceStatus[keyof typeof WorkshopOccurrenceStatus];
 
 

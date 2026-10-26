@@ -19,6 +19,9 @@ import { Link, Redirect, Route, Router as WouterRouter, Switch, useLocation, use
 import NotFound from '@/pages/not-found';
 import { useAttendanceQueue } from './hooks/use-attendance-queue';
 import { UpcomingWorkshops } from './components/upcoming-workshops';
+import { CourseNav, decodeSafe } from './components/course-nav';
+import { CoursesPage, CourseDetailPage } from './pages/courses';
+import { useCourseCatalog } from './lib/courses';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 15_000 } },
@@ -159,7 +162,8 @@ function Shell({ children }: { children: ReactNode }) {
         <BrandLockup />
         <div className="sidebar-label">WORKSPACE</div>
         <nav className="side-nav" aria-label="Main navigation">
-          {links.map(({ href, label, icon: Icon }) => <Link key={href} href={href} className={`side-link ${location === href ? 'side-link-active' : ''}`} data-testid={`link-nav-${label.toLowerCase()}`} onClick={() => setMenuOpen(false)}><Icon size={18} /><span>{label}</span>{location === href && <span className="nav-active-mark" />}</Link>)}
+          {links.map(({ href, label, icon: Icon }) => <Link key={href} href={href} className={`side-link ${location === href ? 'side-link-active' : ''}`} aria-current={location === href ? 'page' : undefined} data-testid={`link-nav-${label.toLowerCase()}`} onClick={() => setMenuOpen(false)}><Icon size={18} /><span>{label}</span>{location === href && <span className="nav-active-mark" />}</Link>)}
+          <CourseNav location={location} onNavigate={() => setMenuOpen(false)} />
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-quiet"><div className="sidebar-quiet-icon"><BookOpen size={18} /></div><p>Keep the record<br />close to the work.</p></div>
@@ -170,7 +174,7 @@ function Shell({ children }: { children: ReactNode }) {
       <main className="main-area">
         <header className="topbar">
           <button type="button" className="mobile-menu" aria-label="Open menu" onClick={() => setMenuOpen(true)} data-testid="button-open-menu"><Menu size={21} /></button>
-          <div className="crumb"><span>KIMEU</span><span className="crumb-slash">/</span><b>{location === '/today' ? 'Today' : location.startsWith('/session') ? 'Session' : 'Settings'}</b></div>
+          <div className="crumb"><span>KIMEU</span><span className="crumb-slash">/</span>{location.startsWith('/courses') ? <CourseCrumb location={location} /> : <b>{location === '/today' ? 'Today' : location.startsWith('/session') ? 'Session' : 'Settings'}</b>}</div>
           <SyncStatus />
         </header>
         <AccessBanner bootstrap={bootstrap} />
@@ -178,6 +182,14 @@ function Shell({ children }: { children: ReactNode }) {
       </main>
     </div>
   );
+}
+
+function CourseCrumb({ location }: { location: string }) {
+  const { data } = useCourseCatalog();
+  if (location === '/courses') return <b aria-current="page">Courses</b>;
+  const id = decodeSafe(location.slice('/courses/'.length));
+  const name = data?.courses.find((course) => course.workshopId === id)?.name ?? 'Course';
+  return <><Link href="/courses" className="crumb-link" data-testid="link-crumb-courses">Courses</Link><span className="crumb-slash">/</span><b className="crumb-current" aria-current="page" title={name}>{name}</b></>;
 }
 
 function SessionUser() {
@@ -476,6 +488,8 @@ function AppRoutes() {
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
          <Route path="/today">{() => <><Show when="signed-in"><Shell><TodayPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
+         <Route path="/courses">{() => <><Show when="signed-in"><Shell><CoursesPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
+         <Route path="/courses/:workshopId">{() => <><Show when="signed-in"><Shell><CourseDetailPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
          <Route path="/session/:sessionId">{() => <><Show when="signed-in"><SessionPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
          <Route path="/settings">{() => <><Show when="signed-in"><SettingsPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
         <Route component={NotFound} />

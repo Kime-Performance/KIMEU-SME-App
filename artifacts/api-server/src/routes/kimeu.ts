@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getUpcomingWorkshops } from "../lib/kimeu/calendar";
-import { GetKimeuUpcomingResponse } from "@workspace/api-zod";
+import { getCourses } from "../lib/kimeu/courses";
 import { Router, type IRouter } from "express";
 import {
   AppendKimeuClinicianNoteBody,
@@ -9,9 +9,11 @@ import {
   CompleteKimeuSessionParams,
   CompleteKimeuSessionResponse,
   GetKimeuBootstrapResponse,
+  GetKimeuCoursesResponse,
   GetKimeuSessionParams,
   GetKimeuSessionResponse,
   GetKimeuTodayResponse,
+  GetKimeuUpcomingResponse,
   OpenKimeuSessionBody,
   OpenKimeuSessionResponse,
   SaveKimeuAttendanceBody,
@@ -50,6 +52,16 @@ import {
 } from "../lib/kimeu/sessions";
 
 const router: IRouter = Router();
+
+router.get("/kimeu/courses", async (req, res, next): Promise<void> => {
+  try {
+    const user = await requireActiveAppUser(req);
+    res.setHeader("Cache-Control", "no-store");
+    res.json(GetKimeuCoursesResponse.parse(await getCourses(user)));
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.get("/kimeu/upcoming", async (req, res, next): Promise<void> => {
   try {

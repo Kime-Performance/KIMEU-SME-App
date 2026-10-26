@@ -26,6 +26,7 @@ import type {
   ClinicianNoteInput,
   ClinicianNoteResponse,
   CompleteSessionInput,
+  CourseCatalog,
   HealthStatus,
   OpenSessionInput,
   SessionDetail,
@@ -205,6 +206,83 @@ export function useGetKimeuBootstrap<TData = Awaited<ReturnType<typeof getKimeuB
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetKimeuBootstrapQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetKimeuCoursesUrl = () => {
+
+
+
+
+  return `/api/kimeu/courses`
+}
+
+/**
+ * @summary List workshop catalog courses permitted for the signed-in SME
+ */
+export const getKimeuCourses = async ( options?: Parameters<typeof customFetch>[1]): Promise<CourseCatalog> => {
+
+  return customFetch<CourseCatalog>(getGetKimeuCoursesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKimeuCoursesQueryKey = () => {
+    return [
+    `/api/kimeu/courses`
+    ] as const;
+    }
+
+
+export const getGetKimeuCoursesQueryOptions = <TData = Awaited<ReturnType<typeof getKimeuCourses>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKimeuCourses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKimeuCoursesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKimeuCourses>>> = ({ signal }) => getKimeuCourses({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKimeuCourses>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetKimeuCoursesQueryResult = NonNullable<Awaited<ReturnType<typeof getKimeuCourses>>>
+export type GetKimeuCoursesQueryError = ErrorType<void>
+
+
+/**
+ * @summary List workshop catalog courses permitted for the signed-in SME
+ */
+
+export function useGetKimeuCourses<TData = Awaited<ReturnType<typeof getKimeuCourses>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKimeuCourses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetKimeuCoursesQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
