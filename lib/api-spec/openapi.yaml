@@ -13,6 +13,40 @@ tags:
   - name: kimeu
     description: KIMEU workshop operations backed by Google Sheets
 paths:
+  /kimeu/courses/{workshopId}/practicals:
+    get:
+      operationId: getKimeuPracticals
+      tags: [Kimeu]
+      parameters:
+        - name: workshopId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Assigned post-workshop practical records
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PracticalWorkspace" }
+    post:
+      operationId: saveKimeuPractical
+      tags: [Kimeu]
+      parameters:
+        - name: workshopId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PracticalSignoff" }
+      responses:
+        "200":
+          description: Saved and reread from the test spreadsheet
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PracticalWorkspace" }
   /healthz:
     get:
       operationId: healthCheck
@@ -216,6 +250,49 @@ paths:
           description: Test spreadsheet or service account is not configured
 components:
   schemas:
+    PracticalSignoff:
+      type: object
+      required: [recordKey, revision, result, practicalDate, notes]
+      properties:
+        recordKey: { type: string, minLength: 1 }
+        revision: { type: string, minLength: 1 }
+        result: { type: string, enum: [Pass, Fail] }
+        practicalDate: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        notes: { type: string, maxLength: 4000 }
+    PracticalWorkspace:
+      type: object
+      required: [canSignOff, records]
+      properties:
+        canSignOff: { type: boolean }
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/PracticalRecord" }
+    PracticalRecord:
+      type: object
+      required: [recordKey, revision, clinicianEmail, name, rd, sessionDate, attended, result, practicalDate, scoredBy, eligible, history]
+      properties:
+        recordKey: { type: string }
+        revision: { type: string }
+        clinicianEmail: { type: string }
+        name: { type: string }
+        rd: { type: string }
+        sessionDate: { type: string }
+        attended: { type: boolean }
+        result: { type: string }
+        practicalDate: { type: string }
+        scoredBy: { type: string }
+        eligible: { type: boolean }
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/PracticalHistory" }
+    PracticalHistory:
+      type: object
+      required: [id, created, author, note]
+      properties:
+        id: { type: string }
+        created: { type: string }
+        author: { type: string }
+        note: { type: string }
     CourseCatalog:
       type: object
       required: [courses]

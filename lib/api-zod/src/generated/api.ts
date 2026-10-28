@@ -8,6 +8,83 @@
 import * as zod from 'zod';
 
 
+
+
+
+export const GetKimeuPracticalsParams = zod.object({
+  "workshopId": zod.coerce.string().min(1)
+})
+
+export const GetKimeuPracticalsResponse = zod.object({
+  "canSignOff": zod.boolean(),
+  "records": zod.array(zod.object({
+  "recordKey": zod.string(),
+  "revision": zod.string(),
+  "clinicianEmail": zod.string(),
+  "name": zod.string(),
+  "rd": zod.string(),
+  "sessionDate": zod.string(),
+  "attended": zod.boolean(),
+  "result": zod.string(),
+  "practicalDate": zod.string(),
+  "scoredBy": zod.string(),
+  "eligible": zod.boolean(),
+  "history": zod.array(zod.object({
+  "id": zod.string(),
+  "created": zod.string(),
+  "author": zod.string(),
+  "note": zod.string()
+}))
+}))
+})
+
+
+
+
+
+export const SaveKimeuPracticalParams = zod.object({
+  "workshopId": zod.coerce.string().min(1)
+})
+
+
+
+export const saveKimeuPracticalBodyPracticalDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const saveKimeuPracticalBodyNotesMax = 4000;
+
+
+
+export const SaveKimeuPracticalBody = zod.object({
+  "recordKey": zod.string().min(1),
+  "revision": zod.string().min(1),
+  "result": zod.enum(['Pass', 'Fail']),
+  "practicalDate": zod.string().regex(saveKimeuPracticalBodyPracticalDateRegExp),
+  "notes": zod.string().max(saveKimeuPracticalBodyNotesMax)
+})
+
+export const SaveKimeuPracticalResponse = zod.object({
+  "canSignOff": zod.boolean(),
+  "records": zod.array(zod.object({
+  "recordKey": zod.string(),
+  "revision": zod.string(),
+  "clinicianEmail": zod.string(),
+  "name": zod.string(),
+  "rd": zod.string(),
+  "sessionDate": zod.string(),
+  "attended": zod.boolean(),
+  "result": zod.string(),
+  "practicalDate": zod.string(),
+  "scoredBy": zod.string(),
+  "eligible": zod.boolean(),
+  "history": zod.array(zod.object({
+  "id": zod.string(),
+  "created": zod.string(),
+  "author": zod.string(),
+  "note": zod.string()
+}))
+}))
+})
+
+
 /**
  * Returns server health status
  * @summary Health check

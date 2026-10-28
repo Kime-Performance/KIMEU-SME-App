@@ -19,12 +19,17 @@ const WRITE_ALLOWLIST: Record<string, ReadonlySet<string>> = {
   "03b-Advanced Workshop Log": new Set([
     "Attended",
     "Attendance Confirmed By",
+    "Practical Date",
+    "Practical Result",
+    "Practical Scored By (RD)",
     "Last Updated By",
     "Last Updated",
   ]),
   "03c-Foundations Tracker": new Set([
     "Session Date",
     "Attended (SME)",
+    "Practical Date",
+    "Practical Result",
     "Last Updated By",
     "Last Updated",
   ]),
@@ -46,6 +51,7 @@ const WRITE_ALLOWLIST: Record<string, ReadonlySet<string>> = {
     "Note Type",
     "Workshop ID",
     "Session ID",
+    "Review ID",
     "Note",
     "Follow-up Needed",
     "Follow-up Due",
@@ -82,6 +88,16 @@ type CachedSnapshot = { expiresAt: number; value: SheetSnapshot };
 
 const snapshotCache = new Map<string, CachedSnapshot>();
 let sheetsConnector: ReplitConnectors | undefined;
+let practicalWriteTail: Promise<void> = Promise.resolve();
+
+// Serialize practical/history read-modify-writes within this server process.
+export async function withPracticalWriteLock<T>(action: () => Promise<T>): Promise<T> {
+  const previous = practicalWriteTail;
+  let release!: () => void;
+  practicalWriteTail = new Promise<void>((resolve) => { release = resolve; });
+  await previous;
+  try { return await action(); } finally { release(); }
+}
 
 function configuration() {
   const sheetId = process.env.KIMEU_SHEET_ID?.trim() || "";
@@ -463,7 +479,10 @@ function assertInputHeader(tabName: string, header: string): void {
 export async function appendSparseInputRow(
   tabName: string,
   updates: Array<{ header: string; value: CellValue }>,
-  options: { headerRow?: number; dataStartRow?: number; autoHeaders?: string[] } = {},
+  options: {
+    headerRow?: number; dataStartRow?: number; autoHeaders?: string[];
+    additionalWrites?: Array<{ tabName: string; rowNumber: number; columnIndex: number; header: string; value: CellValue }>;
+  } = {},
 ): Promise<number> {
   const snapshot = await readTab(tabName, {
     force: true,
@@ -498,9 +517,27 @@ export async function appendSparseInputRow(
       values: [[safeInputValue(update.value)]],
     };
   });
+  // Couple sign-off input cells and their append-only audit note in one atomic
+  // Sheets values batch. No formula or existing note cell is overwritten.
+  const extraSnapshots = new Map<string, SheetSnapshot>();
+  for (const extra of options.additionalWrites ?? []) {
+    assertInputHeader(extra.tabName, extra.header);
+    if (!extraSnapshots.has(extra.tabName)) {
+      extraSnapshots.set(extra.tabName, await readTab(extra.tabName, { force: true }));
+    }
+    const extraHeaders = headersFor(extraSnapshots.get(extra.tabName)!);
+    if (extraHeaders[extra.columnIndex]?.trim() !== extra.header) {
+      throw new KimeuError("The practical sheet headers changed. Reload before saving.", 409, "SHEET_HEADER_CHANGED");
+    }
+    data.push({
+      range: `${quoteSheetName(extra.tabName)}!${columnLetter(extra.columnIndex)}${extra.rowNumber}`,
+      values: [[safeInputValue(extra.value)]],
+    });
+  }
   try {
     await batchWriteValues(data);
     invalidateTab(tabName);
+    for (const extra of options.additionalWrites ?? []) invalidateTab(extra.tabName);
     return rowNumber;
   } catch (error) {
     if (error instanceof KimeuError) throw error;

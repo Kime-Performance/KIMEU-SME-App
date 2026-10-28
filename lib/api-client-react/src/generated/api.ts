@@ -29,6 +29,8 @@ import type {
   CourseCatalog,
   HealthStatus,
   OpenSessionInput,
+  PracticalSignoff,
+  PracticalWorkspace,
   SessionDetail,
   SessionSummary,
   TodayResponse,
@@ -62,6 +64,160 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetKimeuPracticalsUrl = (workshopId: string,) => {
+
+
+
+
+  return `/api/kimeu/courses/${workshopId}/practicals`
+}
+
+export const getKimeuPracticals = async (workshopId: string, options?: Parameters<typeof customFetch>[1]): Promise<PracticalWorkspace> => {
+
+  return customFetch<PracticalWorkspace>(getGetKimeuPracticalsUrl(workshopId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKimeuPracticalsQueryKey = (workshopId: string,) => {
+    return [
+    `/api/kimeu/courses/${workshopId}/practicals`
+    ] as const;
+    }
+
+
+export const getGetKimeuPracticalsQueryOptions = <TData = Awaited<ReturnType<typeof getKimeuPracticals>>, TError = ErrorType<unknown>>(workshopId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKimeuPracticals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKimeuPracticalsQueryKey(workshopId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKimeuPracticals>>> = ({ signal }) => getKimeuPracticals(workshopId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: workshopId !== null && workshopId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKimeuPracticals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetKimeuPracticalsQueryResult = NonNullable<Awaited<ReturnType<typeof getKimeuPracticals>>>
+export type GetKimeuPracticalsQueryError = ErrorType<unknown>
+
+
+
+export function useGetKimeuPracticals<TData = Awaited<ReturnType<typeof getKimeuPracticals>>, TError = ErrorType<unknown>>(
+ workshopId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKimeuPracticals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetKimeuPracticalsQueryOptions(workshopId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveKimeuPracticalUrl = (workshopId: string,) => {
+
+
+
+
+  return `/api/kimeu/courses/${workshopId}/practicals`
+}
+
+export const saveKimeuPractical = async (workshopId: string,
+    practicalSignoff: PracticalSignoff, options?: Parameters<typeof customFetch>[1]): Promise<PracticalWorkspace> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PracticalWorkspace>(getSaveKimeuPracticalUrl(workshopId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(practicalSignoff)
+  }
+);}
+
+
+
+
+
+export const getSaveKimeuPracticalMutationKey = () => ['saveKimeuPractical'] as const;
+
+export const getSaveKimeuPracticalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveKimeuPractical>>, TError,SaveKimeuPracticalMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveKimeuPractical>>, TError,SaveKimeuPracticalMutationVariables, TContext> => {
+
+const mutationKey = getSaveKimeuPracticalMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveKimeuPractical>>, SaveKimeuPracticalMutationVariables> = (props) => {
+          const {workshopId,data} = props ?? {};
+
+          return  saveKimeuPractical(workshopId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveKimeuPracticalMutationResult = NonNullable<Awaited<ReturnType<typeof saveKimeuPractical>>>
+    export type SaveKimeuPracticalMutationBody = BodyType<PracticalSignoff>
+    export type SaveKimeuPracticalMutationError = ErrorType<unknown>
+    export type SaveKimeuPracticalMutationVariables = {workshopId: string;data: BodyType<PracticalSignoff>}
+
+    export const useSaveKimeuPractical = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveKimeuPractical>>, TError,SaveKimeuPracticalMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveKimeuPractical>>,
+        TError,
+        SaveKimeuPracticalMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveKimeuPracticalMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

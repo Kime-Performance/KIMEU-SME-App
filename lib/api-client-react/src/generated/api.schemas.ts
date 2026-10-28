@@ -5,6 +5,53 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type PracticalSignoffResult = typeof PracticalSignoffResult[keyof typeof PracticalSignoffResult];
+
+
+export const PracticalSignoffResult = {
+  Pass: 'Pass',
+  Fail: 'Fail',
+} as const;
+
+export interface PracticalSignoff {
+  /** @minLength 1 */
+  recordKey: string;
+  /** @minLength 1 */
+  revision: string;
+  result: PracticalSignoffResult;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  practicalDate: string;
+  /** @maxLength 4000 */
+  notes: string;
+}
+
+export interface PracticalHistory {
+  id: string;
+  created: string;
+  author: string;
+  note: string;
+}
+
+export interface PracticalRecord {
+  recordKey: string;
+  revision: string;
+  clinicianEmail: string;
+  name: string;
+  rd: string;
+  sessionDate: string;
+  attended: boolean;
+  result: string;
+  practicalDate: string;
+  scoredBy: string;
+  eligible: boolean;
+  history: PracticalHistory[];
+}
+
+export interface PracticalWorkspace {
+  canSignOff: boolean;
+  records: PracticalRecord[];
+}
+
 export interface CourseSummary {
   workshopId: string;
   name: string;

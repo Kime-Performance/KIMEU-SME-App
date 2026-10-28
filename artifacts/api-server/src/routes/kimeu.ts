@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { getUpcomingWorkshops } from "../lib/kimeu/calendar";
 import { getCourses } from "../lib/kimeu/courses";
+import { getPracticals, savePractical } from "../lib/kimeu/practicals";
 import { Router, type IRouter } from "express";
 import {
   AppendKimeuClinicianNoteBody,
@@ -10,6 +11,11 @@ import {
   CompleteKimeuSessionResponse,
   GetKimeuBootstrapResponse,
   GetKimeuCoursesResponse,
+  GetKimeuPracticalsParams,
+  GetKimeuPracticalsResponse,
+  SaveKimeuPracticalParams,
+  SaveKimeuPracticalBody,
+  SaveKimeuPracticalResponse,
   GetKimeuSessionParams,
   GetKimeuSessionResponse,
   GetKimeuTodayResponse,
@@ -41,6 +47,7 @@ import {
   readTab,
   appendSparseInputRow,
   testCopyReadiness,
+  withPracticalWriteLock,
 } from "../lib/kimeu/sheets";
 import {
   completeSession,
@@ -52,6 +59,24 @@ import {
 } from "../lib/kimeu/sessions";
 
 const router: IRouter = Router();
+
+router.get("/kimeu/courses/:workshopId/practicals", async (req, res): Promise<void> => {
+  const params = requireValidRequest(GetKimeuPracticalsParams.safeParse(req.params), "workshop ID");
+  const user = await requireActiveAppUser(req);
+  requireWorkshopAccess(user, params.workshopId);
+  res.setHeader("Cache-Control", "no-store");
+  res.json(GetKimeuPracticalsResponse.parse(await getPracticals(user, params.workshopId)));
+});
+
+router.post("/kimeu/courses/:workshopId/practicals", async (req, res): Promise<void> => {
+  const params = requireValidRequest(SaveKimeuPracticalParams.safeParse(req.params), "workshop ID");
+  const body = requireValidRequest(SaveKimeuPracticalBody.safeParse(req.body), "practical sign-off");
+  const user = await requireActiveAppUser(req);
+  requireRole(user, "RD");
+  requireWorkshopAccess(user, params.workshopId);
+  res.setHeader("Cache-Control", "no-store");
+  res.json(SaveKimeuPracticalResponse.parse(await savePractical(user, params.workshopId, body)));
+});
 
 router.get("/kimeu/courses", async (req, res, next): Promise<void> => {
   try {
@@ -306,11 +331,11 @@ router.post("/kimeu/clinician-notes", async (req, res): Promise<void> => {
     });
   }
   const noteId = String(updates[0].value);
-  await appendSparseInputRow("03g-Clinician Notes", updates, {
+  await withPracticalWriteLock(() => appendSparseInputRow("03g-Clinician Notes", updates, {
     headerRow: 2,
     dataStartRow: 3,
     autoHeaders: ["PT Name (auto)"],
-  });
+  }));
 
   const response = AppendKimeuClinicianNoteResponse.parse({
     noteId,

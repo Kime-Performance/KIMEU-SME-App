@@ -793,3 +793,41 @@ body { font-size: 14.5px; line-height: 1.5; color: var(--pp-fg); background: var
 .crumb-link:hover { color: var(--pp-brand); }
 .crumb { min-width: 0; }
 .crumb-current { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40vw; }
+/* Post-workshop practicals */
+.practicals { margin-top: 28px; }
+.practicals-intro { display: flex; align-items: center; gap: 6px; margin: -6px 0 14px; color: var(--pp-fg2); font-size: 13px; line-height: 1.5; }
+.practical-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.practical-card { padding: 16px; background: var(--pp-surface); border: 1px solid var(--pp-line); border-radius: 10px; }
+.practical-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.practical-who { display: grid; gap: 3px; min-width: 0; }
+.practical-who strong { font-size: 15px; color: var(--pp-fg); }
+.practical-who small { color: var(--pp-muted); font-size: 12px; overflow-wrap: anywhere; }
+.practical-result { flex: 0 0 auto; padding: 5px 9px; border-radius: 999px; font: 600 11px/1 var(--app-font-mono); color: var(--pp-muted); background: var(--pp-grid); }
+.practical-result.is-pass { color: var(--pp-good); background: var(--pp-good-soft); }
+.practical-result.is-fail { color: var(--pp-bad); background: var(--pp-badbg); }
+.practical-facts { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 10px; margin: 14px 0 0; }
+.practical-facts dt { font: 600 12px/1 var(--app-font-serif); letter-spacing: 1px; text-transform: uppercase; color: var(--pp-brand); }
+.practical-facts dd { margin: 5px 0 0; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.practical-history { margin-top: 12px; font-size: 12px; color: var(--pp-fg2); }
+.practical-history summary { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 600; color: var(--pp-brand-ink); }
+.practical-history ol { margin: 8px 0 0; padding: 0 0 0 12px; list-style: none; border-left: 2px solid var(--pp-line); display: grid; gap: 8px; }
+.practical-history span { font: 500 11px/1.4 var(--app-font-mono); color: var(--pp-muted); }
+.practical-history p { margin: 2px 0 0; white-space: pre-wrap; }
+.practical-open, .practical-save { margin-top: 12px; min-height: 44px; padding: 0 16px; color: #fff; background: var(--pp-brand); border: 0; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.practical-open:hover:not(:disabled), .practical-save:hover:not(:disabled) { background: var(--pp-brand-ink); }
+.practical-open:disabled, .practical-save:disabled { opacity: .5; cursor: not-allowed; }
+.practical-save { margin-top: 0; }
+.practical-ineligible { margin: 12px 0 0; padding: 9px 11px; color: var(--pp-warn); background: var(--pp-warnbg); border-radius: 7px; font-size: 12px; }
+.practical-form { display: grid; gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--pp-line); }
+.practical-form > label { display: grid; gap: 6px; font-size: 12px; font-weight: 600; color: var(--pp-fg2); }
+.practical-form input[type=date], .practical-form textarea { width: 100%; padding: 10px 11px; font-size: 14px; color: var(--pp-fg); background: var(--pp-bg); border: 1px solid var(--pp-line); border-radius: 7px; outline: none; }
+.practical-form input:focus, .practical-form textarea:focus { border-color: var(--pp-brand); box-shadow: 0 0 0 3px var(--pp-brand-soft); }
+.practical-choice { display: flex; gap: 8px; margin: 0; padding: 0; border: 0; }
+.practical-choice legend { margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--pp-fg2); }
+.practical-choice label { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; border: 1px solid var(--pp-line); border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.practical-choice label.is-on { color: var(--pp-brand-ink); background: var(--pp-brand-soft); border-color: var(--pp-brand); }
+.practical-choice input { accent-color: var(--pp-brand); }
+.practical-form-meta { display: flex; justify-content: space-between; gap: 10px; color: var(--pp-muted); font-size: 11px; }
+.practical-form-meta span:first-child { display: inline-flex; gap: 5px; align-items: flex-start; }
+.practical-link { padding: 0; color: inherit; background: none; border: 0; text-decoration: underline; font-weight: 700; cursor: pointer; }
+@media (max-width: 700px) { .practical-facts { grid-template-columns: 1fr 1fr; } }

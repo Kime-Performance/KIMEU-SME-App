@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, BookOpen, CircleAlert, ClipboardCheck, FileText,
 import { Link, useParams } from 'wouter';
 import { coursePath, groupCourses, stageLabel, useCourseCatalog } from '@/lib/courses';
 import { decodeSafe } from '@/components/course-nav';
+import { CoursePracticals } from '@/components/course-practicals';
 
 function Skeleton() {
   return <div className="session-list" aria-label="Loading courses">{[0, 1, 2].map((i) => <div className="session-skeleton" key={i}><div className="skeleton skeleton-line w-32" /><div className="skeleton skeleton-line w-56" /></div>)}</div>;
@@ -65,5 +66,6 @@ export function CourseDetailPage() {
         <p>{detail}</p>
       </section>)}
     </div>
+    <CoursePracticals key={course.workshopId} workshopId={course.workshopId} />
   </div>;
 }

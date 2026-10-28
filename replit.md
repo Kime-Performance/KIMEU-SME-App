@@ -2,6 +2,8 @@
 
 Phone-first workshop operations for KIMEU SMEs. Current scope is Phase 1: Today, live attendance, session completion and append-only clinician notes.
 
+Workshop pages also support RD post-workshop practical assessment on the test copy: assigned RDs (or Admins) record Pass/Fail and practical date after confirmed attendance. Not-passed assessments require feedback. The existing sheet formulas determine overall completion; practical sign-off does not override them.
+
 ## Run & Operate
 
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
@@ -35,6 +37,7 @@ Phone-first workshop operations for KIMEU SMEs. Current scope is Phase 1: Today,
 - Resolve columns by their headers. Only input fields may be written; preserve computed and array-formula cells.
 - Never write to 03-KIMEU Summary. Do not create walk-in records in 03e without resolving the spec's read-only tab rule.
 - Clinician notes fail closed unless 03g has a Visibility header. Do not weaken “Aaron + author” privacy.
+- RD assessment feedback retains that same private visibility and append-only history. The KIMEU director uses Admin access to view it.
 - All server permissions require a permitted organisation email and an active 03h user record, including assigned workshop checks.
 - No patient identifiers. Timestamps follow America/Los_Angeles.
 - Google Calendar is the official workshop schedule. Connect one-way for occurrence reference only; never use calendar guests or RSVPs as real attendance. SMEs take actual attendance live in the app.
