@@ -205,9 +205,9 @@ function CourseCrumb({ location }: { location: string }) {
 }
 
 function SessionUser() {
-  const { user, signOut } = useClerk();
+  const { user, signOut, openUserProfile } = useClerk();
   const name = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in';
-  return <div className="session-user"><div className="user-initial">{name.slice(0, 1).toUpperCase()}</div><div className="user-copy"><strong>{name}</strong><span>Workshop access</span></div><button type="button" onClick={() => signOut({ redirectUrl: basePath || '/' })} aria-label="Sign out" className="logout-button" data-testid="button-sign-out"><LogOut size={16} /></button></div>;
+  return <div className="session-user"><div className="user-initial">{name.slice(0, 1).toUpperCase()}</div><div className="user-copy"><strong>{name}</strong><span>Workshop access</span></div><button type="button" onClick={() => openUserProfile()} aria-label="Account and password settings" title="Account and password settings" className="logout-button" data-testid="button-account-security"><ShieldCheck size={16} /></button><button type="button" onClick={() => signOut({ redirectUrl: basePath || '/' })} aria-label="Sign out" className="logout-button" data-testid="button-sign-out"><LogOut size={16} /></button></div>;
 }
 
 function SyncStatus() {
@@ -433,7 +433,7 @@ function SessionPage() {
 
 function SettingsPage() {
   const { data, isLoading, isError, refetch, isFetching } = useGetKimeuBootstrap();
-  const { signOut } = useClerk();
+  const { signOut, user, openUserProfile } = useClerk();
   const isAdmin = data?.user?.roles?.some((role) => role.toLowerCase() === 'admin') ?? false;
   if (isLoading) return <Shell><div className="settings-skeleton"><div className="skeleton skeleton-line w-56" /><div className="skeleton skeleton-line w-full" /><div className="skeleton skeleton-line w-40" /></div></Shell>;
   return <Shell><div className="animate-rise">
@@ -451,6 +451,8 @@ function SettingsPage() {
       </section>
       <section className="settings-card account-card"><div className="settings-card-head"><div className="panel-icon panel-icon-warm"><ShieldCheck size={19} /></div><div><span className="section-kicker">CURRENT ACCESS</span><h2>Account status</h2></div></div>
         {data.user ? <div className="account-details"><div><span>Account</span><strong data-testid="text-account-email">{data.user.email}</strong></div><div><span>Name in sheets</span><strong>{data.user.nameInSheets || 'Not provided'}</strong></div><div><span>Access</span><strong className={data.user.active ? 'text-ready' : 'text-blocked'}>{data.user.active ? 'Active' : 'Inactive'}</strong></div><div><span>Roles</span><strong>{data.user.roles.length ? data.user.roles.join(', ') : 'None returned'}</strong></div><div className="account-wide"><span>Assigned workshops</span><strong>{data.user.workshopIds.length ? data.user.workshopIds.join(', ') : 'None returned'}</strong></div></div> : <div className="empty-inline"><UsersRound size={19} /><span>No KIMEU user record was returned for this account.</span></div>}
+        <p>{user?.passwordEnabled ? 'Your account has a password. Manage it securely under Security in your account settings.' : 'No password is set on your account yet. Open your account settings, choose Security, and add a password. Password options depend on the enabled sign-in methods.'}</p>
+        <button type="button" onClick={() => openUserProfile()} className="button-primary" data-testid="button-settings-password"><ShieldCheck size={15} /> {user?.passwordEnabled ? 'Manage password' : 'Set up password'}</button>
         <button type="button" onClick={() => signOut({ redirectUrl: basePath || '/' })} className="button-quiet signout-settings" data-testid="button-settings-sign-out"><LogOut size={15} /> Sign out</button>
       </section>
     </>}
