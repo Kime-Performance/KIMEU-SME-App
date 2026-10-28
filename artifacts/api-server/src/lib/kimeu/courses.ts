@@ -1,6 +1,6 @@
 import type { AppUser } from "./access";
 import { cell, dataRows, headerIndex, headersFor, KimeuError, readTab } from "./sheets";
-import { canLeadStage } from "./site-access-policy";
+import { canLeadStage, canonicalRole } from "./site-access-policy";
 
 export const isRdAttendanceOnly = (id: string) => id === "EN-CAD" || id === "F-SURG-OBS";
 export const isRdOnboarding = (id: string) => id === "F-11" || id === "F-12" || isRdAttendanceOnly(id);
@@ -25,22 +25,28 @@ export async function getCourses(user: AppUser) {
   const topicColumn = headerIndex(headers, "Region / Topic");
   const leadColumn = headerIndex(headers, "Lead SME");
   const admin = user.roles.includes("Admin");
+  const sme = user.roles.map(canonicalRole).some(role => role === "SME Assist" || role === "SME Lead");
   const courses = dataRows(snapshot).flatMap((row) => {
     const workshopId = cell(row.values, idColumn);
     const name = cell(row.values, nameColumn);
+    const stage = cell(row.values, stageColumn).trim();
+    // The reference tab also contains director instructions/settings. Those
+    // rows are not workshops and must not become "Unstaged" navigation links.
+    if (!workshopId || !name || !stage) return [];
     const rdCourse = user.roles.includes("RD") && isRdOnboarding(workshopId);
-    if (isRdOnboarding(workshopId) && !admin && !user.roles.includes("RD")) return [];
-    if (!workshopId || !name || (!admin && !rdCourse && !user.workshopIds.includes(workshopId))) return [];
+    if (isRdOnboarding(workshopId) && !admin && !user.roles.includes("RD") && !sme) return [];
+    // Catalog visibility does not grant attendance editing or RD sign-off.
+    if (!admin && !sme && !rdCourse && !user.workshopIds.includes(workshopId)) return [];
     return [{
-      workshopId, name, stage: isRdAttendanceOnly(workshopId) ? "Foundations" : cell(row.values, stageColumn),
+      workshopId, name, stage: isRdAttendanceOnly(workshopId) ? "Foundations" : stage,
       topic: cell(row.values, topicColumn) || null,
       leadSme: cell(row.values, leadColumn) || null,
     }];
   });
-  if (!courses.some(c => c.workshopId === "F-11") && (admin || user.roles.includes("RD"))) {
+  if (!courses.some(c => c.workshopId === "F-11") && (admin || user.roles.includes("RD") || sme)) {
     courses.unshift({ workshopId: "F-11", name: "1.1 Orientation", stage: "Foundations", topic: "RD-led onboarding", leadSme: "Regional Director" });
   }
-  if (!courses.some(c => c.workshopId === "F-SURG-OBS") && (admin || user.roles.includes("RD"))) {
+  if (!courses.some(c => c.workshopId === "F-SURG-OBS") && (admin || user.roles.includes("RD") || sme)) {
     courses.push({ workshopId: "F-SURG-OBS", name: "Surgical Observation", stage: "Foundations", topic: "RD attendance confirmation", leadSme: "Regional Director" });
   }
   return { courses };

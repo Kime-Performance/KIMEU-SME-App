@@ -43,7 +43,7 @@ const clerkAppearance = {
   options: {
     logoPlacement: 'inside' as const,
     logoLinkUrl: basePath || '/',
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+    logoImageUrl: `${window.location.origin}${basePath}/brand/kimeu-wordmark.png`,
   },
   variables: {
     colorPrimary: '#2767F4',
@@ -55,14 +55,14 @@ const clerkAppearance = {
     colorInputForeground: '#2A2A2A',
     colorNeutral: '#dde2e9',
     fontFamily: 'Open Sans',
-    borderRadius: '0.625rem',
+    borderRadius: '0.25rem',
   },
   elements: {
     rootBox: 'w-full flex justify-center',
-    cardBox: 'bg-[#ffffff] rounded-[10px] w-[440px] max-w-full overflow-hidden',
+    cardBox: 'bg-[#ffffff] rounded-[4px] border-t-[6px] border-[#2A2A2A] w-[440px] max-w-full overflow-hidden',
     card: '!shadow-none !border-0 !bg-transparent !rounded-none',
     footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
-    headerTitle: 'text-[#2A2A2A] font-semibold uppercase tracking-wide text-[28px] leading-none [font-family:Teko,Arial_Narrow,sans-serif]',
+    headerTitle: 'text-[#2A2A2A] font-bold uppercase tracking-wide text-[28px] leading-none [font-family:Teko,Arial_Narrow,sans-serif]',
     headerSubtitle: 'text-[#525a66]',
     socialButtonsBlockButtonText: 'text-[#2A2A2A] font-medium',
     formFieldLabel: 'text-[#2A2A2A] font-medium',
@@ -72,10 +72,10 @@ const clerkAppearance = {
     identityPreviewEditButton: 'text-[#2767F4]',
     formFieldSuccessText: 'text-[#2767F4]',
     alertText: 'text-[#8f2e2d]',
-    logoBox: 'rounded-lg overflow-hidden',
-    logoImage: 'h-10 w-10 rounded-lg',
+    logoBox: 'h-9',
+    logoImage: 'h-9 w-auto',
     socialButtonsBlockButton: 'border-[#dde2e9] bg-[#ffffff] hover:bg-[#f4f6f9]',
-    formButtonPrimary: 'bg-[#2767F4] hover:bg-[#1b4fc4] text-white',
+    formButtonPrimary: 'bg-[#2A2A2A] hover:bg-[#224DBE] text-white uppercase tracking-wider font-bold',
     formFieldInput: 'bg-[#f4f6f9] border-[#dde2e9] text-[#2A2A2A]',
     footerAction: 'border-t border-[#dde2e9]',
     dividerLine: 'bg-[#dde2e9]',
@@ -145,16 +145,16 @@ function HomePage() {
           <div><Cloud /><h3>Trust the sync state</h3><p>Setup and connection issues are shown plainly—never dressed up as saved.</p></div>
         </div>
       </section>
-      <footer className="welcome-footer"><BrandLockup /><span>Designed for dependable workshop operations.</span></footer>
+      <footer className="welcome-footer"><BrandLockup tone="dark" /><span>Designed for dependable workshop operations.</span></footer>
     </main>
   );
 }
 
-function BrandMark() {
-  return <div className="brand-mark" aria-hidden="true"><span>K</span><i /></div>;
+function BrandMark({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
+  return <img className="brand-wordmark" src={`${basePath}/brand/${tone === 'dark' ? 'kimeu-wordmark-reversed' : 'kimeu-wordmark'}.png`} alt="KIMEU" />;
 }
-function BrandLockup() {
-  return <Link href="/" className="brand-lockup" data-testid="link-brand-home"><BrandMark /><span><b>KIMEU</b><small>SME APP</small></span></Link>;
+function BrandLockup({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
+  return <Link href="/" className={`brand-lockup brand-lockup-${tone}`} data-testid="link-brand-home"><BrandMark tone={tone} /><span><small>SME APP</small></span></Link>;
 }
 
 function Shell({ children }: { children: ReactNode }) {
@@ -172,7 +172,7 @@ function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell">
       <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
-        <BrandLockup />
+        <BrandLockup tone="dark" />
         <div className="sidebar-label">WORKSPACE</div>
         <nav className="side-nav" aria-label="Main navigation">
           {links.map(({ href, label, icon: Icon }) => <Link key={href} href={href} className={`side-link ${location === href ? 'side-link-active' : ''}`} aria-current={location === href ? 'page' : undefined} data-testid={`link-nav-${label.toLowerCase()}`} onClick={() => setMenuOpen(false)}><Icon size={18} /><span>{label}</span>{location === href && <span className="nav-active-mark" />}</Link>)}

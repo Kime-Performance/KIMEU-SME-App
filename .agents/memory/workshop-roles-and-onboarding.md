@@ -28,3 +28,9 @@ Cadaver Lab and Surgical Observation are part of the Foundations pathway. Each n
 **Why:** The user explicitly added these two Foundations attendance requirements and requested Regional Director confirmation.
 
 **How to apply:** Treat both as attendance-only, not practical Pass/Fail assessments or weekly courses. Retain the existing Cadaver Lab identity and history instead of duplicating it as a new workshop. Keep their attendance distinct from overall pathway approval.
+
+Speed should appear as a single Advanced workshop in course navigation.
+
+**Why:** The user explicitly requested Speed as a singular Advanced workshop; it already exists in the shared catalog with historical Fellowship tracking.
+
+**How to apply:** Reuse that existing course rather than adding a duplicate. Its Advanced navigation category must not silently remove its existing Fellowship completion credit or change sheet eligibility rules.

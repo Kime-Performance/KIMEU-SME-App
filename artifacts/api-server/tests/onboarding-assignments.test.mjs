@@ -8,7 +8,7 @@ import { pathToFileURL } from "node:url";
 
 const temp = await mkdtemp(join(tmpdir(), "rd-onboarding-"));
 await build({
-  stdin: { contents: "export * from './src/lib/kimeu/onboarding'; export * from './src/lib/kimeu/sme-assignments';", resolveDir: new URL("../", import.meta.url).pathname, loader: "ts" },
+  stdin: { contents: "export * from './src/lib/kimeu/onboarding'; export * from './src/lib/kimeu/sme-assignments'; export * from './src/lib/kimeu/courses'; export { requireWorkshopAccess } from './src/lib/kimeu/access';", resolveDir: new URL("../", import.meta.url).pathname, loader: "ts" },
   outfile: join(temp, "module.mjs"), bundle: true, platform: "node", format: "esm",
   plugins: [{ name: "isolated-auth-and-sheets", setup(b) {
     b.onResolve({ filter: /^@replit\/connectors-sdk$/ }, () => ({ path: "sheets", namespace: "fixture" }));
@@ -21,7 +21,7 @@ await build({
 });
 const env = process.env.KIMEU_SHEET_ID;
 process.env.KIMEU_SHEET_ID = "isolated-rd-test-copy";
-const { getOnboarding, saveOnboarding, getSmeAssignments, saveSmeAssignment } = await import(pathToFileURL(join(temp, "module.mjs")).href);
+const { getOnboarding, saveOnboarding, getSmeAssignments, saveSmeAssignment, getCourses, requireCourseWriter, requireWorkshopAccess } = await import(pathToFileURL(join(temp, "module.mjs")).href);
 const T = "03i-RD Onboarding", F = "03c-Foundations Tracker", N = "03g-Clinician Notes", U = "03h-App Users";
 const tables = {
   [T]: [[], ["Record ID", "PT Email", "Workshop ID", "Week", "Session Date", "Minutes", "Attended", "RD Result", "Signed By", "Signed At", "Notes", "Last Updated By", "Last Updated", "Unit Complete", "Completed Weeks", "Course Status"]],
@@ -137,7 +137,10 @@ test("provider failures cannot partially change onboarding inputs or audit histo
   assert.deepEqual(tables, before);
 });
 test("Admin assigns SME Assist/Lead with matching workshops while preserving Admin and RD assignments", async () => {
+  tables["03a-KIMEU Workshops"].push(["RD practical required for sessions on or after", "2027-01-01"]);
   const current = await getSmeAssignments(admin);
+  assert.equal(current.courses.some(c => !c.stage.trim()), false);
+  assert.equal(current.courses.some(c => c.workshopId.startsWith("RD practical required")), false);
   assert.ok(current.staff[0].roles.includes("SME Assist"));
   await assert.rejects(getSmeAssignments(rd), { code: "ROLE_NOT_ALLOWED" });
   await assert.rejects(saveSmeAssignment(admin, { email: "sme@example.test", revision: current.revision, smeRoles: ["SME Assist"], workshopIds: ["FW-TEST"] }), { code: "SME_ASSIGNMENT_MISMATCH" });
@@ -146,6 +149,22 @@ test("Admin assigns SME Assist/Lead with matching workshops while preserving Adm
   assert.equal(saved.staff[0].active, true);
   assert.deepEqual(saved.staff[0].workshopIds, ["F-11", "FW-TEST"]);
   await assert.rejects(saveSmeAssignment(admin, { email: "admin@example.test", revision: current.revision, smeRoles: [], workshopIds: [] }), { code: "STAFF_CHANGED" });
+});
+test("approved SMEs can browse every workshop without gaining attendance or RD edit rights", async () => {
+  const assist = { ...admin, roles: ["SME Assist"], workshopIds: [] };
+  const catalog = await getCourses(assist);
+  assert.deepEqual(catalog.courses.map(course => course.workshopId).sort(),
+    ["EN-CAD", "F-11", "F-12", "F-SURG-OBS", "F-TEST", "FW-TEST"].sort());
+  assert.equal(catalog.courses.some(course => course.workshopId.startsWith("RD practical required")), false);
+  await assert.rejects(requireCourseWriter(assist, "FW-TEST"), { code: "SME_STAGE_NOT_ALLOWED" });
+  assert.throws(() => requireWorkshopAccess(assist, "FW-TEST"), { code: "WORKSHOP_NOT_ASSIGNED" });
+  await assert.rejects(getOnboarding(assist, "F-11"), { code: "ROLE_NOT_ALLOWED" });
+  const lead = { ...admin, roles: ["SME Lead"], workshopIds: [] };
+  assert.equal((await getCourses(lead)).courses.length, catalog.courses.length);
+  await assert.rejects(requireCourseWriter(lead, "F-TEST"), { code: "SME_STAGE_NOT_ALLOWED" });
+  const director = { ...admin, roles: ["RD"], workshopIds: [] };
+  assert.deepEqual((await getCourses(director)).courses.map(course => course.workshopId).sort(),
+    ["EN-CAD", "F-11", "F-12", "F-SURG-OBS"].sort());
 });
 test.after(async () => {
   if (env === undefined) delete process.env.KIMEU_SHEET_ID; else process.env.KIMEU_SHEET_ID = env;

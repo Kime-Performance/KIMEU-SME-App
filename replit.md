@@ -2,6 +2,10 @@
 
 Access is private: server authorization requires a verified primary `@kimeperformance.com` email, an active `03h-App Users` record, and an SME, RD, or Admin role. Company email alone does not grant access. Reviewer-only and CEU-only accounts do not enter the workspace. App-user authorization reads bypass the sheet cache so revocations apply on the next API request. Passwords and invitations belong to Clerk, never Google Sheets. Clerk email/password and Restricted/invitation-only sign-up must be configured separately in each Clerk environment; hiding public registration links is not provider-level enforcement.
 
+All approved SME Assist/Lead users can browse every workshop page, including RD-led course overviews. This is catalog visibility only: unassigned workshop PT tracking and RD-only sign-off records remain inaccessible, and attendance writes still require the proper SME title plus the individual workshop assignment. The administrator will assign staff after publishing; do not populate roles or invitations on their behalf.
+
+Publishing handoff: `docs/publishing-kimeu.md` covers public hosting with private app authorization, owner-only production Clerk setup, Kajabi link sharing, and the still-test-only sheet destination. `node scripts/check-published-workspace.mjs <verified-origin>` is a read-only, signed-out routing/access/cache check, not a production login acceptance test. Do not publish or enable master writes implicitly.
+
 Operational sheet readiness is separate from staff authorization. An already verified workspace keeps forms mounted during transient refresh failures, with a retry warning; explicit inactive/denied responses still close it. Every mutation independently rechecks the approved staff record.
 
 SME titles are SME Assist (Foundations) and SME Lead (Fellowship). Legacy Foundations SME / Elite SME roles are canonicalized at read time so access survives the transition. Admin Settings can edit SME titles and workshop assignments for existing staff while preserving non-SME roles and activation; server enforcement includes pathway restrictions.

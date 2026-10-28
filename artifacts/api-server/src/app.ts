@@ -46,6 +46,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Staff records, notes, access decisions and attendance must not be retained by
+// browsers or shared intermediary caches on the publicly reachable deployment.
+app.use("/api/kimeu", (_req, res, next) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("Pragma", "no-cache");
+  next();
+});
 app.use("/api", router);
 app.use(((error, req, res, _next) => {
   if (error instanceof KimeuError) {
