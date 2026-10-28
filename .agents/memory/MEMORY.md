@@ -4,3 +4,4 @@
 - [Data flow intent](data-flow-intent.md) — app records attendance/practical inputs and notes; KIMEU sheet calculates completion without an app approval.
 - [Workshop materials](workshop-materials.md) — link existing Drive presentation folders per workshop, with separate PDF/handout access.
 - [Private access](private-access.md) — workspace restricted to approved SMEs and RDs, with director/admin access retained; email/password sign-in intended.
+- [SME roles and onboarding](workshop-roles-and-onboarding.md) — SME Assist leads Foundations; SME Lead leads Fellowship; Orientation and weekly Evaluation Retention are RD-led.
