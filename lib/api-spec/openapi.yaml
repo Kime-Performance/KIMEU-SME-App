@@ -13,6 +13,34 @@ tags:
   - name: kimeu
     description: KIMEU workshop operations backed by Google Sheets
 paths:
+  /kimeu/courses/{workshopId}/tracking/{sessionDate}:
+    get:
+      operationId: getKimeuCourseTracking
+      parameters:
+        - { name: workshopId, in: path, required: true, schema: { type: string, minLength: 1 } }
+        - { name: sessionDate, in: path, required: true, schema: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' } }
+      responses:
+        "200":
+          description: Live PT directory with attendance and read-only sheet status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseTracking" }
+  /kimeu/courses/{workshopId}/tracking:
+    post:
+      operationId: saveKimeuCourseTracking
+      parameters:
+        - { name: workshopId, in: path, required: true, schema: { type: string, minLength: 1 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourseTrackingInput" }
+      responses:
+        "200":
+          description: Saved tracking reread from Sheets
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseTracking" }
   /kimeu/courses/{workshopId}/practicals:
     get:
       operationId: getKimeuPracticals
@@ -250,6 +278,46 @@ paths:
           description: Test spreadsheet or service account is not configured
 components:
   schemas:
+    CourseTrackingInput:
+      type: object
+      required: [sessionDate, revision, kind, marks]
+      properties:
+        sessionDate: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        revision: { type: string, minLength: 1 }
+        kind: { type: string, enum: [attendance] }
+        marks:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items: { $ref: "#/components/schemas/TrackingMark" }
+    TrackingMark:
+      type: object
+      required: [email, checked]
+      properties:
+        email: { type: string, minLength: 1 }
+        checked: { type: boolean }
+    CourseTracking:
+      type: object
+      required: [sessionDate, revision, canSaveAttendance, rosterRefreshedAt, people]
+      properties:
+        sessionDate: { type: string }
+        revision: { type: string }
+        canSaveAttendance: { type: boolean }
+        rosterRefreshedAt: { type: string }
+        people:
+          type: array
+          items: { $ref: "#/components/schemas/CourseTrackingPerson" }
+    CourseTrackingPerson:
+      type: object
+      required: [email, name, location, attended, practicalPassed, preCourseComplete, sheetStatus]
+      properties:
+        email: { type: string }
+        name: { type: string }
+        location: { type: string }
+        attended: { type: boolean }
+        practicalPassed: { type: boolean }
+        preCourseComplete: { type: boolean }
+        sheetStatus: { type: string }
     PracticalSignoff:
       type: object
       required: [recordKey, revision, result, practicalDate, notes]
@@ -397,7 +465,7 @@ components:
             - type: "null"
         access:
           type: string
-          enum: [allowed, domain_denied, inactive, not_configured]
+          enum: [allowed, domain_denied, inactive, role_denied, not_configured]
       required: [readiness, user, access]
     SessionSummary:
       type: object

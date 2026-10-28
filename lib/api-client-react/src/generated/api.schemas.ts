@@ -5,6 +5,50 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type CourseTrackingInputKind = typeof CourseTrackingInputKind[keyof typeof CourseTrackingInputKind];
+
+
+export const CourseTrackingInputKind = {
+  attendance: 'attendance',
+} as const;
+
+export interface TrackingMark {
+  /** @minLength 1 */
+  email: string;
+  checked: boolean;
+}
+
+export interface CourseTrackingInput {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  sessionDate: string;
+  /** @minLength 1 */
+  revision: string;
+  kind: CourseTrackingInputKind;
+  /**
+     * @minItems 1
+     * @maxItems 200
+     */
+  marks: TrackingMark[];
+}
+
+export interface CourseTrackingPerson {
+  email: string;
+  name: string;
+  location: string;
+  attended: boolean;
+  practicalPassed: boolean;
+  preCourseComplete: boolean;
+  sheetStatus: string;
+}
+
+export interface CourseTracking {
+  sessionDate: string;
+  revision: string;
+  canSaveAttendance: boolean;
+  rosterRefreshedAt: string;
+  people: CourseTrackingPerson[];
+}
+
 export type PracticalSignoffResult = typeof PracticalSignoffResult[keyof typeof PracticalSignoffResult];
 
 
@@ -132,6 +176,7 @@ export const BootstrapResponseAccess = {
   allowed: 'allowed',
   domain_denied: 'domain_denied',
   inactive: 'inactive',
+  role_denied: 'role_denied',
   not_configured: 'not_configured',
 } as const;
 

@@ -1,8 +1,12 @@
 # KIMEU SME App
 
+Access is private: server authorization requires a verified primary `@kimeperformance.com` email, an active `03h-App Users` record, and an SME, RD, or Admin role. Company email alone does not grant access. Reviewer-only and CEU-only accounts do not enter the workspace. App-user authorization reads bypass the sheet cache so revocations apply on the next API request. Passwords and invitations belong to Clerk, never Google Sheets. Clerk email/password and Restricted/invitation-only sign-up must be configured separately in each Clerk environment; hiding public registration links is not provider-level enforcement.
+
 Phone-first workshop operations for KIMEU SMEs. Current scope is Phase 1: Today, live attendance, session completion and append-only clinician notes.
 
 Workshop pages also support RD post-workshop practical assessment on the test copy: assigned RDs (or Admins) record Pass/Fail and practical date after confirmed attendance. Not-passed assessments require feedback. The existing sheet formulas determine overall completion; practical sign-off does not override them.
+
+Each workshop subpage includes an explicit-save attendance PT checklist and separate RD practical assessment. There is no overall-completion checklist, verification save, or approval in the SME app. The KIMEU sheet calculates completion from recorded inputs, including RD Pass and Director-uploaded Kajabi pre-course progress, for its Summary and Foundations/Fellowship tabs and the Clinician Development tool. Preserve all completion formulas and existing note history. Presentation and supporting-material sections remain unpopulated until the user supplies links.
 
 ## Run & Operate
 

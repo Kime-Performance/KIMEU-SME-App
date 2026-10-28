@@ -13,5 +13,6 @@ export const BootstrapResponseAccess = {
   allowed: 'allowed',
   domain_denied: 'domain_denied',
   inactive: 'inactive',
+  role_denied: 'role_denied',
   not_configured: 'not_configured',
 } as const;

@@ -1,5 +1,6 @@
 - [Clerk package compatibility](clerk-package-compatibility.md) — canonical managed-auth wiring requires current Clerk React APIs, not the older v5 major.
 - [Google connector permissions](google-connector-permissions.md) — assess each API scope; Drive read-only does not imply Sheets read-only.
 - [Workshop scheduling](workshop-scheduling.md) — repeated Foundations offerings and regional Advanced dates; annual schedules can shift last minute.
-- [Data flow intent](data-flow-intent.md) — roster reads from KIME; SME attendance, PT completion, and director-visible notes write to KIMEU.
+- [Data flow intent](data-flow-intent.md) — app records attendance/practical inputs and notes; KIMEU sheet calculates completion without an app approval.
 - [Workshop materials](workshop-materials.md) — link existing Drive presentation folders per workshop, with separate PDF/handout access.
+- [Private access](private-access.md) — workspace restricted to approved SMEs and RDs, with director/admin access retained; email/password sign-in intended.

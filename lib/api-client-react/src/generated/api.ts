@@ -27,6 +27,8 @@ import type {
   ClinicianNoteResponse,
   CompleteSessionInput,
   CourseCatalog,
+  CourseTracking,
+  CourseTrackingInput,
   HealthStatus,
   OpenSessionInput,
   PracticalSignoff,
@@ -64,6 +66,165 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetKimeuCourseTrackingUrl = (workshopId: string,
+    sessionDate: string,) => {
+
+
+
+
+  return `/api/kimeu/courses/${workshopId}/tracking/${sessionDate}`
+}
+
+export const getKimeuCourseTracking = async (workshopId: string,
+    sessionDate: string, options?: Parameters<typeof customFetch>[1]): Promise<CourseTracking> => {
+
+  return customFetch<CourseTracking>(getGetKimeuCourseTrackingUrl(workshopId,sessionDate),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKimeuCourseTrackingQueryKey = (workshopId: string,
+    sessionDate: string,) => {
+    return [
+    `/api/kimeu/courses/${workshopId}/tracking/${sessionDate}`
+    ] as const;
+    }
+
+
+export const getGetKimeuCourseTrackingQueryOptions = <TData = Awaited<ReturnType<typeof getKimeuCourseTracking>>, TError = ErrorType<unknown>>(workshopId: string,
+    sessionDate: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKimeuCourseTracking>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKimeuCourseTrackingQueryKey(workshopId,sessionDate);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKimeuCourseTracking>>> = ({ signal }) => getKimeuCourseTracking(workshopId,sessionDate, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: workshopId !== null && workshopId !== undefined && sessionDate !== null && sessionDate !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKimeuCourseTracking>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetKimeuCourseTrackingQueryResult = NonNullable<Awaited<ReturnType<typeof getKimeuCourseTracking>>>
+export type GetKimeuCourseTrackingQueryError = ErrorType<unknown>
+
+
+
+export function useGetKimeuCourseTracking<TData = Awaited<ReturnType<typeof getKimeuCourseTracking>>, TError = ErrorType<unknown>>(
+ workshopId: string,
+    sessionDate: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKimeuCourseTracking>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetKimeuCourseTrackingQueryOptions(workshopId,sessionDate,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveKimeuCourseTrackingUrl = (workshopId: string,) => {
+
+
+
+
+  return `/api/kimeu/courses/${workshopId}/tracking`
+}
+
+export const saveKimeuCourseTracking = async (workshopId: string,
+    courseTrackingInput: CourseTrackingInput, options?: Parameters<typeof customFetch>[1]): Promise<CourseTracking> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CourseTracking>(getSaveKimeuCourseTrackingUrl(workshopId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(courseTrackingInput)
+  }
+);}
+
+
+
+
+
+export const getSaveKimeuCourseTrackingMutationKey = () => ['saveKimeuCourseTracking'] as const;
+
+export const getSaveKimeuCourseTrackingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveKimeuCourseTracking>>, TError,SaveKimeuCourseTrackingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveKimeuCourseTracking>>, TError,SaveKimeuCourseTrackingMutationVariables, TContext> => {
+
+const mutationKey = getSaveKimeuCourseTrackingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveKimeuCourseTracking>>, SaveKimeuCourseTrackingMutationVariables> = (props) => {
+          const {workshopId,data} = props ?? {};
+
+          return  saveKimeuCourseTracking(workshopId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveKimeuCourseTrackingMutationResult = NonNullable<Awaited<ReturnType<typeof saveKimeuCourseTracking>>>
+    export type SaveKimeuCourseTrackingMutationBody = BodyType<CourseTrackingInput>
+    export type SaveKimeuCourseTrackingMutationError = ErrorType<unknown>
+    export type SaveKimeuCourseTrackingMutationVariables = {workshopId: string;data: BodyType<CourseTrackingInput>}
+
+    export const useSaveKimeuCourseTracking = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveKimeuCourseTracking>>, TError,SaveKimeuCourseTrackingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveKimeuCourseTracking>>,
+        TError,
+        SaveKimeuCourseTrackingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveKimeuCourseTrackingMutationOptions(options));
+    }
 
 export const getGetKimeuPracticalsUrl = (workshopId: string,) => {
 

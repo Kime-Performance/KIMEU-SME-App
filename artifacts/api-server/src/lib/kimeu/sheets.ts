@@ -17,6 +17,10 @@ const ALLOWED_TABS = new Set([
 ]);
 const WRITE_ALLOWLIST: Record<string, ReadonlySet<string>> = {
   "03b-Advanced Workshop Log": new Set([
+    "PT Email",
+    "PT Name",
+    "Workshop ID",
+    "Session Date",
     "Attended",
     "Attendance Confirmed By",
     "Practical Date",
@@ -26,6 +30,7 @@ const WRITE_ALLOWLIST: Record<string, ReadonlySet<string>> = {
     "Last Updated",
   ]),
   "03c-Foundations Tracker": new Set([
+    "PT Email",
     "Session Date",
     "Attended (SME)",
     "Practical Date",
@@ -474,6 +479,46 @@ function assertInputHeader(tabName: string, header: string): void {
       "SHEET_WRITE_NOT_ALLOWED",
     );
   }
+}
+
+// New clinician rows need the sheet's own relative formulas. Copy only formula
+// cells into NEW rows; never overwrite an existing record or use app formulas.
+export async function prepareTrackingTemplateRows(tabName: string, firstRow: number, count: number): Promise<void> {
+  if (!["03b-Advanced Workshop Log", "03c-Foundations Tracker"].includes(tabName) ||
+      !Number.isInteger(firstRow) || firstRow < 5 || !Number.isInteger(count) || count < 1) {
+    throw new KimeuError("Invalid new tracking row request.", 400, "INVALID_TEMPLATE_REQUEST");
+  }
+  const current = await readTab(tabName, { force: true });
+  if (firstRow <= current.rows.length) {
+    throw new KimeuError("New template rows cannot replace existing rows.", 409, "TEMPLATE_ROW_OCCUPIED");
+  }
+  const metadata = await requestSheets<{
+    sheets: Array<{ properties: { sheetId: number; title: string; gridProperties: { rowCount: number; columnCount: number } } }>;
+  }>("?fields=sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)))");
+  const properties = metadata.sheets.find(s => s.properties.title === tabName)?.properties;
+  if (!properties) throw new KimeuError("The tracking tab could not be found.", 409, "SHEET_TAB_MISSING");
+  const template = await requestSheets<{ values?: string[][] }>(
+    `/values/${encodeURIComponent(`${quoteSheetName(tabName)}!A4:AZ4`)}?valueRenderOption=FORMULA`);
+  const formulas = (template.values?.[0] ?? []).flatMap((value, column) =>
+    String(value).startsWith("=") ? [{ column, formula: String(value) }] : []);
+  if (!formulas.length || formulas.some(f => /\bARRAYFORMULA\s*\(/i.test(f.formula))) {
+    throw new KimeuError("A director must prepare the tracking template before adding PTs. No formulas were changed.", 409, "TEMPLATE_REVIEW_REQUIRED");
+  }
+  const sheetId = properties.sheetId;
+  const requests: unknown[] = [];
+  const requiredRows = firstRow + count - 1;
+  if (properties.gridProperties.rowCount < requiredRows) {
+    requests.push({ appendDimension: { sheetId, dimension: "ROWS", length: requiredRows - properties.gridProperties.rowCount } });
+  }
+  for (const { column } of formulas) requests.push({
+    copyPaste: {
+      source: { sheetId, startRowIndex: 3, endRowIndex: 4, startColumnIndex: column, endColumnIndex: column + 1 },
+      destination: { sheetId, startRowIndex: firstRow - 1, endRowIndex: firstRow - 1 + count, startColumnIndex: column, endColumnIndex: column + 1 },
+      pasteType: "PASTE_FORMULA",
+    },
+  });
+  await requestSheets(":batchUpdate", { method: "POST", body: { requests } });
+  invalidateTab(tabName);
 }
 
 export async function appendSparseInputRow(

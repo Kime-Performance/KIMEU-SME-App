@@ -1,5 +1,6 @@
 import { clerkClient, getAuth } from "@clerk/express";
 import type { Request } from "express";
+import { hasSiteRole, verifiedPrimaryEmail } from "./site-access-policy";
 import {
   cell,
   getBasicReadiness,
@@ -40,11 +41,7 @@ export async function signedInEmail(req: Request): Promise<string> {
 
   try {
     const user = await clerkClient.users.getUser(userId);
-    const email =
-      user.primaryEmailAddress?.emailAddress ??
-      user.emailAddresses.find((item) => item.id === user.primaryEmailAddressId)
-        ?.emailAddress ??
-      "";
+    const email = verifiedPrimaryEmail(user);
     if (!email) {
       throw new KimeuError(
         "Your sign-in account does not have a verified email address.",
@@ -83,7 +80,8 @@ export async function findActiveAppUser(email: string): Promise<AppUser | null> 
       "SHEET_NOT_CONFIGURED",
     );
   }
-  const snapshot = await readTab("03h-App Users");
+  // Revocations must apply on the next request, not after the sheet cache expires.
+  const snapshot = await readTab("03h-App Users", { force: true });
   const headers = headersFor(snapshot);
   const emailIndex = headerIndex(headers, "Email");
   const nameIndex = headerIndex(headers, "Name in Sheets");
@@ -134,6 +132,13 @@ export async function requireActiveAppUser(req: Request): Promise<AppUser> {
       "APP_USER_INACTIVE",
     );
   }
+  if (!hasSiteRole(user.roles)) {
+    throw new KimeuError(
+      "KIMEU is private to approved SMEs, Regional Directors, and administrators.",
+      403,
+      "SITE_ROLE_NOT_ALLOWED",
+    );
+  }
   return user;
 }
 
@@ -177,6 +182,9 @@ export async function getBootstrapForRequest(req: Request) {
   const user = await findActiveAppUser(email);
   if (!user) {
     return { readiness, user: null, access: "inactive" as const };
+  }
+  if (!hasSiteRole(user.roles)) {
+    return { readiness, user: null, access: "role_denied" as const };
   }
   if (user.roles.includes("Admin")) {
     readiness.sheetId = getSheetIdForAdmin();

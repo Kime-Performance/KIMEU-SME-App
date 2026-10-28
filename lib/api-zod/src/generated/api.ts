@@ -9,6 +9,73 @@ import * as zod from 'zod';
 
 
 
+export const getKimeuCourseTrackingPathSessionDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const GetKimeuCourseTrackingParams = zod.object({
+  "workshopId": zod.coerce.string().min(1),
+  "sessionDate": zod.coerce.string().regex(getKimeuCourseTrackingPathSessionDateRegExp)
+})
+
+export const GetKimeuCourseTrackingResponse = zod.object({
+  "sessionDate": zod.string(),
+  "revision": zod.string(),
+  "canSaveAttendance": zod.boolean(),
+  "rosterRefreshedAt": zod.string(),
+  "people": zod.array(zod.object({
+  "email": zod.string(),
+  "name": zod.string(),
+  "location": zod.string(),
+  "attended": zod.boolean(),
+  "practicalPassed": zod.boolean(),
+  "preCourseComplete": zod.boolean(),
+  "sheetStatus": zod.string()
+}))
+})
+
+
+
+
+
+export const SaveKimeuCourseTrackingParams = zod.object({
+  "workshopId": zod.coerce.string().min(1)
+})
+
+export const saveKimeuCourseTrackingBodySessionDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const saveKimeuCourseTrackingBodyMarksMax = 200;
+
+
+
+export const SaveKimeuCourseTrackingBody = zod.object({
+  "sessionDate": zod.string().regex(saveKimeuCourseTrackingBodySessionDateRegExp),
+  "revision": zod.string().min(1),
+  "kind": zod.enum(['attendance']),
+  "marks": zod.array(zod.object({
+  "email": zod.string().min(1),
+  "checked": zod.boolean()
+})).min(1).max(saveKimeuCourseTrackingBodyMarksMax)
+})
+
+export const SaveKimeuCourseTrackingResponse = zod.object({
+  "sessionDate": zod.string(),
+  "revision": zod.string(),
+  "canSaveAttendance": zod.boolean(),
+  "rosterRefreshedAt": zod.string(),
+  "people": zod.array(zod.object({
+  "email": zod.string(),
+  "name": zod.string(),
+  "location": zod.string(),
+  "attended": zod.boolean(),
+  "practicalPassed": zod.boolean(),
+  "preCourseComplete": zod.boolean(),
+  "sheetStatus": zod.string()
+}))
+})
+
+
+
 
 
 export const GetKimeuPracticalsParams = zod.object({
@@ -112,7 +179,7 @@ export const GetKimeuBootstrapResponse = zod.object({
   "workshopIds": zod.array(zod.string()),
   "active": zod.boolean()
 }),zod.null()]),
-  "access": zod.enum(['allowed', 'domain_denied', 'inactive', 'not_configured'])
+  "access": zod.enum(['allowed', 'domain_denied', 'inactive', 'role_denied', 'not_configured'])
 })
 
 

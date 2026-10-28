@@ -101,10 +101,16 @@ function ClerkQueryClientCacheInvalidator() {
 }
 
 function SignInPage() {
-  return <div className="auth-wall"><div className="auth-intro"><BrandMark /><span>FIELD OPERATIONS</span><h1>Good work starts with a clear record.</h1><p>Sign in to manage workshop sessions, attendance and follow-up.</p></div><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>;
+  return <div className="auth-wall"><div className="auth-intro"><BrandMark /><span>PRIVATE KIMEU WORKSPACE</span><h1>Good work starts with a clear record.</h1><p>Sign in with your approved work account. Access is limited to KIMEU SMEs, Regional Directors, and administrators.</p></div><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} appearance={{ elements: { footerAction: { display: 'none' } } }} /></div>;
 }
 
 function SignUpPage() {
+  // Invitation redemption still needs Clerk's canonical sign-up route. Hiding
+  // public registration is not the security boundary: Sheets authorization
+  // protects every API, and Clerk's Restricted mode must be enabled separately.
+  if (!new URLSearchParams(window.location.search).has('__clerk_ticket')) {
+    return <div className="auth-wall"><div className="auth-intro"><BrandMark /><span>PRIVATE KIMEU WORKSPACE</span><h1>Access by invitation.</h1><p>Ask the KIMEU Director to approve your SME or Regional Director account. Creating an account alone does not grant access.</p><Link href="/sign-in" className="button-primary" data-testid="link-approved-sign-in">Return to sign in</Link></div></div>;
+  }
   return <div className="auth-wall"><div className="auth-intro"><BrandMark /><span>KIMEU WORKSHOP NETWORK</span><h1>Make room for better practice.</h1><p>Access is confirmed against your organisation and assigned workshops.</p></div><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>;
 }
 
@@ -128,7 +134,7 @@ function HomePage() {
           <div className="board-row"><span className="board-index">03</span><div><strong>Close the loop</strong><small>Leave the next session ready</small></div><ChevronRight size={17} /></div>
           <div className="board-footer"><span className="sync-mark"><span /> SYNC STATUS</span><span>Connected when configured</span></div>
         </div>
-        <div className="hero-index">A FIELD TOOL FOR<br />KIMEU SMEs & REVIEWERS</div>
+        <div className="hero-index">A PRIVATE FIELD TOOL FOR<br />KIMEU SMEs & REGIONAL DIRECTORS</div>
       </section>
       <section className="welcome-lower">
         <div className="welcome-caption"><span>01 — THE WORKFLOW</span><strong>Built for the room,<br />not the spreadsheet.</strong></div>
@@ -152,10 +158,16 @@ function BrandLockup() {
 
 function Shell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
-  const { data: bootstrap } = useGetKimeuBootstrap();
+  const { data: bootstrap, isLoading, isError, refetch } = useGetKimeuBootstrap({
+    query: { queryKey: getGetKimeuBootstrapQueryKey(), refetchInterval: 30_000, refetchOnWindowFocus: true },
+  });
+  const { signOut } = useClerk();
   const [menuOpen, setMenuOpen] = useState(false);
   const admin = bootstrap?.user?.roles?.some((role) => role.toLowerCase() === 'admin') ?? false;
   const links = [{ href: '/today', label: 'Today', icon: CalendarDays }, ...(admin ? [{ href: '/settings', label: 'Settings', icon: Settings2 }] : [])];
+  if (isLoading) return <main className="auth-wall" role="status"><p>Checking your KIMEU access…</p></main>;
+  if (isError || !bootstrap) return <main className="auth-wall"><ErrorState title="Access could not be verified" detail="The workspace stays locked until your access is confirmed." retry={() => refetch()} /></main>;
+  if (bootstrap.access !== 'allowed') return <main className="auth-wall"><div className="auth-intro"><BrandMark /><span>PRIVATE KIMEU WORKSPACE</span><h1>Approved access required.</h1><p>This workspace is available only to active, approved SMEs, Regional Directors, and administrators. Contact the KIMEU Director about your access.</p><AccessBanner bootstrap={bootstrap} /><button type="button" className="button-primary" onClick={() => signOut({ redirectUrl: basePath || '/' })} data-testid="button-denied-sign-out">Sign out</button></div></main>;
   return (
     <div className="app-shell">
       <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
@@ -210,6 +222,7 @@ function AccessBanner({ bootstrap }: { bootstrap: BootstrapResponse | undefined 
   const content = {
     domain_denied: ['Access not available', 'This account is outside the permitted organisation domain. Contact your KIMEU administrator.'],
     inactive: ['Account inactive', 'Your account is not currently active for KIMEU. Ask an administrator to review your access.'],
+    role_denied: ['Access not permitted', 'Only approved SMEs, Regional Directors, and administrators can use this workspace.'],
     not_configured: ['Workspace setup incomplete', 'The workshop sheet connection is not configured. Session data and writes are unavailable until setup is complete.'],
   }[bootstrap.access];
   if (!content) return null;
