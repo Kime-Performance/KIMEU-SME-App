@@ -1,6 +1,6 @@
 import { clerkClient, getAuth } from "@clerk/express";
 import type { Request } from "express";
-import { hasSiteRole, verifiedPrimaryEmail } from "./site-access-policy";
+import { canonicalRole, hasSiteRole, verifiedPrimaryEmail } from "./site-access-policy";
 import {
   cell,
   getBasicReadiness,
@@ -16,6 +16,8 @@ import {
 
 export const KIMEU_EMAIL_DOMAIN = "kimeperformance.com";
 export const KIMEU_ROLES = [
+  "SME Assist",
+  "SME Lead",
   "Foundations SME",
   "Elite SME",
   "RD",
@@ -107,7 +109,7 @@ export async function findActiveAppUser(email: string): Promise<AppUser | null> 
   return {
     email,
     nameInSheets: cell(row, nameIndex),
-    roles: splitList(cell(row, rolesIndex)).filter((role) =>
+    roles: [...new Set(splitList(cell(row, rolesIndex)).map(canonicalRole))].filter((role) =>
       (KIMEU_ROLES as readonly string[]).includes(role),
     ),
     workshopIds: splitList(cell(row, workshopIndex)),
@@ -144,7 +146,7 @@ export async function requireActiveAppUser(req: Request): Promise<AppUser> {
 
 export function requireRole(user: AppUser, ...roles: KimeuRole[]): void {
   if (user.roles.includes("Admin")) return;
-  if (!roles.some((role) => user.roles.includes(role))) {
+  if (!roles.some((role) => user.roles.map(canonicalRole).includes(canonicalRole(role)))) {
     throw new KimeuError(
       "Your KIMEU role does not allow this action.",
       403,
@@ -175,17 +177,20 @@ export async function getBootstrapForRequest(req: Request) {
     };
   }
 
-  const readiness = await testCopyReadiness();
-  if (!readiness.configured) {
-    return { readiness, user: null, access: "not_configured" as const };
+  const basic = getBasicReadiness();
+  if (!basic.configured) {
+    return { readiness: await testCopyReadiness(), user: null, access: "not_configured" as const };
   }
+  // Authorization depends on the freshly read staff record, not whether every
+  // separate workshop/log tab happened to pass its connection/readiness probe.
   const user = await findActiveAppUser(email);
   if (!user) {
-    return { readiness, user: null, access: "inactive" as const };
+    return { readiness: basic, user: null, access: "inactive" as const };
   }
   if (!hasSiteRole(user.roles)) {
-    return { readiness, user: null, access: "role_denied" as const };
+    return { readiness: basic, user: null, access: "role_denied" as const };
   }
+  const readiness = await testCopyReadiness();
   if (user.roles.includes("Admin")) {
     readiness.sheetId = getSheetIdForAdmin();
   }

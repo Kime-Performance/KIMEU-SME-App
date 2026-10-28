@@ -30,11 +30,15 @@ import type {
   CourseTracking,
   CourseTrackingInput,
   HealthStatus,
+  OnboardingInput,
+  OnboardingWorkspace,
   OpenSessionInput,
   PracticalSignoff,
   PracticalWorkspace,
   SessionDetail,
   SessionSummary,
+  SmeAssignmentInput,
+  SmeAssignments,
   TodayResponse,
   UnmarkedAttendance,
   UpcomingSchedule
@@ -66,6 +70,313 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetKimeuSmeAssignmentsUrl = () => {
+
+
+
+
+  return `/api/kimeu/admin/sme-assignments`
+}
+
+export const getKimeuSmeAssignments = async ( options?: Parameters<typeof customFetch>[1]): Promise<SmeAssignments> => {
+
+  return customFetch<SmeAssignments>(getGetKimeuSmeAssignmentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKimeuSmeAssignmentsQueryKey = () => {
+    return [
+    `/api/kimeu/admin/sme-assignments`
+    ] as const;
+    }
+
+
+export const getGetKimeuSmeAssignmentsQueryOptions = <TData = Awaited<ReturnType<typeof getKimeuSmeAssignments>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKimeuSmeAssignments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKimeuSmeAssignmentsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKimeuSmeAssignments>>> = ({ signal }) => getKimeuSmeAssignments({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKimeuSmeAssignments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetKimeuSmeAssignmentsQueryResult = NonNullable<Awaited<ReturnType<typeof getKimeuSmeAssignments>>>
+export type GetKimeuSmeAssignmentsQueryError = ErrorType<unknown>
+
+
+
+export function useGetKimeuSmeAssignments<TData = Awaited<ReturnType<typeof getKimeuSmeAssignments>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKimeuSmeAssignments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetKimeuSmeAssignmentsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveKimeuSmeAssignmentUrl = () => {
+
+
+
+
+  return `/api/kimeu/admin/sme-assignments`
+}
+
+export const saveKimeuSmeAssignment = async (smeAssignmentInput: SmeAssignmentInput, options?: Parameters<typeof customFetch>[1]): Promise<SmeAssignments> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SmeAssignments>(getSaveKimeuSmeAssignmentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(smeAssignmentInput)
+  }
+);}
+
+
+
+
+
+export const getSaveKimeuSmeAssignmentMutationKey = () => ['saveKimeuSmeAssignment'] as const;
+
+export const getSaveKimeuSmeAssignmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveKimeuSmeAssignment>>, TError,SaveKimeuSmeAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveKimeuSmeAssignment>>, TError,SaveKimeuSmeAssignmentMutationVariables, TContext> => {
+
+const mutationKey = getSaveKimeuSmeAssignmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveKimeuSmeAssignment>>, SaveKimeuSmeAssignmentMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveKimeuSmeAssignment(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveKimeuSmeAssignmentMutationResult = NonNullable<Awaited<ReturnType<typeof saveKimeuSmeAssignment>>>
+    export type SaveKimeuSmeAssignmentMutationBody = BodyType<SmeAssignmentInput>
+    export type SaveKimeuSmeAssignmentMutationError = ErrorType<unknown>
+    export type SaveKimeuSmeAssignmentMutationVariables = {data: BodyType<SmeAssignmentInput>}
+
+    export const useSaveKimeuSmeAssignment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveKimeuSmeAssignment>>, TError,SaveKimeuSmeAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveKimeuSmeAssignment>>,
+        TError,
+        SaveKimeuSmeAssignmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveKimeuSmeAssignmentMutationOptions(options));
+    }
+
+export const getGetKimeuOnboardingUrl = (courseId: 'F-11' | 'F-12' | 'EN-CAD' | 'F-SURG-OBS',) => {
+
+
+
+
+  return `/api/kimeu/onboarding/${courseId}`
+}
+
+export const getKimeuOnboarding = async (courseId: 'F-11' | 'F-12' | 'EN-CAD' | 'F-SURG-OBS', options?: Parameters<typeof customFetch>[1]): Promise<OnboardingWorkspace> => {
+
+  return customFetch<OnboardingWorkspace>(getGetKimeuOnboardingUrl(courseId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKimeuOnboardingQueryKey = (courseId: 'F-11' | 'F-12' | 'EN-CAD' | 'F-SURG-OBS',) => {
+    return [
+    `/api/kimeu/onboarding/${courseId}`
+    ] as const;
+    }
+
+
+export const getGetKimeuOnboardingQueryOptions = <TData = Awaited<ReturnType<typeof getKimeuOnboarding>>, TError = ErrorType<unknown>>(courseId: 'F-11' | 'F-12' | 'EN-CAD' | 'F-SURG-OBS', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKimeuOnboarding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKimeuOnboardingQueryKey(courseId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKimeuOnboarding>>> = ({ signal }) => getKimeuOnboarding(courseId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: courseId !== null && courseId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKimeuOnboarding>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetKimeuOnboardingQueryResult = NonNullable<Awaited<ReturnType<typeof getKimeuOnboarding>>>
+export type GetKimeuOnboardingQueryError = ErrorType<unknown>
+
+
+
+export function useGetKimeuOnboarding<TData = Awaited<ReturnType<typeof getKimeuOnboarding>>, TError = ErrorType<unknown>>(
+ courseId: 'F-11' | 'F-12' | 'EN-CAD' | 'F-SURG-OBS', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKimeuOnboarding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetKimeuOnboardingQueryOptions(courseId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveKimeuOnboardingUrl = (courseId: 'F-11' | 'F-12' | 'EN-CAD' | 'F-SURG-OBS',) => {
+
+
+
+
+  return `/api/kimeu/onboarding/${courseId}`
+}
+
+export const saveKimeuOnboarding = async (courseId: 'F-11' | 'F-12' | 'EN-CAD' | 'F-SURG-OBS',
+    onboardingInput: OnboardingInput, options?: Parameters<typeof customFetch>[1]): Promise<OnboardingWorkspace> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OnboardingWorkspace>(getSaveKimeuOnboardingUrl(courseId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(onboardingInput)
+  }
+);}
+
+
+
+
+
+export const getSaveKimeuOnboardingMutationKey = () => ['saveKimeuOnboarding'] as const;
+
+export const getSaveKimeuOnboardingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveKimeuOnboarding>>, TError,SaveKimeuOnboardingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveKimeuOnboarding>>, TError,SaveKimeuOnboardingMutationVariables, TContext> => {
+
+const mutationKey = getSaveKimeuOnboardingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveKimeuOnboarding>>, SaveKimeuOnboardingMutationVariables> = (props) => {
+          const {courseId,data} = props ?? {};
+
+          return  saveKimeuOnboarding(courseId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveKimeuOnboardingMutationResult = NonNullable<Awaited<ReturnType<typeof saveKimeuOnboarding>>>
+    export type SaveKimeuOnboardingMutationBody = BodyType<OnboardingInput>
+    export type SaveKimeuOnboardingMutationError = ErrorType<unknown>
+    export type SaveKimeuOnboardingMutationVariables = {courseId: 'F-11' | 'F-12' | 'EN-CAD' | 'F-SURG-OBS';data: BodyType<OnboardingInput>}
+
+    export const useSaveKimeuOnboarding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveKimeuOnboarding>>, TError,SaveKimeuOnboardingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveKimeuOnboarding>>,
+        TError,
+        SaveKimeuOnboardingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveKimeuOnboardingMutationOptions(options));
+    }
 
 export const getGetKimeuCourseTrackingUrl = (workshopId: string,
     sessionDate: string,) => {

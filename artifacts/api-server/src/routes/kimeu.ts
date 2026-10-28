@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getUpcomingWorkshops } from "../lib/kimeu/calendar";
-import { getCourses } from "../lib/kimeu/courses";
+import { getCourses, requireCourseWriter } from "../lib/kimeu/courses";
 import { getPracticals, savePractical } from "../lib/kimeu/practicals";
 import { Router, type IRouter } from "express";
 import {
@@ -132,7 +132,7 @@ function requireValidRequest<T>(
 }
 
 function requireSessionWriter(user: AppUser): void {
-  requireRole(user, "Foundations SME", "Elite SME");
+  requireRole(user, "SME Assist", "SME Lead");
 }
 
 function requireAssignedSession(user: AppUser, workshopId: string): void {
@@ -141,9 +141,9 @@ function requireAssignedSession(user: AppUser, workshopId: string): void {
 
 function authorRoleFor(user: AppUser, stage: string): string {
   const preferred = /foundation/i.test(stage)
-    ? "Foundations SME"
+    ? "SME Assist"
     : /fellowship|enrichment/i.test(stage)
-      ? "Elite SME"
+      ? "SME Lead"
       : undefined;
   if (preferred && user.roles.includes(preferred)) return preferred;
   return user.roles[0] ?? "KIMEU user";
@@ -182,6 +182,7 @@ router.post("/kimeu/sessions", async (req, res): Promise<void> => {
   requireRole(user, ...KIMEU_ROLES);
   requireSessionWriter(user);
   requireAssignedSession(user, body.workshopId);
+  await requireCourseWriter(user, body.workshopId);
   const sessionDate = body.sessionDate.toISOString().slice(0, 10);
   const response = OpenKimeuSessionResponse.parse(
     await openSession(user, body.workshopId, sessionDate),
@@ -218,6 +219,7 @@ router.post(
     requireSessionWriter(user);
     const session = await getSessionRecord(params.sessionId);
     requireAssignedSession(user, session.workshopId);
+    await requireCourseWriter(user, session.workshopId);
     const response = SaveKimeuAttendanceResponse.parse(
       await saveAttendance(user, params.sessionId, body.marks),
     );
@@ -240,6 +242,7 @@ router.post(
     requireSessionWriter(user);
     const session = await getSessionRecord(params.sessionId);
     requireAssignedSession(user, session.workshopId);
+    await requireCourseWriter(user, session.workshopId);
     try {
       const response = CompleteKimeuSessionResponse.parse(
         await completeSession(user, params.sessionId, body),

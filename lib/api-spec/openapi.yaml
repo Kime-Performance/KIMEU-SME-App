@@ -13,6 +13,52 @@ tags:
   - name: kimeu
     description: KIMEU workshop operations backed by Google Sheets
 paths:
+  /kimeu/admin/sme-assignments:
+    get:
+      operationId: getKimeuSmeAssignments
+      responses:
+        "200":
+          description: Existing approved staff and workshop assignments
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SmeAssignments" }
+    post:
+      operationId: saveKimeuSmeAssignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SmeAssignmentInput" }
+      responses:
+        "200":
+          description: Saved assignments confirmed by sheet readback
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SmeAssignments" }
+  /kimeu/onboarding/{courseId}:
+    parameters:
+      - { name: courseId, in: path, required: true, schema: { type: string, enum: [F-11, F-12, EN-CAD, F-SURG-OBS] } }
+    get:
+      operationId: getKimeuOnboarding
+      responses:
+        "200":
+          description: RD onboarding workspace, with sheet-calculated progress
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OnboardingWorkspace" }
+    post:
+      operationId: saveKimeuOnboarding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OnboardingInput" }
+      responses:
+        "200":
+          description: RD inputs saved and confirmed by sheet readback
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OnboardingWorkspace" }
   /kimeu/courses/{workshopId}/tracking/{sessionDate}:
     get:
       operationId: getKimeuCourseTracking
@@ -278,6 +324,84 @@ paths:
           description: Test spreadsheet or service account is not configured
 components:
   schemas:
+    SmeAssignmentInput:
+      type: object
+      required: [email, revision, smeRoles, workshopIds]
+      properties:
+        email: { type: string, minLength: 1 }
+        revision: { type: string, minLength: 1 }
+        smeRoles:
+          type: array
+          maxItems: 2
+          items: { type: string, enum: [SME Assist, SME Lead] }
+        workshopIds:
+          type: array
+          items: { type: string }
+    SmeAssignments:
+      type: object
+      required: [revision, staff, courses]
+      properties:
+        revision: { type: string }
+        staff:
+          type: array
+          items: { $ref: "#/components/schemas/SmeAssignmentStaff" }
+        courses:
+          type: array
+          items: { $ref: "#/components/schemas/CourseSummary" }
+    SmeAssignmentStaff:
+      type: object
+      required: [email, name, active, roles, workshopIds]
+      properties:
+        email: { type: string }
+        name: { type: string }
+        active: { type: boolean }
+        roles: { type: array, items: { type: string } }
+        workshopIds: { type: array, items: { type: string } }
+    OnboardingInput:
+      type: object
+      required: [email, revision, week, date, attended, result, notes]
+      properties:
+        email: { type: string, minLength: 1 }
+        revision: { type: string, minLength: 1 }
+        week: { type: integer, minimum: 1, maximum: 4 }
+        date: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        attended: { type: boolean }
+        result: { type: string, enum: ["", Pass, Fail] }
+        notes: { type: string, maxLength: 4000 }
+    OnboardingWorkspace:
+      type: object
+      required: [courseId, requiredWeeks, canSignOff, people]
+      properties:
+        courseId: { type: string }
+        requiredWeeks: { type: integer }
+        canSignOff: { type: boolean }
+        people:
+          type: array
+          items: { $ref: "#/components/schemas/OnboardingPerson" }
+    OnboardingPerson:
+      type: object
+      required: [email, name, location, revision, completedWeeks, sheetStatus, units]
+      properties:
+        email: { type: string }
+        name: { type: string }
+        location: { type: string }
+        revision: { type: string }
+        completedWeeks: { type: integer }
+        sheetStatus: { type: string }
+        units:
+          type: array
+          items: { $ref: "#/components/schemas/OnboardingUnit" }
+    OnboardingUnit:
+      type: object
+      required: [week, date, attended, result, notes, signedBy, signedAt]
+      properties:
+        week: { type: integer }
+        date: { type: string }
+        attended: { type: boolean }
+        result: { type: string }
+        notes: { type: string }
+        signedBy: { type: string }
+        signedAt: { type: string }
     CourseTrackingInput:
       type: object
       required: [sessionDate, revision, kind, marks]

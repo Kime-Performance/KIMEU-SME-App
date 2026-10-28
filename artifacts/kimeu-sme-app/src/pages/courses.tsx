@@ -5,6 +5,7 @@ import { coursePath, groupCourses, stageLabel, useCourseCatalog } from '@/lib/co
 import { decodeSafe } from '@/components/course-nav';
 import { CoursePracticals } from '@/components/course-practicals';
 import { CourseTracking } from '@/components/course-tracking';
+import { CourseOnboarding, isOnboardingCourse } from '@/components/course-onboarding';
 
 function Skeleton() {
   return <div className="session-list" aria-label="Loading courses">{[0, 1, 2].map((i) => <div className="session-skeleton" key={i}><div className="skeleton skeleton-line w-32" /><div className="skeleton skeleton-line w-56" /></div>)}</div>;
@@ -60,6 +61,7 @@ export function CourseDetailPage() {
       <div><dt>Topic</dt><dd>{course.topic || 'Not listed'}</dd></div>
       <div><dt><UsersRound size={13} aria-hidden="true" /> Lead SME</dt><dd>{course.leadSme || 'Not listed'}</dd></div>
     </dl>
+    {isOnboardingCourse(course.workshopId) ? <CourseOnboarding key={course.workshopId} courseId={course.workshopId} /> : <>
     <CourseTracking key={course.workshopId} workshopId={course.workshopId} />
     <div className="course-pending-note" role="status"><BookOpen size={17} aria-hidden="true" /><span>Course content is not populated yet. These sections are the frame it will fill.</span></div>
     <div className="course-frames">
@@ -69,5 +71,6 @@ export function CourseDetailPage() {
       </section>)}
     </div>
     <CoursePracticals key={course.workshopId} workshopId={course.workshopId} />
+    </>}
   </div>;
 }

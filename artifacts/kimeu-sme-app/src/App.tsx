@@ -22,6 +22,7 @@ import { UpcomingWorkshops } from './components/upcoming-workshops';
 import { CourseNav, decodeSafe } from './components/course-nav';
 import { CoursesPage, CourseDetailPage } from './pages/courses';
 import { useCourseCatalog } from './lib/courses';
+import { SmeAssignmentsPanel } from './components/sme-assignments';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 15_000 } },
@@ -166,7 +167,7 @@ function Shell({ children }: { children: ReactNode }) {
   const admin = bootstrap?.user?.roles?.some((role) => role.toLowerCase() === 'admin') ?? false;
   const links = [{ href: '/today', label: 'Today', icon: CalendarDays }, ...(admin ? [{ href: '/settings', label: 'Settings', icon: Settings2 }] : [])];
   if (isLoading) return <main className="auth-wall" role="status"><p>Checking your KIMEU access…</p></main>;
-  if (isError || !bootstrap) return <main className="auth-wall"><ErrorState title="Access could not be verified" detail="The workspace stays locked until your access is confirmed." retry={() => refetch()} /></main>;
+  if (!bootstrap) return <main className="auth-wall"><ErrorState title="Access could not be verified" detail="The workspace stays locked until your access is confirmed." retry={() => refetch()} /></main>;
   if (bootstrap.access !== 'allowed') return <main className="auth-wall"><div className="auth-intro"><BrandMark /><span>PRIVATE KIMEU WORKSPACE</span><h1>Approved access required.</h1><p>This workspace is available only to active, approved SMEs, Regional Directors, and administrators. Contact the KIMEU Director about your access.</p><AccessBanner bootstrap={bootstrap} /><button type="button" className="button-primary" onClick={() => signOut({ redirectUrl: basePath || '/' })} data-testid="button-denied-sign-out">Sign out</button></div></main>;
   return (
     <div className="app-shell">
@@ -189,6 +190,7 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="crumb"><span>KIMEU</span><span className="crumb-slash">/</span>{location.startsWith('/courses') ? <CourseCrumb location={location} /> : <b>{location === '/today' ? 'Today' : location.startsWith('/session') ? 'Session' : 'Settings'}</b>}</div>
           <SyncStatus />
         </header>
+        {isError && <div className="access-banner" role="alert" data-testid="status-access-refresh-error"><CircleAlert size={18} /><div><strong>Access refresh unavailable</strong><span>Your last verified workspace and unsaved forms are kept open. Every save still checks current staff access on the server.</span></div><button type="button" className="button-quiet" onClick={() => refetch()}>Retry</button></div>}
         <AccessBanner bootstrap={bootstrap} />
         <div className="page-content">{children}</div>
       </main>
@@ -449,6 +451,7 @@ function SettingsPage() {
         <div className="sheet-id-row"><span>CONFIGURED SHEET ID</span><code data-testid="text-sheet-id">{isAdmin ? data.readiness.sheetId || 'Not configured' : 'Visible to administrators only'}</code></div>
         {data.readiness.missing.length > 0 && <div className="missing-list"><strong>Setup requirements reported by server</strong><ul>{data.readiness.missing.map((item) => <li key={item}><CircleAlert size={14} />{item}</li>)}</ul></div>}
       </section>
+      {isAdmin && <SmeAssignmentsPanel />}
       <section className="settings-card account-card"><div className="settings-card-head"><div className="panel-icon panel-icon-warm"><ShieldCheck size={19} /></div><div><span className="section-kicker">CURRENT ACCESS</span><h2>Account status</h2></div></div>
         {data.user ? <div className="account-details"><div><span>Account</span><strong data-testid="text-account-email">{data.user.email}</strong></div><div><span>Name in sheets</span><strong>{data.user.nameInSheets || 'Not provided'}</strong></div><div><span>Access</span><strong className={data.user.active ? 'text-ready' : 'text-blocked'}>{data.user.active ? 'Active' : 'Inactive'}</strong></div><div><span>Roles</span><strong>{data.user.roles.length ? data.user.roles.join(', ') : 'None returned'}</strong></div><div className="account-wide"><span>Assigned workshops</span><strong>{data.user.workshopIds.length ? data.user.workshopIds.join(', ') : 'None returned'}</strong></div></div> : <div className="empty-inline"><UsersRound size={19} /><span>No KIMEU user record was returned for this account.</span></div>}
         <p>{user?.passwordEnabled ? 'Your account has a password. Manage it securely under Security in your account settings.' : 'No password is set on your account yet. Open your account settings, choose Security, and add a password. Password options depend on the enabled sign-in methods.'}</p>

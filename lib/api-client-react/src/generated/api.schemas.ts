@@ -5,6 +5,102 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type SmeAssignmentInputSmeRolesItem = typeof SmeAssignmentInputSmeRolesItem[keyof typeof SmeAssignmentInputSmeRolesItem];
+
+
+export const SmeAssignmentInputSmeRolesItem = {
+  SME_Assist: 'SME Assist',
+  SME_Lead: 'SME Lead',
+} as const;
+
+export interface SmeAssignmentInput {
+  /** @minLength 1 */
+  email: string;
+  /** @minLength 1 */
+  revision: string;
+  /** @maxItems 2 */
+  smeRoles: SmeAssignmentInputSmeRolesItem[];
+  workshopIds: string[];
+}
+
+export interface SmeAssignmentStaff {
+  email: string;
+  name: string;
+  active: boolean;
+  roles: string[];
+  workshopIds: string[];
+}
+
+export interface CourseSummary {
+  workshopId: string;
+  name: string;
+  stage: string;
+  /** @nullable */
+  topic: string | null;
+  /** @nullable */
+  leadSme: string | null;
+}
+
+export interface SmeAssignments {
+  revision: string;
+  staff: SmeAssignmentStaff[];
+  courses: CourseSummary[];
+}
+
+export type OnboardingInputResult = typeof OnboardingInputResult[keyof typeof OnboardingInputResult];
+
+
+export const OnboardingInputResult = {
+  '': '',
+  Pass: 'Pass',
+  Fail: 'Fail',
+} as const;
+
+export interface OnboardingInput {
+  /** @minLength 1 */
+  email: string;
+  /** @minLength 1 */
+  revision: string;
+  /**
+     * @minimum 1
+     * @maximum 4
+     */
+  week: number;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  date: string;
+  attended: boolean;
+  result: OnboardingInputResult;
+  /** @maxLength 4000 */
+  notes: string;
+}
+
+export interface OnboardingUnit {
+  week: number;
+  date: string;
+  attended: boolean;
+  result: string;
+  notes: string;
+  signedBy: string;
+  signedAt: string;
+}
+
+export interface OnboardingPerson {
+  email: string;
+  name: string;
+  location: string;
+  revision: string;
+  completedWeeks: number;
+  sheetStatus: string;
+  units: OnboardingUnit[];
+}
+
+export interface OnboardingWorkspace {
+  courseId: string;
+  requiredWeeks: number;
+  canSignOff: boolean;
+  people: OnboardingPerson[];
+}
+
 export type CourseTrackingInputKind = typeof CourseTrackingInputKind[keyof typeof CourseTrackingInputKind];
 
 
@@ -94,16 +190,6 @@ export interface PracticalRecord {
 export interface PracticalWorkspace {
   canSignOff: boolean;
   records: PracticalRecord[];
-}
-
-export interface CourseSummary {
-  workshopId: string;
-  name: string;
-  stage: string;
-  /** @nullable */
-  topic: string | null;
-  /** @nullable */
-  leadSme: string | null;
 }
 
 export interface CourseCatalog {

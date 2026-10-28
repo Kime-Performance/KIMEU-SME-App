@@ -8,6 +8,132 @@
 import * as zod from 'zod';
 
 
+export const GetKimeuSmeAssignmentsResponse = zod.object({
+  "revision": zod.string(),
+  "staff": zod.array(zod.object({
+  "email": zod.string(),
+  "name": zod.string(),
+  "active": zod.boolean(),
+  "roles": zod.array(zod.string()),
+  "workshopIds": zod.array(zod.string())
+})),
+  "courses": zod.array(zod.object({
+  "workshopId": zod.string(),
+  "name": zod.string(),
+  "stage": zod.string(),
+  "topic": zod.string().nullable(),
+  "leadSme": zod.string().nullable()
+}))
+})
+
+
+
+
+export const saveKimeuSmeAssignmentBodySmeRolesMax = 2;
+
+
+
+export const SaveKimeuSmeAssignmentBody = zod.object({
+  "email": zod.string().min(1),
+  "revision": zod.string().min(1),
+  "smeRoles": zod.array(zod.enum(['SME Assist', 'SME Lead'])).max(saveKimeuSmeAssignmentBodySmeRolesMax),
+  "workshopIds": zod.array(zod.string())
+})
+
+export const SaveKimeuSmeAssignmentResponse = zod.object({
+  "revision": zod.string(),
+  "staff": zod.array(zod.object({
+  "email": zod.string(),
+  "name": zod.string(),
+  "active": zod.boolean(),
+  "roles": zod.array(zod.string()),
+  "workshopIds": zod.array(zod.string())
+})),
+  "courses": zod.array(zod.object({
+  "workshopId": zod.string(),
+  "name": zod.string(),
+  "stage": zod.string(),
+  "topic": zod.string().nullable(),
+  "leadSme": zod.string().nullable()
+}))
+})
+
+
+export const GetKimeuOnboardingParams = zod.object({
+  "courseId": zod.enum(['F-11', 'F-12', 'EN-CAD', 'F-SURG-OBS'])
+})
+
+export const GetKimeuOnboardingResponse = zod.object({
+  "courseId": zod.string(),
+  "requiredWeeks": zod.number().int(),
+  "canSignOff": zod.boolean(),
+  "people": zod.array(zod.object({
+  "email": zod.string(),
+  "name": zod.string(),
+  "location": zod.string(),
+  "revision": zod.string(),
+  "completedWeeks": zod.number().int(),
+  "sheetStatus": zod.string(),
+  "units": zod.array(zod.object({
+  "week": zod.number().int(),
+  "date": zod.string(),
+  "attended": zod.boolean(),
+  "result": zod.string(),
+  "notes": zod.string(),
+  "signedBy": zod.string(),
+  "signedAt": zod.string()
+}))
+}))
+})
+
+
+export const SaveKimeuOnboardingParams = zod.object({
+  "courseId": zod.enum(['F-11', 'F-12', 'EN-CAD', 'F-SURG-OBS'])
+})
+
+
+
+export const saveKimeuOnboardingBodyWeekMax = 4;
+
+export const saveKimeuOnboardingBodyDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const saveKimeuOnboardingBodyNotesMax = 4000;
+
+
+
+export const SaveKimeuOnboardingBody = zod.object({
+  "email": zod.string().min(1),
+  "revision": zod.string().min(1),
+  "week": zod.number().int().min(1).max(saveKimeuOnboardingBodyWeekMax),
+  "date": zod.string().regex(saveKimeuOnboardingBodyDateRegExp),
+  "attended": zod.boolean(),
+  "result": zod.enum(['', 'Pass', 'Fail']),
+  "notes": zod.string().max(saveKimeuOnboardingBodyNotesMax)
+})
+
+export const SaveKimeuOnboardingResponse = zod.object({
+  "courseId": zod.string(),
+  "requiredWeeks": zod.number().int(),
+  "canSignOff": zod.boolean(),
+  "people": zod.array(zod.object({
+  "email": zod.string(),
+  "name": zod.string(),
+  "location": zod.string(),
+  "revision": zod.string(),
+  "completedWeeks": zod.number().int(),
+  "sheetStatus": zod.string(),
+  "units": zod.array(zod.object({
+  "week": zod.number().int(),
+  "date": zod.string(),
+  "attended": zod.boolean(),
+  "result": zod.string(),
+  "notes": zod.string(),
+  "signedBy": zod.string(),
+  "signedAt": zod.string()
+}))
+}))
+})
+
+
 
 export const getKimeuCourseTrackingPathSessionDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 

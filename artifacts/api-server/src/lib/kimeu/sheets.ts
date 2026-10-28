@@ -14,8 +14,14 @@ const ALLOWED_TABS = new Set([
   "03f-Session Log",
   "03g-Clinician Notes",
   "03h-App Users",
+  "03i-RD Onboarding",
 ]);
 const WRITE_ALLOWLIST: Record<string, ReadonlySet<string>> = {
+  "03h-App Users": new Set(["App Role(s)", "Workshop IDs"]),
+  "03i-RD Onboarding": new Set([
+    "Record ID", "PT Email", "Workshop ID", "Week", "Session Date", "Minutes",
+    "Attended", "RD Result", "Signed By", "Signed At", "Notes", "Last Updated By", "Last Updated",
+  ]),
   "03b-Advanced Workshop Log": new Set([
     "PT Email",
     "PT Name",

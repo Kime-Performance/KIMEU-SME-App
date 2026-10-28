@@ -3,6 +3,8 @@ import type { CourseTrackingInput } from "@workspace/api-zod";
 import type { AppUser } from "./access";
 import { readCourseDirectory } from "./course-directory";
 import { openSession } from "./sessions";
+import { canLeadStage, canonicalRole } from "./site-access-policy";
+import { isRdOnboarding } from "./courses";
 import {
   cell, dataRows, formatSheetDate, formatSheetTimestamp, headerIndex, headersFor,
   KimeuError, normalizeEmail, readTab, sessionIdFor, todayInAppTimeZone,
@@ -10,7 +12,7 @@ import {
 } from "./sheets";
 
 const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
-const writer = (user: AppUser) => user.roles.some(r => ["Admin", "Foundations SME", "Elite SME"].includes(r));
+const writer = (user: AppUser) => user.roles.map(canonicalRole).some(r => ["Admin", "SME Assist", "SME Lead"].includes(r));
 function authorize(user: AppUser, workshopId: string) {
   if (!user.active || (!user.roles.includes("Admin") && !user.workshopIds.includes(workshopId))) {
     throw new KimeuError("This workshop is not assigned to your account.", 403, "WORKSHOP_NOT_ASSIGNED");
@@ -38,6 +40,7 @@ async function load(user: AppUser, workshopId: string, sessionDate: string, forc
   const courses = dataRows(catalog).filter(r => cell(r.values, headerIndex(ch, "Workshop ID")) === workshopId);
   if (courses.length !== 1) throw new KimeuError("The course could not be uniquely identified.", 409, "COURSE_AMBIGUOUS");
   const stage = cell(courses[0].values, headerIndex(ch, "Stage"));
+  if (isRdOnboarding(workshopId)) throw new KimeuError("Use the RD onboarding sign-off page for this course.", 409, "USE_RD_ONBOARDING");
   const foundation = /foundation/i.test(stage);
   if (!foundation && !/fellowship|advanced|enrichment/i.test(stage)) {
     throw new KimeuError("This course does not have a supported tracking sheet.", 409, "UNSUPPORTED_STAGE");
@@ -94,7 +97,7 @@ async function load(user: AppUser, workshopId: string, sessionDate: string, forc
     };
   });
   const revision = digest([workshopId, sessionDate, directory.people, snapshot.rows, sessionStatus]);
-  const allowed = writer(user);
+  const allowed = canLeadStage(user.roles, stage);
   const workspace = {
     sessionDate, revision,
     canSaveAttendance: allowed && !["Complete", "Cancelled"].includes(sessionStatus) && sessionDate <= todayInAppTimeZone(),
@@ -116,6 +119,9 @@ export async function saveCourseTracking(user: AppUser, workshopId: string, inpu
   if (!user.nameInSheets.trim()) throw new KimeuError("Your Name in Sheets is required before saving.", 409, "AUTHOR_REQUIRED");
   return withPracticalWriteLock(async () => {
     const state = await load(user, workshopId, input.sessionDate, true);
+    if (!canLeadStage(user.roles, state.foundation ? "Foundations" : "Fellowship")) {
+      throw new KimeuError("Your SME title does not permit leading this pathway.", 403, "SME_STAGE_NOT_ALLOWED");
+    }
     if (state.workspace.revision !== input.revision) throw new KimeuError("Tracking changed. Reload and review the latest marks before saving.", 409, "TRACKING_CHANGED");
     if (new Set(input.marks.map(m => normalizeEmail(m.email))).size !== input.marks.length) {
       throw new KimeuError("Each PT can only appear once in a save.", 400, "DUPLICATE_MARK");

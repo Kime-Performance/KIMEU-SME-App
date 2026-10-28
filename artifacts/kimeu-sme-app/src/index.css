@@ -862,3 +862,24 @@ body { font-size: 14.5px; line-height: 1.5; color: var(--pp-fg); background: var
 .ct-flag { color: #a46340; font: 500 9px/1 var(--app-font-mono); letter-spacing: .08em; text-transform: uppercase; }
 .ct-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 @media (max-width: 860px) { .ct-grid { grid-template-columns: 1fr; } .ct-actions { position: sticky; bottom: 0; padding: 10px 0; background: #fffdf8; } .ct-actions .button-primary { flex: 1; } }
+
+/* Onboarding sign-off + SME assignments */
+.ob-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.ob-person { padding: 14px; background: var(--pp-surface, #fffdf8); border: 1px solid var(--pp-line, #e4e1d7); border-radius: 10px; }
+.ob-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.ob-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ob-sheet { font: 600 10px/1 var(--app-font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--pp-fg, #2A2A2A); }
+.ob-weeks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.ob-week { min-height: 34px; padding: 0 12px; border: 1px solid var(--pp-line, #dde2e9); border-radius: 6px; background: transparent; font-size: 12px; cursor: pointer; }
+.ob-week-on { border-color: #2767F4; color: #2767F4; font-weight: 700; }
+.ob-week-pass { box-shadow: inset 0 -2px 0 #2f8a5b; }
+.ob-week-fail { box-shadow: inset 0 -2px 0 #c93b3a; }
+.ob-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-top: 12px; }
+.ob-attend { min-height: 44px; padding: 0; align-items: center; font-size: 13px; }
+.ob-result, .ob-courses { display: flex; flex-wrap: wrap; gap: 6px; }
+.ob-courses { width: 100%; }
+.ob-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px; border: 1px solid var(--pp-line, #dde2e9); border-radius: 6px; font-size: 12px; cursor: pointer; }
+.ob-pill-on { border-color: #2767F4; background: #eef3fe; }
+.ob-notes { flex: 1 1 100%; }
+.ob-notes textarea { min-height: 64px; padding: 9px 11px; border: 1px solid #dde2e9; border-radius: 7px; background: #f4f6f9; font: inherit; font-size: 13px; resize: vertical; }
+.ob-root .course-frames { margin-top: 18px; }

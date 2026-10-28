@@ -22,7 +22,7 @@ await build({
 });
 const original = process.env.KIMEU_SHEET_ID;
 process.env.KIMEU_SHEET_ID = "isolated-access-test";
-const { requireActiveAppUser } = await import(pathToFileURL(join(directory, "access.mjs")).href);
+const { requireActiveAppUser, getBootstrapForRequest } = await import(pathToFileURL(join(directory, "access.mjs")).href);
 const req = { fixtureUid: "fixture-user" };
 const reset = () => {
   globalThis.__siteIdentity = {
@@ -38,7 +38,8 @@ test("valid SME/RD/Admin can authenticate; fresh sheet reads enforce immediate r
   for (const role of ["Foundations SME", "Elite SME", "RD", "Admin"]) {
     reset();
     globalThis.__siteUsers[2][2] = role;
-    assert.deepEqual((await requireActiveAppUser(req)).roles, [role]);
+    const canonical = role === "Foundations SME" ? "SME Assist" : role === "Elite SME" ? "SME Lead" : role;
+    assert.deepEqual((await requireActiveAppUser(req)).roles, [canonical]);
     globalThis.__siteUsers[2][4] = "No";
     await assert.rejects(requireActiveAppUser(req), { code: "APP_USER_INACTIVE" });
   }
@@ -61,6 +62,19 @@ test("anonymous, unverified and external-domain identities cannot access data", 
   reset();
   globalThis.__siteIdentity.emailAddresses[0].emailAddress = "fixture@example.test";
   await assert.rejects(requireActiveAppUser(req), { code: "DOMAIN_NOT_ALLOWED" });
+});
+test("unrelated sheet readiness failures do not revoke a freshly approved user's workspace", async () => {
+  reset();
+  // The transport supplies only staff headers, so the other log-tab readiness
+  // probes fail their schema checks. Staff approval itself is still fresh.
+  const bootstrap = await getBootstrapForRequest(req);
+  assert.equal(bootstrap.readiness.configured, false);
+  assert.equal(bootstrap.access, "allowed");
+  assert.ok(bootstrap.user.roles.includes("SME Assist"));
+  globalThis.__siteUsers[2][4] = "No";
+  const revoked = await getBootstrapForRequest(req);
+  assert.equal(revoked.access, "inactive");
+  assert.equal(revoked.user, null);
 });
 test.after(async () => {
   if (original === undefined) delete process.env.KIMEU_SHEET_ID;

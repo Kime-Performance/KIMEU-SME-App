@@ -8,7 +8,7 @@ export function useCourseCatalog() {
 export function stageLabel(stage: string) {
   const s = stage.trim();
   if (!s) return 'Unstaged';
-  return s.toLowerCase() === 'fellowship' ? 'Advanced' : s;
+  return s.toLowerCase() === 'fellowship' ? 'Fellowship' : s;
 }
 
 export function coursePath(workshopId: string) {
@@ -16,7 +16,7 @@ export function coursePath(workshopId: string) {
 }
 
 export function groupCourses(courses: CourseSummary[]) {
-  const order = (label: string) => (label === 'Foundations' ? 0 : label === 'Advanced' ? 1 : 2);
+  const order = (label: string) => (label === 'Foundations' ? 0 : label === 'Fellowship' ? 1 : 2);
   const map = new Map<string, CourseSummary[]>();
   for (const c of courses) {
     const label = stageLabel(c.stage);
