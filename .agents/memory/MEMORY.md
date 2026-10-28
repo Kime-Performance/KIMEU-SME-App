@@ -2,3 +2,4 @@
 - [Google connector permissions](google-connector-permissions.md) — assess each API scope; Drive read-only does not imply Sheets read-only.
 - [Workshop scheduling](workshop-scheduling.md) — repeated Foundations offerings and regional Advanced dates; annual schedules can shift last minute.
 - [Data flow intent](data-flow-intent.md) — roster reads from KIME; SME attendance, PT completion, and director-visible notes write to KIMEU.
+- [Workshop materials](workshop-materials.md) — link existing Drive presentation folders per workshop, with separate PDF/handout access.
