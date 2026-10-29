@@ -164,7 +164,9 @@ export function CourseTracking({ workshopId }: { workshopId: string }) {
         <span className="ct-search-box"><Search size={14} /><input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name or location" data-testid="input-search-pts" /></span></label>
     </div>
     <p className="ct-meta">Nothing saves automatically. A workshop session is opened only when attendance is saved.{data && <> Roster refreshed <b data-testid="text-roster-refreshed">{fmtTime(data.rosterRefreshedAt)}</b>.</>}</p>
-    <p className="ct-explain">Overall completion is calculated in the KIMEU sheet from attendance, RD practical results, and Director-uploaded pre-course progress. No separate completion approval is needed here.</p>
+    <p className="ct-explain">{workshopId.startsWith('F-')
+      ? 'Foundations workshop completion is calculated in the KIMEU sheet from attendance and RD practical Pass. Kajabi progress applies only to the separate Foundations assessment component.'
+      : 'Overall completion is calculated in the KIMEU sheet from attendance, RD practical results, and Director-uploaded pre-course progress. No separate completion approval is needed here.'}</p>
     {message && <div className={`inline-message inline-message-${message.tone}`} role="status" data-testid="status-tracking-message">{message.text}
       {message.conflict && <button type="button" className="button-quiet ct-inline-btn" onClick={() => discard()} data-testid="button-discard-reload">Discard and reload</button>}</div>}
     {!validDate ? <div className="state-card state-error"><div className="state-icon"><CircleAlert size={18} /></div><div><h3>Choose a valid date</h3><p>Pick the workshop occurrence date to load the checklist.</p></div></div>

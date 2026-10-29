@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { rdHeaders, foundationRollups, evaluationCompletion, summaryRollups, rdArrayFormulas } from "../../../scripts/src/kimeu-rd-live-formulas.mjs";
+import { foundationWorkshopCompletion } from "../../../scripts/src/kimeu-foundations-completion.mjs";
 
 const temp = await mkdtemp(join(tmpdir(), "kimeu-live-config-"));
 await build({ entryPoints: [new URL("../src/lib/kimeu/sheet-configuration.ts", import.meta.url).pathname], outfile: join(temp, "config.mjs"), bundle: true, platform: "node", format: "esm" });
@@ -35,14 +36,23 @@ test("Foundations rollups preserve legacy attendance and do not use array formul
   assert.ok(result.every(formula => !formula.includes("ARRAYFORMULA")));
   assert.match(result[1], /"F-12"/);
 });
-test("Evaluation bridge preserves old logic and never bypasses Kajabi", () => {
-  const legacy = '=IF(A7="","",IF(L7="Yes","✓",""))';
+test("Evaluation workshop completion uses four RD weeks, not Kajabi assessment progress", () => {
+  const legacy = '=IF(AND(E7=100,L7="Yes",N7="Pass"),"✓","")';
   const formula = evaluationCompletion(7, legacy);
-  assert.ok(formula.endsWith(`${legacy.slice(1)}))`));
   assert.match(formula, /\$AZ7="Complete"/);
-  assert.match(formula, /SUBSTITUTE\(\$E7/);
+  assert.ok(!formula.includes("E7"));
+  assert.match(formula, /L7="Yes",N7="Pass"/);
   assert.match(formula, /"Fail"/);
   assert.throws(() => evaluationCompletion(7, "✓"));
+});
+test("all Foundations workshop checkmarks require attendance and RD Pass without a Kajabi gate", () => {
+  for (const [start, attended, practical] of [[15, "Q", "S"], [20, "V", "X"], [25, "AA", "AC"], [30, "AF", "AH"], [35, "AK", "AM"], [40, "AP", "AR"]]) {
+    const formula = foundationWorkshopCompletion(4, start);
+    assert.match(formula, new RegExp(`${attended}4="Yes",${practical}4="Pass"`));
+    assert.ok(!formula.includes("E4"));
+    assert.match(formula, /"Retake"/);
+  }
+  assert.throws(() => foundationWorkshopCompletion(4, 4));
 });
 test("Summary adds explicit RD status columns without rewriting overall pathway status", () => {
   const formulas = summaryRollups(38);

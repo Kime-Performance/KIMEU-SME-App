@@ -23,11 +23,11 @@ Regional Directors also work in this app and sign off post-workshop practicals. 
 
 **How to apply:** Keep RD practical assessment separate from SME attendance. Require corrective feedback for not-passed practicals; do not equate attendance alone with pathway completion.
 
-PT course completion requires attendance, RD practical sign-off, and 100% completion of pre-course material. Pre-course completion requires the KIMEU Director to upload the Kajabi data to the KIMEU Master sheet.
+Foundations workshop completion requires attendance and RD practical Pass, without a Kajabi percentage. Evaluation Retention requires its four completed RD weeks. Kajabi completion only matters for the separate Foundations assessment component; the Director uploads that data to the Master.
 
-**Why:** The user explicitly specified these three completion requirements and the Director's Kajabi upload responsibility.
+**Why:** The user explicitly removed Kajabi completion from Foundations workshop completion and clarified that it only matters for the Foundations assessment component.
 
-**How to apply:** The KIMEU sheet determines completion from the prerequisite inputs. Read pre-course completion from the KIMEU Master sheet; do not infer it from attendance or practical sign-off, or assume a direct Kajabi integration.
+**How to apply:** Let Foundations workshop checkmarks depend on attendance and RD Pass, not Kajabi progress. Preserve the assessment's Kajabi and exam requirements and the overall pathway calculation. Do not apply this Foundations-specific change to Fellowship/Advanced completion rules.
 
 Workshop subpages must contain a running list of available PTs with checkboxes and an explicit Submit/Save action for attendance. There is no separate full-completion checklist or approval in the SME app.
 

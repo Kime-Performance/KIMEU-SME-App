@@ -1,5 +1,6 @@
 // Formula-only rollout helpers. No credentials, network calls, or clinician data.
 // Existing Kajabi inputs, historical attendance, and Summary A:J stay untouched.
+import { foundationWorkshopCompletion } from "./kimeu-foundations-completion.mjs";
 export const rdHeaders = [
   "Record ID", "PT Email", "Workshop ID", "Week", "Session Date", "Minutes",
   "Attended", "RD Result", "Signed By", "Signed At", "Notes", "Last Updated By",
@@ -44,9 +45,9 @@ export function evaluationCompletion(row, oldFormula) {
   if (typeof oldFormula !== "string" || !oldFormula.startsWith("=")) {
     throw new Error(`Existing Evaluation Retention formula missing at O${row}; review before rollout.`);
   }
-  // Use the new four-week result when records exist; preserve the entire legacy
-  // expression otherwise. Kajabi remains a prerequisite for the legacy ✓ cell.
-  return `=IF($A${row}="","",IF(COUNTIFS(${rd}!$B$3:$B,$A${row},${rd}!$C$3:$C,"F-12")>0,IF(AND($AZ${row}="Complete",IFERROR(VALUE(SUBSTITUTE($E${row},"%","")),0)=100),"✓",IF(COUNTIFS(${rd}!$B$3:$B,$A${row},${rd}!$C$3:$C,"F-12",${rd}!$H$3:$H,"Fail")>0,"Redo","")),${oldFormula.slice(1)}))`;
+  // Old formulas must exist, but their superseded Kajabi workshop gate must
+  // not be reintroduced when an onboarding rollout is run again.
+  return foundationWorkshopCompletion(row, 10);
 }
 
 export function summaryRollups(row) {

@@ -22,7 +22,7 @@ In `03-KIMEU Summary`, headers are row 3, data begins at row 4, and PT Email rem
 
 Evaluation Retention's standalone status is **Complete** after four dated, attended, one-hour weekly sessions with RD Pass. Read the explicit AZ/Summary L status for this requirement. Do not infer this requirement's status from the whole Foundations pathway, Kajabi progress, or the old single-session date fields.
 
-The legacy Evaluation Retention checkmark in Foundations O still requires Kajabi completion. Overall Foundations can therefore remain In Progress while weekly Evaluation Retention is Complete. Existing history and Kajabi prerequisites are not overridden.
+Foundations workshop checkmarks no longer require Kajabi completion. Evaluation Retention in O uses its four completed RD weeks when weekly records exist; the six clinical workshop checkmarks require attendance and RD practical Pass. Kajabi remains required only for the separate Foundations assessment component. Overall Foundations may therefore remain In Progress even when individual workshop checkmarks are complete.
 
 Cadaver and Surgical Observation use new RD records when present; otherwise their status formulas honor the existing manual RD attendance fields AW:AX.
 
