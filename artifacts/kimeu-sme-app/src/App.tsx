@@ -21,6 +21,7 @@ import { useAttendanceQueue } from './hooks/use-attendance-queue';
 import { UpcomingWorkshops } from './components/upcoming-workshops';
 import { CourseNav, decodeSafe } from './components/course-nav';
 import { CoursesPage, CourseDetailPage } from './pages/courses';
+import { FellowshipReviewsPage } from './pages/fellowship-reviews';
 import { useCourseCatalog } from './lib/courses';
 import { SmeAssignmentsPanel } from './components/sme-assignments';
 
@@ -102,7 +103,7 @@ function ClerkQueryClientCacheInvalidator() {
 }
 
 function SignInPage() {
-  return <div className="auth-wall"><div className="auth-intro"><BrandMark /><span>PRIVATE KIMEU WORKSPACE</span><h1>Good work starts with a clear record.</h1><p>Sign in with your approved work account. Access is limited to KIMEU SMEs, Regional Directors, and administrators.</p></div><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} appearance={{ elements: { footerAction: { display: 'none' } } }} /></div>;
+  return <div className="auth-wall"><div className="auth-intro"><BrandMark /><span>PRIVATE KIMEU WORKSPACE</span><h1>Good work starts with a clear record.</h1><p>Sign in with your approved work account. Access is limited to KIMEU SMEs, Regional Directors, Fellowship reviewers, and administrators.</p></div><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} appearance={{ elements: { footerAction: { display: 'none' } } }} /></div>;
 }
 
 function SignUpPage() {
@@ -165,10 +166,11 @@ function Shell({ children }: { children: ReactNode }) {
   const { signOut } = useClerk();
   const [menuOpen, setMenuOpen] = useState(false);
   const admin = bootstrap?.user?.roles?.some((role) => role.toLowerCase() === 'admin') ?? false;
-  const links = [{ href: '/today', label: 'Today', icon: CalendarDays }, ...(admin ? [{ href: '/settings', label: 'Settings', icon: Settings2 }] : [])];
+  const reviewer = admin || (bootstrap?.user?.roles.includes('Fellowship Reviewer') ?? false);
+  const links = [{ href: '/today', label: 'Today', icon: CalendarDays }, ...(reviewer ? [{ href: '/fellowship-reviews', label: 'Fellowship Reviews', icon: NotebookPen }] : []), ...(admin ? [{ href: '/settings', label: 'Settings', icon: Settings2 }] : [])];
   if (isLoading) return <main className="auth-wall" role="status"><p>Checking your KIMEU access…</p></main>;
   if (!bootstrap) return <main className="auth-wall"><ErrorState title="Access could not be verified" detail="The workspace stays locked until your access is confirmed." retry={() => refetch()} /></main>;
-  if (bootstrap.access !== 'allowed') return <main className="auth-wall"><div className="auth-intro"><BrandMark /><span>PRIVATE KIMEU WORKSPACE</span><h1>Approved access required.</h1><p>This workspace is available only to active, approved SMEs, Regional Directors, and administrators. Contact the KIMEU Director about your access.</p><AccessBanner bootstrap={bootstrap} /><button type="button" className="button-primary" onClick={() => signOut({ redirectUrl: basePath || '/' })} data-testid="button-denied-sign-out">Sign out</button></div></main>;
+  if (bootstrap.access !== 'allowed') return <main className="auth-wall"><div className="auth-intro"><BrandMark /><span>PRIVATE KIMEU WORKSPACE</span><h1>Approved access required.</h1><p>This workspace is available only to active, approved SMEs, Regional Directors, Fellowship reviewers, and administrators. Contact the KIMEU Director about your access.</p><AccessBanner bootstrap={bootstrap} /><button type="button" className="button-primary" onClick={() => signOut({ redirectUrl: basePath || '/' })} data-testid="button-denied-sign-out">Sign out</button></div></main>;
   return (
     <div className="app-shell">
       <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
@@ -187,7 +189,7 @@ function Shell({ children }: { children: ReactNode }) {
       <main className="main-area">
         <header className="topbar">
           <button type="button" className="mobile-menu" aria-label="Open menu" onClick={() => setMenuOpen(true)} data-testid="button-open-menu"><Menu size={21} /></button>
-          <div className="crumb"><span>KIMEU</span><span className="crumb-slash">/</span>{location.startsWith('/courses') ? <CourseCrumb location={location} /> : <b>{location === '/today' ? 'Today' : location.startsWith('/session') ? 'Session' : 'Settings'}</b>}</div>
+          <div className="crumb"><span>KIMEU</span><span className="crumb-slash">/</span>{location.startsWith('/courses') ? <CourseCrumb location={location} /> : <b>{location === '/today' ? 'Today' : location === '/fellowship-reviews' ? 'Fellowship Reviews' : location.startsWith('/session') ? 'Session' : 'Settings'}</b>}</div>
           <SyncStatus />
         </header>
         {isError && <div className="access-banner" role="alert" data-testid="status-access-refresh-error"><CircleAlert size={18} /><div><strong>Access refresh unavailable</strong><span>Your last verified workspace and unsaved forms are kept open. Every save still checks current staff access on the server.</span></div><button type="button" className="button-quiet" onClick={() => refetch()}>Retry</button></div>}
@@ -225,7 +227,7 @@ function AccessBanner({ bootstrap }: { bootstrap: BootstrapResponse | undefined 
   const content = {
     domain_denied: ['Access not available', 'This account is outside the permitted organisation domain. Contact your KIMEU administrator.'],
     inactive: ['Account inactive', 'Your account is not currently active for KIMEU. Ask an administrator to review your access.'],
-    role_denied: ['Access not permitted', 'Only approved SMEs, Regional Directors, and administrators can use this workspace.'],
+    role_denied: ['Access not permitted', 'Only approved SMEs, Regional Directors, Fellowship reviewers, and administrators can use this workspace.'],
     not_configured: ['Workspace setup incomplete', 'The workshop sheet connection is not configured. Session data and writes are unavailable until setup is complete.'],
   }[bootstrap.access];
   if (!content) return null;
@@ -508,6 +510,7 @@ function AppRoutes() {
         <Route path="/sign-up/*?" component={SignUpPage} />
          <Route path="/today">{() => <><Show when="signed-in"><Shell><TodayPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
          <Route path="/courses">{() => <><Show when="signed-in"><Shell><CoursesPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
+         <Route path="/fellowship-reviews">{() => <><Show when="signed-in"><Shell><FellowshipReviewsPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
          <Route path="/courses/:workshopId">{() => <><Show when="signed-in"><Shell><CourseDetailPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
          <Route path="/session/:sessionId">{() => <><Show when="signed-in"><SessionPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
          <Route path="/settings">{() => <><Show when="signed-in"><SettingsPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>

@@ -18,6 +18,11 @@ const ALLOWED_TABS = new Set([
   "03i-RD Onboarding",
 ]);
 const WRITE_ALLOWLIST: Record<string, ReadonlySet<string>> = {
+  "03d-Fellowship Review Log": new Set([
+    "Review Date", "Reviewed By", "Review Type", "PT Email", "PT Name", "Result", "Score",
+    "Workshop ID (Refocus)", "Specific Need", "Notes", "Refocus Strategy",
+    "Last Updated By", "Last Updated",
+  ]),
   "03h-App Users": new Set(["App Role(s)", "Workshop IDs"]),
   "03i-RD Onboarding": new Set([
     "Record ID", "PT Email", "Workshop ID", "Week", "Session Date", "Minutes",
@@ -489,13 +494,23 @@ function assertInputHeader(tabName: string, header: string): void {
 // New clinician rows need the sheet's own relative formulas. Copy only formula
 // cells into NEW rows; never overwrite an existing record or use app formulas.
 export async function prepareTrackingTemplateRows(tabName: string, firstRow: number, count: number): Promise<void> {
-  if (!["03b-Advanced Workshop Log", "03c-Foundations Tracker"].includes(tabName) ||
-      !Number.isInteger(firstRow) || firstRow < 5 || !Number.isInteger(count) || count < 1) {
+  const review = tabName === "03d-Fellowship Review Log";
+  if (!["03b-Advanced Workshop Log", "03c-Foundations Tracker", "03d-Fellowship Review Log"].includes(tabName) ||
+      !Number.isInteger(firstRow) || firstRow < (review ? 4 : 5) || !Number.isInteger(count) || count < 1) {
     throw new KimeuError("Invalid new tracking row request.", 400, "INVALID_TEMPLATE_REQUEST");
   }
   const current = await readTab(tabName, { force: true });
-  if (firstRow <= current.rows.length) {
+  if (!review && firstRow <= current.rows.length) {
     throw new KimeuError("New template rows cannot replace existing rows.", 409, "TEMPLATE_ROW_OCCUPIED");
+  }
+  if (review) {
+    // Reuse only genuinely unused template rows, never historical reviews,
+    // scheduled exams, follow-up inputs or draft notes.
+    for (let row = firstRow; row < firstRow + count; row++) {
+      if (!isUnusedFellowshipRow(current.rows[row - 1] ?? [])) {
+        throw new KimeuError("A Fellowship review row is occupied; reload before saving.", 409, "TEMPLATE_ROW_OCCUPIED");
+      }
+    }
   }
   const metadata = await requestSheets<{
     sheets: Array<{ properties: { sheetId: number; title: string; gridProperties: { rowCount: number; columnCount: number } } }>;
@@ -524,6 +539,13 @@ export async function prepareTrackingTemplateRows(tabName: string, firstRow: num
   });
   await requestSheets(":batchUpdate", { method: "POST", body: { requests } });
   invalidateTab(tabName);
+}
+
+export function isUnusedFellowshipRow(values: string[]): boolean {
+  // Formula-owned A/J/K/M/R/S; D may contain the prefilled exam type.
+  return values.every((value, column) =>
+    [0, 9, 10, 12, 17, 18].includes(column) ||
+    (column === 3 && value === "Fellowship Exam") || !String(value ?? "").trim());
 }
 
 export async function appendSparseInputRow(

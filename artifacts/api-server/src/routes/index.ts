@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import kimeuRouter from "./kimeu";
 import courseTrackingRouter from "./course-tracking";
 import onboardingAdminRouter from "./onboarding-admin";
+import fellowshipReviewsRouter from "./fellowship-reviews";
 
 const router: IRouter = Router();
 
@@ -10,5 +11,6 @@ router.use(healthRouter);
 router.use(kimeuRouter);
 router.use(courseTrackingRouter);
 router.use(onboardingAdminRouter);
+router.use(fellowshipReviewsRouter);
 
 export default router;

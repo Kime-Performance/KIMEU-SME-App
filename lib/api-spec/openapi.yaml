@@ -13,6 +13,28 @@ tags:
   - name: kimeu
     description: KIMEU workshop operations backed by Google Sheets
 paths:
+  /kimeu/fellowship-reviews:
+    get:
+      operationId: getKimeuFellowshipReviews
+      responses:
+        "200":
+          description: Fellowship review workspace for approved reviewers and administrators
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FellowshipReviewWorkspace" }
+    post:
+      operationId: saveKimeuFellowshipReview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FellowshipReviewInput" }
+      responses:
+        "200":
+          description: Review and audit saved atomically and verified by readback
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FellowshipReviewWorkspace" }
   /kimeu/admin/sme-assignments:
     get:
       operationId: getKimeuSmeAssignments
@@ -324,6 +346,64 @@ paths:
           description: Test spreadsheet or service account is not configured
 components:
   schemas:
+    FellowshipReviewInput:
+      type: object
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email }
+        reviewDate: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        result: { type: string, enum: [Pass, Refocus] }
+        score: { type: number, minimum: 0, maximum: 100 }
+        notes: { type: string, maxLength: 4000 }
+        workshopId: { type: [string, "null"] }
+        revision: { type: string, minLength: 1 }
+        requestId: { type: string, format: uuid }
+      required: [email, reviewDate, result, score, notes, workshopId, revision, requestId]
+    FellowshipReviewEntry:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: string }
+        reviewDate: { type: string }
+        reviewedBy: { type: string }
+        reviewType: { type: string }
+        result: { type: string }
+        score: { type: [number, "null"] }
+        notes: { type: string }
+        specificNeed: { type: string }
+        workshopId: { type: [string, "null"] }
+        status: { type: string }
+        updatedAt: { type: string }
+      required: [id, email, name, reviewDate, reviewedBy, reviewType, result, score, notes, specificNeed, workshopId, status, updatedAt]
+    FellowshipReviewPerson:
+      type: object
+      properties:
+        email: { type: string }
+        name: { type: string }
+        location: { type: string }
+        revision: { type: string }
+      required: [email, name, location, revision]
+    FellowshipRefocusWorkshop:
+      type: object
+      properties:
+        workshopId: { type: string }
+        name: { type: string }
+      required: [workshopId, name]
+    FellowshipReviewWorkspace:
+      type: object
+      properties:
+        today: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        people:
+          type: array
+          items: { $ref: "#/components/schemas/FellowshipReviewPerson" }
+        reviews:
+          type: array
+          items: { $ref: "#/components/schemas/FellowshipReviewEntry" }
+        workshops:
+          type: array
+          items: { $ref: "#/components/schemas/FellowshipRefocusWorkshop" }
+      required: [today, people, reviews, workshops]
     SmeAssignmentInput:
       type: object
       required: [email, revision, smeRoles, workshopIds]

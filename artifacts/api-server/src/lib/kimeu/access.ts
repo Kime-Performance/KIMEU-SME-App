@@ -136,7 +136,7 @@ export async function requireActiveAppUser(req: Request): Promise<AppUser> {
   }
   if (!hasSiteRole(user.roles)) {
     throw new KimeuError(
-      "KIMEU is private to approved SMEs, Regional Directors, and administrators.",
+      "KIMEU is private to approved SMEs, Regional Directors, Fellowship reviewers, and administrators.",
       403,
       "SITE_ROLE_NOT_ALLOWED",
     );

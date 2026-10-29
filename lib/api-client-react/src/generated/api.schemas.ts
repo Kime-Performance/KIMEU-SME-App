@@ -5,6 +5,71 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type FellowshipReviewInputResult = typeof FellowshipReviewInputResult[keyof typeof FellowshipReviewInputResult];
+
+
+export const FellowshipReviewInputResult = {
+  Pass: 'Pass',
+  Refocus: 'Refocus',
+} as const;
+
+export interface FellowshipReviewInput {
+  email: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  reviewDate: string;
+  result: FellowshipReviewInputResult;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  score: number;
+  /** @maxLength 4000 */
+  notes: string;
+  /** @nullable */
+  workshopId: string | null;
+  /** @minLength 1 */
+  revision: string;
+  requestId: string;
+}
+
+export interface FellowshipReviewEntry {
+  id: string;
+  email: string;
+  name: string;
+  reviewDate: string;
+  reviewedBy: string;
+  reviewType: string;
+  result: string;
+  /** @nullable */
+  score: number | null;
+  notes: string;
+  specificNeed: string;
+  /** @nullable */
+  workshopId: string | null;
+  status: string;
+  updatedAt: string;
+}
+
+export interface FellowshipReviewPerson {
+  email: string;
+  name: string;
+  location: string;
+  revision: string;
+}
+
+export interface FellowshipRefocusWorkshop {
+  workshopId: string;
+  name: string;
+}
+
+export interface FellowshipReviewWorkspace {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  today: string;
+  people: FellowshipReviewPerson[];
+  reviews: FellowshipReviewEntry[];
+  workshops: FellowshipRefocusWorkshop[];
+}
+
 export type SmeAssignmentInputSmeRolesItem = typeof SmeAssignmentInputSmeRolesItem[keyof typeof SmeAssignmentInputSmeRolesItem];
 
 

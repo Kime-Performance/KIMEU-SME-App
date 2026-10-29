@@ -34,8 +34,8 @@ const reset = () => {
     ["fixture@kimeperformance.com", "Fixture SME", "Foundations SME", "F-TEST", "Yes"],
   ];
 };
-test("valid SME/RD/Admin can authenticate; fresh sheet reads enforce immediate revocation", async () => {
-  for (const role of ["Foundations SME", "Elite SME", "RD", "Admin"]) {
+test("approved SME/RD/reviewer/Admin can authenticate; fresh reads enforce immediate revocation", async () => {
+  for (const role of ["Foundations SME", "Elite SME", "RD", "Fellowship Reviewer", "Admin"]) {
     reset();
     globalThis.__siteUsers[2][2] = role;
     const canonical = role === "Foundations SME" ? "SME Assist" : role === "Elite SME" ? "SME Lead" : role;
@@ -45,7 +45,7 @@ test("valid SME/RD/Admin can authenticate; fresh sheet reads enforce immediate r
   }
 });
 test("a corporate address does not grant access without an approved site role and active row", async () => {
-  for (const role of ["", "CEU Admin", "Fellowship Reviewer"]) {
+  for (const role of ["", "CEU Admin", "Unknown"]) {
     reset();
     globalThis.__siteUsers[2][2] = role;
     await assert.rejects(requireActiveAppUser(req), { code: "SITE_ROLE_NOT_ALLOWED" });

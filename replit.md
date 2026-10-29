@@ -34,6 +34,12 @@ Each workshop subpage includes an explicit-save attendance PT checklist and sepa
 - Sheet configuration: `KIMEU_SHEET_ID` identifies the approved destination. Live Master access additionally requires `KIMEU_ENABLE_LIVE_WRITES=true`; without explicit opt-in the Master remains blocked. Reads and writes use the existing Google Sheets integration through Replit Connectors; no service-account JSON is required. Never copy sandbox records wholesale into the Master.
 - Clerk credentials are managed through the workspace Auth pane.
 
+## Fellowship overall reviews
+
+`/fellowship-reviews` is limited to active Fellowship Reviewer and Admin accounts. Approved Fellowship Reviewer accounts can enter the private site without an unrelated SME/RD role; that does not grant attendance/practical editing rights. Review saves append dated overall Fellowship Exam attempts with Pass or Refocus, numeric score and feedback, using exact `03d-Fellowship Review Log` headers. Formulas and prior reviews are preserved; stale revisions are rejected and request IDs prevent duplicate retries. Review and private audit inputs save atomically with readback. Never create a pretend clinical assessment in the live Master for testing.
+
+Summary I selects the latest review using date, Last Updated and row tie-breakers. P:T supply score, assessment feedback, reviewer, review date and update time; see `docs/fellowship-review-data-contract.md` for the downstream mapping. Private audit notes are not the shared assessment feedback. The separate Clinician Development Tool still needs to consume and refresh this feed.
+
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9

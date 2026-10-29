@@ -3,11 +3,11 @@ name: Private SME and RD access
 description: Who may enter the KIMEU workspace and the user's intended sign-in method.
 ---
 
-The SME app is private to approved SMEs and Regional Directors, with director/admin access retained. The user is comfortable using email and password. The app will have a place in Kajabi; anyone may see the cover page, but only assigned SMEs and RDs (plus the administrator) may enter the app.
+The SME app is private to approved SMEs, Regional Directors, and explicitly assigned Fellowship reviewers, with director/admin access retained. The user is comfortable using email and password. The app will have a place in Kajabi; anyone may see the cover page, but only approved staff may enter the app.
 
-**Why:** The user explicitly requested a private site for SMEs and Regional Directors, not an app open to every clinician or company email address, and clarified that a publicly visible cover page or Kajabi placement must not expose the workspace.
+**Why:** The user explicitly requested a private site, not an app open to every clinician or company email address. They later requested named Fellowship reviewers with their own secure access to record overall assessments.
 
-**How to apply:** Keep the cover page public. Require an active approved app-user record and an SME, RD, or Admin role before serving workspace data. A Kajabi membership, corporate-domain address, or newly created authentication account alone must not grant access. Other reviewer/administrative roles need one of these site-access roles as well. Preserve course-level permissions. Let the authentication provider handle passwords and invitations; never put passwords in the roster or app-user sheet.
+**How to apply:** Keep the cover page public. Require an active approved app-user record and an SME, RD, Fellowship Reviewer, or Admin role before serving workspace data. A Kajabi membership, corporate-domain address, or newly created authentication account alone must not grant access. Fellowship Reviewer admission grants the overall-review workspace, not SME attendance or RD practical editing rights. Preserve course-level permissions. Let the authentication provider handle passwords and invitations; never put passwords in the roster or app-user sheet.
 
 Do not treat a failure in a separate workshop/log sheet-health check as revocation of a freshly approved staff account. Keep an already verified workspace and its draft forms mounted during transient connection-refresh errors, but enforce fresh authorization on every server-side save and honor explicit access revocation.
 

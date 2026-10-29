@@ -9,6 +9,12 @@ The SME titles are SME Assist and SME Lead. SME Assist leads Foundations worksho
 
 **How to apply:** Use these names in staff assignment controls and preserve existing approved access when transitioning from older SME labels.
 
+Fellowship reviewers need a dedicated space for overall assessment Pass/Fail, numeric score, and notes, using the Master Sheet's existing column types and feeding the Clinician Development Tool.
+
+**Why:** The user explicitly requested overall Fellowship assessments and confirmed that a failed assessment should use the existing Refocus result rather than adding a separate Fail value.
+
+**How to apply:** Display Fail / Refocus while storing Refocus; retain prior attempts and reviewer attribution. Distinguish overall assessment feedback intended for downstream tracking from private audit notes. Do not invent a score-to-pass threshold.
+
 1.1 Orientation needs its own subpage with attendance, Regional Director sign-off, and slide-deck sections.
 
 1.2 Evaluation Retention requires four weekly, one-hour workshops with Regional Director sign-off for course completion. The user is still deciding whether each week should have specific required material.

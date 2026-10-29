@@ -1,4 +1,4 @@
-export const SITE_ROLES = ["SME Assist", "SME Lead", "RD", "Admin"] as const;
+export const SITE_ROLES = ["SME Assist", "SME Lead", "RD", "Fellowship Reviewer", "Admin"] as const;
 
 export function canonicalRole(role: string): string {
   return role === "Foundations SME" ? "SME Assist" : role === "Elite SME" ? "SME Lead" : role;

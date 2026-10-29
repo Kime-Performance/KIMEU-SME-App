@@ -8,6 +8,92 @@
 import * as zod from 'zod';
 
 
+export const getKimeuFellowshipReviewsResponseTodayRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const GetKimeuFellowshipReviewsResponse = zod.object({
+  "today": zod.string().regex(getKimeuFellowshipReviewsResponseTodayRegExp),
+  "people": zod.array(zod.object({
+  "email": zod.string(),
+  "name": zod.string(),
+  "location": zod.string(),
+  "revision": zod.string()
+})),
+  "reviews": zod.array(zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "reviewDate": zod.string(),
+  "reviewedBy": zod.string(),
+  "reviewType": zod.string(),
+  "result": zod.string(),
+  "score": zod.number().nullable(),
+  "notes": zod.string(),
+  "specificNeed": zod.string(),
+  "workshopId": zod.string().nullable(),
+  "status": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "workshops": zod.array(zod.object({
+  "workshopId": zod.string(),
+  "name": zod.string()
+}))
+})
+
+
+export const saveKimeuFellowshipReviewBodyReviewDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const saveKimeuFellowshipReviewBodyScoreMin = 0;
+export const saveKimeuFellowshipReviewBodyScoreMax = 100;
+
+export const saveKimeuFellowshipReviewBodyNotesMax = 4000;
+
+
+
+
+export const SaveKimeuFellowshipReviewBody = zod.object({
+  "email": zod.string().email(),
+  "reviewDate": zod.string().regex(saveKimeuFellowshipReviewBodyReviewDateRegExp),
+  "result": zod.enum(['Pass', 'Refocus']),
+  "score": zod.number().min(saveKimeuFellowshipReviewBodyScoreMin).max(saveKimeuFellowshipReviewBodyScoreMax),
+  "notes": zod.string().max(saveKimeuFellowshipReviewBodyNotesMax),
+  "workshopId": zod.string().nullable(),
+  "revision": zod.string().min(1),
+  "requestId": zod.string().uuid()
+})
+
+export const saveKimeuFellowshipReviewResponseTodayRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const SaveKimeuFellowshipReviewResponse = zod.object({
+  "today": zod.string().regex(saveKimeuFellowshipReviewResponseTodayRegExp),
+  "people": zod.array(zod.object({
+  "email": zod.string(),
+  "name": zod.string(),
+  "location": zod.string(),
+  "revision": zod.string()
+})),
+  "reviews": zod.array(zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "reviewDate": zod.string(),
+  "reviewedBy": zod.string(),
+  "reviewType": zod.string(),
+  "result": zod.string(),
+  "score": zod.number().nullable(),
+  "notes": zod.string(),
+  "specificNeed": zod.string(),
+  "workshopId": zod.string().nullable(),
+  "status": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "workshops": zod.array(zod.object({
+  "workshopId": zod.string(),
+  "name": zod.string()
+}))
+})
+
+
 export const GetKimeuSmeAssignmentsResponse = zod.object({
   "revision": zod.string(),
   "staff": zod.array(zod.object({
