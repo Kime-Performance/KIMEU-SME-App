@@ -5,6 +5,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { clinicalFoundations, foundationsFixture } from "./helpers/foundations-fixture.mjs";
 
 const temp = await mkdtemp(join(tmpdir(), "course-tracking-"));
 await build({
@@ -151,6 +152,30 @@ test("full templates extend only new formula cells before saving another PT", as
   assert.deepEqual(tables[F][3], before);
   assert.equal(tables[F].at(-1)[8], "=computed");
   assert.ok(writes.some(w => w.requests?.some(r => r.copyPaste)));
+});
+test("all six Foundations subpages save attendance into the correct block and PT without Kajabi or completion writes", async () => {
+  process.env.KIMEU_SHEET_ID = "isolated-six-foundations-attendance";
+  tables["03a-KIMEU Workshops"] = [[], ["Workshop ID", "Workshop Name", "Stage"],
+    ...clinicalFoundations.map(([id, name]) => [id, name, "Foundations"])];
+  tables[F] = foundationsFixture();
+  const actor = { ...sme, workshopIds: clinicalFoundations.map(([id]) => id) };
+  for (const [i, [id]] of clinicalFoundations.entries()) {
+    const start = 15 + i * 5;
+    for (const [p, email] of ["one@example.test", "two@example.test"].entries()) {
+      const before = structuredClone(tables[F]);
+      const ws = await getCourseTracking(actor, id, date);
+      const saved = await saveCourseTracking(actor, id, saveInput(ws, "attendance", email, true));
+      assert.equal(saved.people.find(person => person.email === email).attended, true, `${id}: ${email}`);
+      assert.equal(saved.people.find(person => person.email === email).preCourseComplete, false);
+      assert.equal(tables[F][3 + p][start + 1], "Yes", `${id}: correct attendance column`);
+      for (let row = 0; row < before.length; row++) {
+        for (let col = 0; col < before[row].length; col++) {
+          if (row === 3 + p && [start, start + 1, 46, 47].includes(col)) continue;
+          assert.equal(tables[F][row][col], before[row][col], `${id}: unrelated cell ${row}:${col} changed`);
+        }
+      }
+    }
+  }
 });
 test.after(async () => {
   if (savedEnv === undefined) delete process.env.KIMEU_SHEET_ID; else process.env.KIMEU_SHEET_ID = savedEnv;

@@ -5,6 +5,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { clinicalFoundations, foundationsFixture } from "./helpers/foundations-fixture.mjs";
 
 // Exercise the real Sheets allowlist, header mapping, atomic batch and readback
 // against an isolated fake transport. This test never reaches Google.
@@ -155,6 +156,34 @@ test("master spreadsheet remains blocked without explicit live approval", async 
   }
 });
 
+test("all six Foundations practicals write the selected PT's correct columns and preserve prerequisites and other PTs", async () => {
+  process.env.KIMEU_SHEET_ID = "isolated-test-copy-six-foundations";
+  data["03a-KIMEU Workshops"] = [[], ["Workshop ID", "Workshop Name", "Stage"],
+    ...clinicalFoundations.map(([id, name]) => [id, name, "Foundations"])];
+  data[F] = foundationsFixture("Yes");
+  const actor = { ...rd, workshopIds: clinicalFoundations.map(([id]) => id) };
+  for (const [i, [id]] of clinicalFoundations.entries()) {
+    const start = 15 + i * 5;
+    for (const [p, email] of ["one@example.test", "two@example.test"].entries()) {
+      const before = structuredClone(data[F]);
+      const ws = await getPracticals(actor, id);
+      const record = ws.records.find(r => r.clinicianEmail === email);
+      assert.ok(record, `${id}: PT is available for practical sign-off`);
+      const saved = await savePractical(actor, id, inputFor(record));
+      const confirmed = saved.records.find(r => r.clinicianEmail === email);
+      assert.equal(confirmed.result, "Pass");
+      assert.equal(confirmed.practicalDate, "2026-01-02");
+      assert.equal(data[F][3 + p][start + 2], "2026-01-02");
+      assert.equal(data[F][3 + p][start + 3], "Pass");
+      for (let row = 0; row < before.length; row++) {
+        for (let col = 0; col < before[row].length; col++) {
+          if (row === 3 + p && [start + 2, start + 3, 46, 47].includes(col)) continue;
+          assert.equal(data[F][row][col], before[row][col], `${id}: unrelated cell ${row}:${col} changed`);
+        }
+      }
+    }
+  }
+});
 test.after(async () => {
   if (originalSheet === undefined) delete process.env.KIMEU_SHEET_ID;
   else process.env.KIMEU_SHEET_ID = originalSheet;
