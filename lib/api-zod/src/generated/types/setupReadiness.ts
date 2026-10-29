@@ -5,8 +5,10 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SetupReadinessTrackingMode } from './setupReadinessTrackingMode';
 
 export interface SetupReadiness {
+  trackingMode: SetupReadinessTrackingMode;
   configured: boolean;
   /** @nullable */
   sheetId: string | null;

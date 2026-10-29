@@ -1,6 +1,7 @@
 import { ReplitConnectors, type ProxyOptions } from "@replit/connectors-sdk";
+import { resolveSheetConfiguration } from "./sheet-configuration";
 
-export const MASTER_SHEET_ID = "1cXPmoIV0El9aGjwsac9sszhjFYOpz0C0QFx4GoxSaxM";
+export { MASTER_SHEET_ID } from "./sheet-configuration";
 export const NOTE_VISIBILITY_HEADER = "Visibility";
 export const APP_TIME_ZONE = "America/Los_Angeles";
 
@@ -111,23 +112,14 @@ export async function withPracticalWriteLock<T>(action: () => Promise<T>): Promi
 }
 
 function configuration() {
-  const sheetId = process.env.KIMEU_SHEET_ID?.trim() || "";
-  const missing: string[] = [];
-  if (!sheetId) missing.push("KIMEU_SHEET_ID");
-  if (sheetId && sheetId === MASTER_SHEET_ID) {
-    missing.push("The master spreadsheet is blocked; configure a test copy.");
-  }
-  return {
-    sheetId,
-    configured: Boolean(sheetId && sheetId !== MASTER_SHEET_ID),
-    missing,
-  };
+  return resolveSheetConfiguration(process.env.KIMEU_SHEET_ID, process.env.KIMEU_ENABLE_LIVE_WRITES);
 }
 
 export function getBasicReadiness() {
   const config = configuration();
   return {
     configured: config.configured,
+    trackingMode: config.trackingMode,
     sheetId: null as string | null,
     notePrivacyReady: false,
     writeEnabled: config.configured,
@@ -144,7 +136,7 @@ function getSheetId(): string {
   const config = configuration();
   if (!config.configured) {
     throw new KimeuError(
-      "Google Sheets is not configured for a test copy.",
+      "Google Sheets tracking is not configured or live writes have not been approved.",
       503,
       "SHEET_NOT_CONFIGURED",
     );
@@ -159,20 +151,27 @@ async function requestSheets<T>(
   // The connector manages OAuth and refresh. No service-account JSON is needed.
   const sheetId = getSheetId();
   sheetsConnector ??= new ReplitConnectors();
-  const response = await sheetsConnector.proxy(
-    "google-sheet",
-    `/v4/spreadsheets/${encodeURIComponent(sheetId)}${suffix}`,
-    options,
-  );
+  const path = `/v4/spreadsheets/${encodeURIComponent(sheetId)}${suffix}`;
+  let response = await sheetsConnector.proxy("google-sheet", path, options);
+  // A 429 rejects the whole Sheets request. Retry only that explicit rejection,
+  // never an ambiguous write timeout or 5xx that might already have committed.
+  for (let attempt = 0; response.status === 429 && attempt < 2; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 1000 * 2 ** attempt));
+    response = await sheetsConnector.proxy("google-sheet", path, options);
+  }
   if (!response.ok) {
     throw new KimeuError(
-      response.status === 401 || response.status === 403
-        ? "The Google Sheets connection needs access to the test copy. Check the connected Google account's permissions."
+      response.status === 429
+        ? "Google Sheets is temporarily rate-limited. The result could not be confirmed; retry shortly."
+        : response.status === 401 || response.status === 403
+        ? "The Google Sheets connection needs access to the configured spreadsheet. Check the connected Google account's permissions."
         : response.status === 404
-          ? "The test spreadsheet could not be found by the connected Google account."
+          ? "The configured spreadsheet could not be found by the connected Google account."
           : "Google Sheets could not complete the request. Please retry.",
       503,
-      response.status === 401 || response.status === 403
+      response.status === 429
+        ? "SHEET_RATE_LIMITED"
+        : response.status === 401 || response.status === 403
         ? "SHEET_ACCESS_DENIED"
         : "SHEET_REQUEST_FAILED",
     );
@@ -226,7 +225,7 @@ export async function readTab(
   quoteSheetName(name);
   const headerRow = options.headerRow ?? 2;
   const dataStartRow = options.dataStartRow ?? 3;
-  const cacheKey = `${name}:${headerRow}:${dataStartRow}`;
+  const cacheKey = `${getSheetId()}:${name}:${headerRow}:${dataStartRow}`;
   const cached = snapshotCache.get(cacheKey);
   if (!options.force && cached && cached.expiresAt > Date.now()) {
     return cached.value;
@@ -237,7 +236,7 @@ export async function readTab(
       valueRenderOption: "FORMATTED_VALUE",
       majorDimension: "ROWS",
     });
-    const range = encodeURIComponent(`${quoteSheetName(name)}!A1:AZ`);
+    const range = encodeURIComponent(`${quoteSheetName(name)}!A1:ZZ`);
     const response = await requestSheets<{
       values?: Array<Array<string | number | boolean | null>>;
     }>(`/values/${range}?${query}`);
@@ -260,7 +259,7 @@ export async function readTab(
   } catch (error) {
     if (error instanceof KimeuError) throw error;
     throw new KimeuError(
-      "The configured test spreadsheet could not be read through the Google Sheets connection.",
+      "The configured spreadsheet could not be read through the Google Sheets connection.",
       503,
       "SHEET_READ_FAILED",
     );
@@ -504,7 +503,7 @@ export async function prepareTrackingTemplateRows(tabName: string, firstRow: num
   const properties = metadata.sheets.find(s => s.properties.title === tabName)?.properties;
   if (!properties) throw new KimeuError("The tracking tab could not be found.", 409, "SHEET_TAB_MISSING");
   const template = await requestSheets<{ values?: string[][] }>(
-    `/values/${encodeURIComponent(`${quoteSheetName(tabName)}!A4:AZ4`)}?valueRenderOption=FORMULA`);
+    `/values/${encodeURIComponent(`${quoteSheetName(tabName)}!A4:ZZ4`)}?valueRenderOption=FORMULA`);
   const formulas = (template.values?.[0] ?? []).flatMap((value, column) =>
     String(value).startsWith("=") ? [{ column, formula: String(value) }] : []);
   if (!formulas.length || formulas.some(f => /\bARRAYFORMULA\s*\(/i.test(f.formula))) {
@@ -602,7 +601,7 @@ export async function appendSparseInputRow(
 
 export function invalidateTab(name: string): void {
   for (const key of snapshotCache.keys()) {
-    if (key.startsWith(`${name}:`)) snapshotCache.delete(key);
+    if (key.includes(`:${name}:`)) snapshotCache.delete(key);
   }
 }
 
@@ -641,6 +640,7 @@ export async function testCopyReadiness() {
       configured: missing.every(
         (item) => item === "03g-Clinician Notes: Visibility (needed to protect private notes)",
       ),
+      trackingMode: basic.trackingMode,
       sheetId: null as string | null,
       notePrivacyReady,
       writeEnabled: missing.every(
@@ -652,6 +652,7 @@ export async function testCopyReadiness() {
   } catch (error) {
     return {
       configured: false,
+      trackingMode: basic.trackingMode,
       sheetId: null as string | null,
       notePrivacyReady: false,
       writeEnabled: false,
@@ -659,7 +660,7 @@ export async function testCopyReadiness() {
         ...missing,
         error instanceof KimeuError
           ? error.message
-          : "The test spreadsheet could not be reached through the Google Sheets connection.",
+          : "The configured spreadsheet could not be reached through the Google Sheets connection.",
       ],
     };
   }

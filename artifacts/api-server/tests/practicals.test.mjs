@@ -144,9 +144,15 @@ test("Advanced sign-off writes scorer and preserves computed status; provider fa
   assert.equal(data[A][2][9], "Fixture RD");
 });
 
-test("master spreadsheet remains hard-blocked", async () => {
+test("master spreadsheet remains blocked without explicit live approval", async () => {
   process.env.KIMEU_SHEET_ID = "1cXPmoIV0El9aGjwsac9sszhjFYOpz0C0QFx4GoxSaxM";
-  await assert.rejects(getPracticals(rd, "F-TEST"), { code: "SHEET_NOT_CONFIGURED" });
+  const liveApproval = process.env.KIMEU_ENABLE_LIVE_WRITES;
+  delete process.env.KIMEU_ENABLE_LIVE_WRITES;
+  try { await assert.rejects(getPracticals(rd, "F-TEST"), { code: "SHEET_NOT_CONFIGURED" }); }
+  finally {
+    if (liveApproval === undefined) delete process.env.KIMEU_ENABLE_LIVE_WRITES;
+    else process.env.KIMEU_ENABLE_LIVE_WRITES = liveApproval;
+  }
 });
 
 test.after(async () => {

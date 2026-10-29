@@ -22,8 +22,9 @@ timeoutMs = 20000
 [userenv]
 
 [userenv.shared]
-KIMEU_SHEET_ID = "1D-tA9f3NxaJ1ik3FW_Q4nd75kfic8CF45GrEbSjj3kY"
+KIMEU_SHEET_ID = "1cXPmoIV0El9aGjwsac9sszhjFYOpz0C0QFx4GoxSaxM"
 KIMEU_CALENDAR_ID = "c_classroom7f2d8955@group.calendar.google.com"
+KIMEU_ENABLE_LIVE_WRITES = "true"
 
 [nix]
 channel = "stable-25_05"

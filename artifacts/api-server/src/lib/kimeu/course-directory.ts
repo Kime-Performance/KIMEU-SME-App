@@ -1,7 +1,7 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import { KimeuError, normalizeEmail } from "./sheets";
 
-// Explicit user-supplied source, separate from the writable KIMEU test copy.
+// Explicit read-only roster source, separate from the writable KIMEU tracking sheet.
 const SOURCE = "1CCBAQrjlACcWDPAS6Z2UIirnn-4tleSEuZhc6wPTufo";
 type Directory = { refreshedAt: string; people: Array<{ email: string; name: string; location: string }> };
 let cache: { until: number; value: Directory } | undefined;

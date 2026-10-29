@@ -547,6 +547,9 @@ components:
     SetupReadiness:
       type: object
       properties:
+        trackingMode:
+          type: string
+          enum: [live, test, unconfigured]
         configured:
           type: boolean
         sheetId:
@@ -559,7 +562,7 @@ components:
           type: array
           items:
             type: string
-      required: [configured, sheetId, notePrivacyReady, writeEnabled, missing]
+      required: [configured, trackingMode, sheetId, notePrivacyReady, writeEnabled, missing]
     AppUser:
       type: object
       properties:

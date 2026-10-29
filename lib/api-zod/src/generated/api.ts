@@ -292,6 +292,7 @@ export const HealthCheckResponse = zod.object({
  */
 export const GetKimeuBootstrapResponse = zod.object({
   "readiness": zod.object({
+  "trackingMode": zod.enum(['live', 'test', 'unconfigured']),
   "configured": zod.boolean(),
   "sheetId": zod.string().nullable(),
   "notePrivacyReady": zod.boolean(),

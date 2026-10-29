@@ -47,6 +47,7 @@ export * from './sessionDetail';
 export * from './sessionSummary';
 export * from './sessionSummarySessionStatus';
 export * from './setupReadiness';
+export * from './setupReadinessTrackingMode';
 export * from './smeAssignmentInput';
 export * from './smeAssignmentInputSmeRolesItem';
 export * from './smeAssignments';

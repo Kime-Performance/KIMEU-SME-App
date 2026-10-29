@@ -238,7 +238,17 @@ export interface ApiError {
   code?: string;
 }
 
+export type SetupReadinessTrackingMode = typeof SetupReadinessTrackingMode[keyof typeof SetupReadinessTrackingMode];
+
+
+export const SetupReadinessTrackingMode = {
+  live: 'live',
+  test: 'test',
+  unconfigured: 'unconfigured',
+} as const;
+
 export interface SetupReadiness {
+  trackingMode: SetupReadinessTrackingMode;
   configured: boolean;
   /** @nullable */
   sheetId: string | null;

@@ -7,6 +7,12 @@ The KIME Master Database's Roster tab is the continuing source of PTs available 
 
 The SME opens a workshop subpage to record live attendance and write notes visible to the KIMEU director. RDs record practical results. These input records flow from the app into the KIMEU Master Database for consistent Foundations and Fellowship pathway tracking.
 
+The user explicitly approved enabling live tracking instead of keeping saves isolated in a test copy. Preserve existing history and Kajabi inputs; do not bulk-copy sandbox records into the Master.
+
+**Why:** The user observed that a saved weekly sign-off did not reach the Master or Clinician Development Tool and chose “Enable live tracking.”
+
+**How to apply:** Keep the app-to-Master data flow live once verified. Treat individual RD requirement completion separately from overall Foundations completion; a finished weekly requirement does not waive other pathway prerequisites.
+
 **Why:** The user specified two one-way connections, with the shared sheets supporting the KIMEU Progress Tracker.
 
 **How to apply:** Keep the roster source separate from the workshop-record destination, even if both ultimately reside in the same spreadsheet. Do not write roster changes back from this app. Distinguish individual PT completion from closing a workshop session.

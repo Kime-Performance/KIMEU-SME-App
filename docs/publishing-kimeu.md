@@ -25,7 +25,7 @@ Development and production Clerk identities, sessions and passwords are separate
 
 - In Publishing, choose **Public** hosting so Christine and Kajabi users can reach the sign-in page without Replit collaborator access. Keep the app's own authentication and approved-staff authorization enabled.
 - This hosting selection is an owner action and has not been applied by this preparation.
-- Keep the shared `KIMEU_SHEET_ID` pointed at the existing test copy. Publishing alone does not enable live-master input writes.
+- Preserve the approved shared `KIMEU_SHEET_ID` destination and explicit `KIMEU_ENABLE_LIVE_WRITES` setting. Live Master tracking was authorized separately from publishing; publishing alone must not change a test connection into a live connection. The in-app tracking-mode banner identifies which destination is active.
 - The requested Cadaver Lab/Surgical Observation integration into the live Foundations and Summary tabs, and the separate Clinician Development app's reader changes, are not completed by this publishing preparation. Confirm completion/grandfathering policy and verify the integration separately before live workshop use.
 - Google Calendar remains a read-only occurrence reference; attendance comes from the app.
 
@@ -36,7 +36,7 @@ Retrieve the actual published URL from Publishing, not the `.replit.dev` preview
 1. Signed-out visitors see sign-in, not PT information. `/sign-up` without an invitation shows the invitation-only message.
 2. Accept the owner's production invitation, set the password and sign in. Confirm Admin Settings works.
 3. An authenticated but unapproved account cannot enter. An approved SME/RD receives only its allowed course/PT access.
-4. Test production invitation acceptance, password recovery, sign-out, and a permitted save/readback using an agreed test PT in the test-copy sheet.
+4. Test production invitation acceptance, password recovery and sign-out. Exercise save/readback with agreed fixtures only in an isolated test-copy configuration; do not insert sandbox PTs into the live Master.
 5. Confirm removing staff approval prevents further API access.
 
 Run this additional **read-only signed-out check**:

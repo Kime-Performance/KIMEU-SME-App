@@ -1,5 +1,6 @@
 - [Clerk package compatibility](clerk-package-compatibility.md) — canonical managed-auth wiring requires current Clerk React APIs, not the older v5 major.
 - [Google connector permissions](google-connector-permissions.md) — assess each API scope; Drive read-only does not imply Sheets read-only.
+- [Google Sheets quotas](google-sheets-quotas.md) — managed Sheets requests can hit a shared provider-project limit, not just this app's own request count.
 - [Workshop scheduling](workshop-scheduling.md) — repeated Foundations offerings and regional Advanced dates; annual schedules can shift last minute.
 - [Data flow intent](data-flow-intent.md) — app records attendance/practical inputs and notes; KIMEU sheet calculates completion without an app approval.
 - [Workshop materials](workshop-materials.md) — link existing Drive presentation folders per workshop, with separate PDF/handout access.
