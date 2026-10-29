@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, Lock, RefreshCw, Search, UserCheck } from 'lucide-react';
+import { CircleAlert, Lock, RefreshCw, UserCheck } from 'lucide-react';
 import {
   getGetKimeuCourseTrackingQueryKey, getGetKimeuPracticalsQueryKey, getGetKimeuTodayQueryKey,
   useGetKimeuCourseTracking, useSaveKimeuCourseTracking,
@@ -26,12 +26,17 @@ function fmtTime(s: string) {
 const slug = (k: string) => k.replace(/[^a-zA-Z0-9_-]/g, '_');
 const serverValue = (p: CourseTrackingPerson, _kind: Kind) => p.attended;
 
-export function CourseTracking({ workshopId }: { workshopId: string }) {
+export function CourseTracking({ workshopId, selectedEmail, onRosterChange, onDirtyChange, onBusyChange }: {
+  workshopId: string;
+  selectedEmail: string;
+  onRosterChange: (people: CourseTrackingPerson[]) => void;
+  onDirtyChange: (dirty: boolean) => void;
+  onBusyChange: (busy: boolean) => void;
+}) {
   const client = useQueryClient();
   const [sessionDate, setSessionDate] = useState(laToday);
   const [drafts, setDrafts] = useState<Drafts>(EMPTY);
   const [baseRevision, setBaseRevision] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string; conflict?: boolean } | null>(null);
   const validDate = validDateStr(sessionDate);
   const queryKey = getGetKimeuCourseTrackingQueryKey(workshopId, sessionDate);
@@ -42,6 +47,14 @@ export function CourseTracking({ workshopId }: { workshopId: string }) {
   const data = query.data;
   const count = (k: Kind) => Object.keys(drafts[k]).length;
   const dirty = count('attendance') > 0;
+  useEffect(() => {
+    onRosterChange(data?.people ?? []);
+  }, [data?.people, onRosterChange]);
+  useEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
+  useEffect(() => { onBusyChange(save.isPending); }, [save.isPending, onBusyChange]);
+  useEffect(() => {
+    setDrafts(EMPTY); setBaseRevision(null); setMessage(null);
+  }, [selectedEmail]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -64,10 +77,9 @@ export function CourseTracking({ workshopId }: { workshopId: string }) {
   }, [dirty]);
 
   const people = useMemo(() => {
-    const q = search.trim().toLowerCase();
     const list = data?.people ?? [];
-    return q ? list.filter((p) => `${p.name} ${p.location} ${p.email}`.toLowerCase().includes(q)) : list;
-  }, [data, search]);
+    return list.filter((p) => p.email === selectedEmail);
+  }, [data, selectedEmail]);
 
   function changeDate(next: string) {
     if (dirty && !window.confirm('You have unsaved checklist changes. Changing the date will discard them. Continue?')) return;
@@ -75,7 +87,7 @@ export function CourseTracking({ workshopId }: { workshopId: string }) {
   }
 
   function toggle(kind: Kind, p: CourseTrackingPerson, checked: boolean) {
-    if (!data) return;
+    if (!data || p.email !== selectedEmail) return;
     if (baseRevision === null) setBaseRevision(data.revision);
     setDrafts((d) => {
       const next = { ...d[kind] };
@@ -95,7 +107,7 @@ export function CourseTracking({ workshopId }: { workshopId: string }) {
 
   function submit(kind: Kind) {
     if (!data) return;
-    const marks: TrackingMark[] = Object.entries(drafts[kind]).map(([email, checked]) => ({ email, checked }));
+    const marks: TrackingMark[] = Object.entries(drafts[kind]).filter(([email]) => email === selectedEmail).map(([email, checked]) => ({ email, checked }));
     if (!marks.length) return;
     setMessage(null);
     save.mutate({ workshopId, data: { sessionDate, revision: baseRevision ?? data.revision, kind, marks } }, {
@@ -154,14 +166,13 @@ export function CourseTracking({ workshopId }: { workshopId: string }) {
     </section>;
   }
 
+  if (!selectedEmail && !query.isLoading && !query.isError) return <p className="ct-meta" data-testid="text-select-pt-first">Select a PT above to view their attendance and RD practical.</p>;
   return <section className="ct-root" aria-label="Course tracking" data-testid="section-course-tracking">
     <div className="section-title-row"><div><span className="section-kicker">PT CHECKLIST</span><h2>Workshop attendance</h2></div>
       <button type="button" className="button-quiet" onClick={() => query.refetch()} disabled={!validDate || query.isFetching} data-testid="button-refresh-tracking"><RefreshCw size={14} className={query.isFetching ? 'spin' : ''} /> Refresh</button></div>
     <div className="ct-toolbar">
       <label className="ct-field"><span>Workshop date</span>
         <input type="date" value={sessionDate} onChange={(e) => changeDate(e.target.value)} disabled={save.isPending} data-testid="input-session-date" /></label>
-      <label className="ct-field ct-search"><span>Search PTs</span>
-        <span className="ct-search-box"><Search size={14} /><input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name or location" data-testid="input-search-pts" /></span></label>
     </div>
     <p className="ct-meta">Nothing saves automatically. A workshop session is opened only when attendance is saved.{data && <> Roster refreshed <b data-testid="text-roster-refreshed">{fmtTime(data.rosterRefreshedAt)}</b>.</>}</p>
     <p className="ct-explain">{workshopId.startsWith('F-')
@@ -175,7 +186,7 @@ export function CourseTracking({ workshopId }: { workshopId: string }) {
       : !data?.people.length ? <div className="state-card"><div className="state-icon"><UserCheck size={18} /></div><div><h3>No active clinical PTs</h3><p>The KIME roster returned no PTs for this course and date.</p></div></div>
       : <>
         {query.isError && <div className="inline-message inline-message-error">Latest refresh failed; showing last loaded marks.</div>}
-        {!people.length && <p className="ct-meta" data-testid="text-no-search-results">No PTs match "{search}".</p>}
+        {!people.length && <p className="ct-meta" data-testid="text-no-search-results">The selected PT is not available in the current roster.</p>}
         <div className="ct-grid">{renderList('attendance')}</div>
       </>}
   </section>;

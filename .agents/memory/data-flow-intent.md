@@ -29,11 +29,11 @@ Foundations workshop completion requires attendance and RD practical Pass, witho
 
 **How to apply:** Let Foundations workshop checkmarks depend on attendance and RD Pass, not Kajabi progress. Preserve the assessment's Kajabi and exam requirements and the overall pathway calculation. Do not apply this Foundations-specific change to Fellowship/Advanced completion rules.
 
-Workshop subpages must contain a running list of available PTs with checkboxes and an explicit Submit/Save action for attendance. There is no separate full-completion checklist or approval in the SME app.
+Workshop subpages use one shared PT selector/search. Attendance and RD practicals are specific to that selected person, not separate filtered lists of people. Keep an explicit Submit/Save action for attendance. There is no separate full-completion checklist or approval in the SME app.
 
-**Why:** The user approved the course-page structure but could not find attendance there. They subsequently clarified that the SME app checks individual requirement boxes; the KIMEU sheet interprets those inputs for completion.
+**Why:** The user clarified: “I should go into a workshop, select a PT or search for one and then the attendance and RD practical are specific to that person.” The SME app checks individual requirements; the sheet interprets completion.
 
-**How to apply:** Keep attendance directly on the course page, with separate RD practical sign-off. Do not silently save checkbox taps or add a full-completion approval. Leave completion to the sheet calculations.
+**How to apply:** Selecting or searching for a PT controls both attendance and RD practicals by their email identity. Do not show an unrelated PT's practical record. Warn before discarding unsaved changes when switching people. Do not silently save checkbox taps or add a full-completion approval.
 
 The Clinician Development Tool reads the Foundations, Fellowship, and Advanced Workshop tabs, not Summary. The user needs the SME app's inputs to reach the sheet accurately so the Clinician tool can read them.
 

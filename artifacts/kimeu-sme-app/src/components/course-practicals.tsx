@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, ClipboardCheck, History, Lock, RefreshCw, ShieldAlert } from 'lucide-react';
 import {
@@ -29,7 +29,12 @@ type Draft = { recordKey: string; revision: string; result: 'Pass' | 'Fail' | ''
 
 function slug(k: string) { return k.replace(/[^a-zA-Z0-9_-]/g, '_'); }
 
-export function CoursePracticals({ workshopId }: { workshopId: string }) {
+export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onBusyChange }: {
+  workshopId: string;
+  selectedEmail: string;
+  onDirtyChange: (dirty: boolean) => void;
+  onBusyChange: (busy: boolean) => void;
+}) {
   const queryKey = getGetKimeuPracticalsQueryKey(workshopId);
   const { data, isLoading, isError, refetch, isFetching } = useGetKimeuPracticals(workshopId, { query: { queryKey, refetchInterval: 60000, refetchOnWindowFocus: true } });
   const client = useQueryClient();
@@ -40,6 +45,13 @@ export function CoursePracticals({ workshopId }: { workshopId: string }) {
 
   const canSignOff = data?.canSignOff === true;
   const records = data?.records ?? [];
+  const matchingRecords = records.filter(record => record.clinicianEmail === selectedEmail);
+  useEffect(() => { onDirtyChange(draft !== null); }, [draft, onDirtyChange]);
+  useEffect(() => { onBusyChange(save.isPending); }, [save.isPending, onBusyChange]);
+  useEffect(() => {
+    setDraft(null); setFormError(null); setSuccess('');
+  }, [selectedEmail]);
+  useEffect(() => () => { onDirtyChange(false); onBusyChange(false); }, [onDirtyChange, onBusyChange]);
 
   const open = (r: PracticalRecord) => {
     setSuccess(null); setFormError(null);
@@ -47,7 +59,7 @@ export function CoursePracticals({ workshopId }: { workshopId: string }) {
   };
 
   const submit = (r: PracticalRecord) => {
-    if (!draft) return;
+    if (!draft || draft.recordKey !== r.recordKey || r.clinicianEmail !== selectedEmail) return;
     const notes = draft.notes.trim();
     const today = laToday();
     if (!draft.result) return setFormError({ text: 'Choose Passed or Not passed.', conflict: false });
@@ -91,9 +103,9 @@ export function CoursePracticals({ workshopId }: { workshopId: string }) {
     {success && <div className="inline-message inline-message-success" role="status" data-testid="status-practical-success">{success}</div>}
     {isLoading ? <div className="session-list" aria-label="Loading practicals">{[0, 1].map((i) => <div className="session-skeleton" key={i}><div className="skeleton skeleton-line w-40" /><div className="skeleton skeleton-line w-56" /></div>)}</div>
       : isError ? <div className="state-card state-error" role="alert" data-testid="error-practicals"><div className="state-icon"><CircleAlert size={18} /></div><div><h3>Practicals could not load</h3><p>No records are shown rather than guessing. Try again shortly.</p><button type="button" className="button-quiet" onClick={() => refetch()} data-testid="button-retry-practicals"><RefreshCw size={14} /> Try again</button></div></div>
-      : !records.length ? <div className="state-card" data-testid="empty-practicals"><div className="state-icon"><ClipboardCheck size={18} /></div><div><h3>No practical records yet</h3><p>Attendees appear here once they are on a roster for this course.</p></div></div>
+      : !matchingRecords.length ? <div className="state-card" data-testid="empty-practicals"><div className="state-icon"><ClipboardCheck size={18} /></div><div><h3>No saved practical record for this PT</h3><p>Save attendance for the selected PT first. Checking an attendance box without saving does not create a practical record. Regional Directors see only their assigned PTs.</p></div></div>
       : <ul className="practical-list">
-        {records.map((r) => {
+        {matchingRecords.map((r) => {
           const id = slug(r.recordKey);
           const editing = draft?.recordKey === r.recordKey;
           const res = r.result;

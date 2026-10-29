@@ -3,8 +3,7 @@ import { ArrowLeft, ArrowRight, BookOpen, CircleAlert, ClipboardCheck, FileText,
 import { Link, useParams } from 'wouter';
 import { coursePath, groupCourses, stageLabel, useCourseCatalog } from '@/lib/courses';
 import { decodeSafe } from '@/components/course-nav';
-import { CoursePracticals } from '@/components/course-practicals';
-import { CourseTracking } from '@/components/course-tracking';
+import { WorkshopWorkspace } from '@/components/workshop-workspace';
 import { CourseOnboarding, isOnboardingCourse } from '@/components/course-onboarding';
 import { getGetKimeuBootstrapQueryKey, useGetKimeuBootstrap } from '@workspace/api-client-react';
 
@@ -44,6 +43,18 @@ const frames = [
   { icon: ClipboardCheck, title: 'Practical criteria', detail: 'What a clinician must demonstrate for this course.' },
 ];
 
+function CourseMaterialsFrame() {
+  return <>
+    <div className="course-pending-note" role="status"><BookOpen size={17} aria-hidden="true" /><span>Course content is not populated yet. These sections are the frame it will fill.</span></div>
+    <div className="course-frames">
+      {frames.map(({ icon: Icon, title, detail }) => <section key={title} className="course-frame" aria-label={title}>
+        <div className="panel-heading"><div className="panel-icon"><Icon size={18} /></div><div><span className="section-kicker">NOT YET POPULATED</span><h2>{title}</h2></div></div>
+        <p>{detail}</p>
+      </section>)}
+    </div>
+  </>;
+}
+
 export function CourseDetailPage() {
   const { workshopId: raw = '' } = useParams<{ workshopId: string }>();
   const workshopId = decodeSafe(raw);
@@ -70,15 +81,10 @@ export function CourseDetailPage() {
       <div><dt><UsersRound size={13} aria-hidden="true" /> Lead SME</dt><dd>{course.leadSme || 'Not listed'}</dd></div>
     </dl>
     {isOnboardingCourse(course.workshopId) && showRdWorkspace ? <CourseOnboarding key={course.workshopId} courseId={course.workshopId} /> : <>
-    {showTracking ? <CourseTracking key={course.workshopId} workshopId={course.workshopId} /> : <div className="course-pending-note" role="status" data-testid="status-course-view-only"><BookOpen size={17} aria-hidden="true" /><span>{rdOnly ? 'This workshop’s PT attendance and sign-offs are available only to Regional Directors and administrators.' : 'You can view this workshop. PT attendance and practical records are available only for workshops assigned to your account.'}</span></div>}
-    <div className="course-pending-note" role="status"><BookOpen size={17} aria-hidden="true" /><span>Course content is not populated yet. These sections are the frame it will fill.</span></div>
-    <div className="course-frames">
-      {frames.map(({ icon: Icon, title, detail }) => <section key={title} className="course-frame" aria-label={title}>
-        <div className="panel-heading"><div className="panel-icon"><Icon size={18} /></div><div><span className="section-kicker">NOT YET POPULATED</span><h2>{title}</h2></div></div>
-        <p>{detail}</p>
-      </section>)}
-    </div>
-    {showTracking && <CoursePracticals key={course.workshopId} workshopId={course.workshopId} />}
+    {showTracking ? <WorkshopWorkspace key={course.workshopId} workshopId={course.workshopId}><CourseMaterialsFrame /></WorkshopWorkspace> : <>
+      <div className="course-pending-note" role="status" data-testid="status-course-view-only"><BookOpen size={17} aria-hidden="true" /><span>{rdOnly ? 'This workshop’s PT attendance and sign-offs are available only to Regional Directors and administrators.' : 'You can view this workshop. PT attendance and practical records are available only for workshops assigned to your account.'}</span></div>
+      <CourseMaterialsFrame />
+    </>}
     </>}
   </div>;
 }
