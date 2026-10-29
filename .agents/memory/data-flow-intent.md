@@ -33,4 +33,10 @@ Workshop subpages must contain a running list of available PTs with checkboxes a
 
 **Why:** The user approved the course-page structure but could not find attendance there. They subsequently clarified that the SME app checks individual requirement boxes; the KIMEU sheet interprets those inputs for completion.
 
-**How to apply:** Keep attendance directly on the course page, with separate RD practical sign-off. Do not silently save checkbox taps or add a full-completion approval. Leave completion to the Summary and Foundations/Fellowship sheet calculations consumed by the Clinician Development tool.
+**How to apply:** Keep attendance directly on the course page, with separate RD practical sign-off. Do not silently save checkbox taps or add a full-completion approval. Leave completion to the sheet calculations.
+
+The Clinician Development Tool reads the Foundations, Fellowship, and Advanced Workshop tabs, not Summary. The user needs the SME app's inputs to reach the sheet accurately so the Clinician tool can read them.
+
+**Why:** The user explicitly corrected the assumption that Summary was the downstream integration source.
+
+**How to apply:** Verify saves against the actual pathway source records and their existing calculated fields. Do not require a new Summary integration or describe added Summary columns as a necessary handoff to the Clinician Development Tool.

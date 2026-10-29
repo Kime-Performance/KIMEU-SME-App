@@ -25,7 +25,17 @@ Every save appends an attempt. Existing reviews, follow-up inputs, and scheduled
 
 Review and private audit inputs share one atomic values batch. Optimistic revisions reject stale history. A stable request UUID, stored with the audit, makes retries safe after an unconfirmed response.
 
-## Summary feed for the Clinician Development Tool
+## Direct pathway-tab feed for the Clinician Development Tool
+
+The Clinician Development Tool reads the Master's Foundations, Fellowship, and Advanced Workshop tabs directly, **not Summary**. The SME app must save into these existing source records:
+
+- `03c-Foundations Tracker`: Foundations workshop attendance and practical inputs; RD onboarding inputs in `03i-RD Onboarding` feed the existing Foundations result formulas.
+- `03b-Advanced Workshop Log`: individual Fellowship/Advanced workshop attendance and practical inputs.
+- `03d-Fellowship Review Log`: overall Fellowship result, numeric Score, Notes, reviewer, and date using the mapping above.
+
+Summary is not an intermediate integration requirement. Successful app saves verify the destination sheet records by readback. The other app's selected display fields and refresh timing remain separate from confirming the source save.
+
+## Additional Summary view for the director
 
 Tab `03-KIMEU Summary`: headers row 3, data from row 4. Join by normalized **PT Email** in B, never clinician name or row number.
 
@@ -38,7 +48,7 @@ Tab `03-KIMEU Summary`: headers row 3, data from row 4. Join by normalized **PT 
 
 Prefer header-based mapping. All six fields select the same latest review using review date, server-stamped Last Updated, then row as tie-breakers. Two attempts on the same day must not leave the older result displayed.
 
-The separate Clinician Development Tool must fetch these fields and refresh its own cache. Its code is not in this workspace, so this feed does not by itself verify or change that app's display.
+These are additional Summary views of the source records, not new fields the Clinician Development Tool must adopt.
 
 Overall **Fellowship** in Summary E is still calculated by the Master's existing workshop, exam, and historical-status rules. An exam result alone is not an app-side overall-completion override.
 

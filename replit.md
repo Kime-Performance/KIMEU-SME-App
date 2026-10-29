@@ -38,7 +38,7 @@ Each workshop subpage includes an explicit-save attendance PT checklist and sepa
 
 `/fellowship-reviews` is limited to active Fellowship Reviewer and Admin accounts. Approved Fellowship Reviewer accounts can enter the private site without an unrelated SME/RD role; that does not grant attendance/practical editing rights. Review saves append dated overall Fellowship Exam attempts with Pass or Refocus, numeric score and feedback, using exact `03d-Fellowship Review Log` headers. Formulas and prior reviews are preserved; stale revisions are rejected and request IDs prevent duplicate retries. Review and private audit inputs save atomically with readback. Never create a pretend clinical assessment in the live Master for testing.
 
-Summary I selects the latest review using date, Last Updated and row tie-breakers. P:T supply score, assessment feedback, reviewer, review date and update time; see `docs/fellowship-review-data-contract.md` for the downstream mapping. Private audit notes are not the shared assessment feedback. The separate Clinician Development Tool still needs to consume and refresh this feed.
+The Clinician Development Tool reads the Foundations, Fellowship Review, and Advanced Workshop tabs directly, not Summary. Keep app saves accurate in those source records; no new Summary integration is required. Summary I selects the latest review using date, Last Updated and row tie-breakers; P:T provide an additional director view of score, feedback, reviewer and dates. See `docs/fellowship-review-data-contract.md`. Private audit notes are not shared assessment feedback.
 
 ## Stack
 
