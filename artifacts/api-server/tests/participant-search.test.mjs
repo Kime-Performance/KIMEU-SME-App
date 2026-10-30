@@ -7,6 +7,21 @@ const source = readFileSync(new URL("../../kimeu-sme-app/src/lib/participant-sea
 const code = transformSync(source, { loader: "ts", format: "esm" }).code;
 const { matchesParticipantSearch } = await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
 
+test("PT search supports name parts, spacing and Nate as a short form without changing identity", () => {
+  const name = "Nathaniel Van Dusen", email = "nathaniel@example.test";
+  for (const query of ["Nate Van Dusen", "  NATE   van   DUSEN ", "Van Dusen", "Dusen Nathaniel", email]) {
+    assert.equal(matchesParticipantSearch(query, name, email), true, query);
+  }
+  assert.equal(matchesParticipantSearch("Nate Van Dusen", "Nathaniel Other", "other@example.test"), false);
+  assert.equal(matchesParticipantSearch("Nate Van Dusen", "Matt Van Dusen", "matt@example.test"), false);
+  assert.equal(matchesParticipantSearch("Nate", "Natalie Example", "natalie@example.test"), false);
+  const matches = [
+    { name, email },
+    { name: "Nathan Van Dusen", email: "another@example.test" },
+  ].filter(person => matchesParticipantSearch("Nate Van Dusen", person.name, person.email));
+  assert.equal(matches.length, 2, "shared nicknames must remain ambiguous for explicit PT selection");
+});
+
 test("attendance and practical searches select the same clinician, never an unrelated practical record", () => {
   const roster = [
     { name: "Grant Example", email: "grant@example.test", location: "North" },

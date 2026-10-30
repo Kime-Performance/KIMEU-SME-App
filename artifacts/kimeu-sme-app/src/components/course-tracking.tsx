@@ -26,10 +26,11 @@ function fmtTime(s: string) {
 const slug = (k: string) => k.replace(/[^a-zA-Z0-9_-]/g, '_');
 const serverValue = (p: CourseTrackingPerson, _kind: Kind) => p.attended;
 
-export function CourseTracking({ workshopId, selectedEmail, onRosterChange, onDirtyChange, onBusyChange }: {
+export function CourseTracking({ workshopId, selectedEmail, onRosterChange, onRosterStatusChange, onDirtyChange, onBusyChange }: {
   workshopId: string;
   selectedEmail: string;
   onRosterChange: (people: CourseTrackingPerson[]) => void;
+  onRosterStatusChange?: (status: 'loading' | 'ready' | 'error') => void;
   onDirtyChange: (dirty: boolean) => void;
   onBusyChange: (busy: boolean) => void;
 }) {
@@ -50,6 +51,9 @@ export function CourseTracking({ workshopId, selectedEmail, onRosterChange, onDi
   useEffect(() => {
     onRosterChange(data?.people ?? []);
   }, [data?.people, onRosterChange]);
+  useEffect(() => {
+    onRosterStatusChange?.(data ? 'ready' : query.isError ? 'error' : 'loading');
+  }, [data, query.isError, onRosterStatusChange]);
   useEffect(() => { onDirtyChange(dirty); }, [dirty, onDirtyChange]);
   useEffect(() => { onBusyChange(save.isPending); }, [save.isPending, onBusyChange]);
   useEffect(() => {
