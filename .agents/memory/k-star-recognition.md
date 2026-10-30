@@ -9,6 +9,12 @@ K-Star recognition is optional for KB Resilience only, independent of workshop/p
 
 **How to apply:** Keep ordinary sign-offs and unrelated edits from clearing award evidence. Do not append award-only workshop rows: the downstream app uses the most recently updated course row for completion evidence.
 
+Numeric K-Star evidence must be read independently of the sheet's display format, without changing the calendar-date contract for workshop/practical dates.
+
+**Why:** A date-formatted award column displayed the numeric award 3 as 1900-01-02. Saves committed but failed confirmation, and retained awards appeared missing.
+
+**How to apply:** Use raw numeric reads for award evidence, retain formatted calendar dates elsewhere, and keep the shared award column displayed as a number so downstream consumers are not misled. Never parse date-looking display text as a new credential.
+
 RD practical and K-Star entry must be clearly discoverable for a selected, eligible PT, rather than hidden behind generic Assess/Reassess wording.
 
 **Why:** The user reported that neither the RD practical completion action nor the K-Star earned option could be found after implementation.

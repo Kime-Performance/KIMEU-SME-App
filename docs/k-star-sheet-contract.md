@@ -27,6 +27,12 @@ Updates target the existing selected course row, never append a K-Star-only work
 
 ## Verification boundaries
 
+K-Star numeric evidence is read using `UNFORMATTED_VALUE` and `SERIAL_NUMBER` for AF only, while the rest of the row retains formatted calendar-date reads. This prevents a date-formatted AF cell from turning an underlying award of 3 into a false missing result or failed save confirmation. AF's shared display format is integer `0`; no award values or other columns were changed by that formatting correction.
+
+Practical timing is shown as an inclusive two-week window from the workshop date through day 14. On-time dates are green; late dates remain saveable, while future completion dates and dates before the workshop remain invalid. New practical forms default the actual date to today, which can be changed to the date the practical actually occurred.
+
+On a stale or uncertain save, the form keeps the draft and does not auto-retry writes. Users review the latest saved card/history, explicitly accept that reviewed revision if another save is needed, then save again. A background read failure keeps cached records and the draft visible.
+
 Isolated provider tests cover typed AE/AF writes, numeric zero, invalid and mismatched inputs, highest-level retention across historical rows, stale revisions, preserved course evidence, new attendance initialization, unrelated edits, authorized roles, header safety, and readback failure. Browser checks use the actual component with synthetic records and mocked network traffic. No real clinician award is created for testing.
 
 The supplied consumer contract states that the Clinician Development app reads A:ZZ, examines all retained FW-KB rows, and awards the highest TRUE + integer 1–4 level. Its sheet cache and active-page refresh may take approximately **5–6 minutes**. That app must also be published with its K-Star changes.

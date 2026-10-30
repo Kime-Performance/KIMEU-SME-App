@@ -39,7 +39,7 @@ const row = (email, workshop = "FW-KB", date = "2026-01-01") => {
 };
 const admin = { active: true, email: "admin@fixture.test", roles: ["Admin"], nameInSheets: "Fixture Admin", workshopIds: [] };
 const rd = { ...admin, email: "rd@fixture.test", roles: ["RD"], nameInSheets: "Fixture RD", workshopIds: ["FW-KB", "FW-OTHER"] };
-let tables, batches, ignoreKStar = false;
+let tables, batches, ignoreKStar = false, dateFormattedStars = false;
 function reset() {
   const blank = Array(32).fill(""); blank[0] = "=new-record"; blank[18] = "=status-formula";
   tables = {
@@ -48,7 +48,7 @@ function reset() {
     [C]: [[], ["Workshop ID", "Workshop Name", "Stage"], ["FW-KB", "KB Resilience", "Fellowship"], ["FW-OTHER", "Other workshop", "Fellowship"]],
     "03f-Session Log": [[], ["Session ID", "Session Status"]],
   };
-  batches = []; ignoreKStar = false;
+  batches = []; ignoreKStar = false; dateFormattedStars = false;
 }
 reset();
 globalThis.__kStarTransport = async (_connector, url, options) => {
@@ -71,6 +71,18 @@ globalThis.__kStarTransport = async (_connector, url, options) => {
   }
   const decoded = decodeURIComponent(url.split("/values/")[1].split("?")[0]);
   const tab = decoded.match(/^'([^']+)'!/)[1];
+  if (decoded.endsWith("!AF1:AF")) {
+    assert.match(url, /valueRenderOption=UNFORMATTED_VALUE/);
+    assert.match(url, /dateTimeRenderOption=SERIAL_NUMBER/);
+    return Response.json({ values: tables[tab].map(r => [r[31] ?? ""]) });
+  }
+  if (dateFormattedStars && tab === A) {
+    const values = structuredClone(tables[A]);
+    for (const r of values.slice(2)) if (r[31] !== "" && r[31] != null) {
+      r[31] = new Date(Date.UTC(1899, 11, 30) + Number(r[31]) * 86400000).toISOString().slice(0, 10);
+    }
+    return Response.json({ values });
+  }
   return Response.json({ values: tables[tab] });
 };
 const get = async (email = "one@example.test", workshop = "FW-KB", user = rd) =>
@@ -80,6 +92,20 @@ const input = (record, kStarPerformed, kStarStars) => ({
   ...(kStarPerformed === undefined ? {} : { kStarPerformed, kStarStars }),
 });
 test.beforeEach(reset);
+
+test("date-formatted star cells are read as underlying numeric awards and save confirms without refresh", async () => {
+  dateFormattedStars = true;
+  const r = await get();
+  const ws = await api.savePractical(rd, "FW-KB", input(r, true, 3));
+  const saved = ws.records.find(record => record.recordKey === r.recordKey);
+  assert.equal(saved.kStarStars, 3);
+  assert.equal(saved.kStarHighestEarned, 3);
+  assert.equal(saved.practicalDate, r.sessionDate, "Calendar dates stay calendar-only");
+  const reopened = await get();
+  assert.equal(reopened.kStarStars, 3);
+  await api.savePractical(rd, "FW-KB", input(reopened, true, 1));
+  assert.equal((await get()).kStarHighestEarned, 3);
+});
 
 test("numeric sheet formatting remains valid evidence; FALSE or blank never implies an award", () => {
   assert.deepEqual(api.readKStar("TRUE", "3.00"), { performed: true, stars: 3 });

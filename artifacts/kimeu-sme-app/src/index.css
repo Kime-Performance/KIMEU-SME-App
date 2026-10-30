@@ -1006,4 +1006,7 @@ h1, h2, h3, .page-heading h1, .hero-copy h1, .auth-intro h1, .section-title-row 
 .k-star-fields select { width: 100%; min-width: 0; min-height: 42px; padding: 8px; background: white; color: var(--pp-fg); border: 1px solid var(--pp-line); border-radius: 4px; }
 .practical-entry-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
 .k-star-fields select:disabled { opacity: .65; cursor: not-allowed; }
+.practical-window { display: grid; gap: 4px; padding: 10px 12px; border-radius: 6px; font-size: 13px; }
+.practical-window.is-on-time { color: var(--pp-good); background: #e9f5ee; border: 1px solid #bbdcca; }
+.practical-window.is-outside-window { color: var(--pp-warn); background: var(--pp-warnbg); border: 1px solid var(--pp-line); }
 @media (max-width: 767px) { .fa-grid { grid-template-columns: 1fr; } .fa-panel { position: static; } }

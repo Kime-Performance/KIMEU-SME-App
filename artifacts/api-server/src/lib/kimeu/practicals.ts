@@ -32,7 +32,8 @@ async function load(user: AppUser, workshopId: string) {
   if (!supported) return { canSignOff: false, records: [], internal: [] };
   const tabName = foundation ? "03c-Foundations Tracker" : "03b-Advanced Workshop Log";
   const [snapshot, notes] = await Promise.all([
-    readTab(tabName, { force: true, dataStartRow: foundation ? 4 : 3 }),
+    readTab(tabName, { force: true, dataStartRow: foundation ? 4 : 3,
+      ...(workshopId === K_STAR_WORKSHOP ? { numericColumns: [31] } : {}) }),
     readTab(NOTES, { force: true }),
   ]);
   const headers = headersFor(snapshot);

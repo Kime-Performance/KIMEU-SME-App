@@ -228,12 +228,12 @@ export function headerIndex(headers: string[], name: string): number {
 
 export async function readTab(
   name: string,
-  options: { force?: boolean; headerRow?: number; dataStartRow?: number } = {},
+  options: { force?: boolean; headerRow?: number; dataStartRow?: number; numericColumns?: number[] } = {},
 ): Promise<SheetSnapshot> {
   quoteSheetName(name);
   const headerRow = options.headerRow ?? 2;
   const dataStartRow = options.dataStartRow ?? 3;
-  const cacheKey = `${getSheetId()}:${name}:${headerRow}:${dataStartRow}`;
+  const cacheKey = `${getSheetId()}:${name}:${headerRow}:${dataStartRow}:${options.numericColumns?.join(",") ?? "formatted"}`;
   const cached = snapshotCache.get(cacheKey);
   if (!options.force && cached && cached.expiresAt > Date.now()) {
     return cached.value;
@@ -258,6 +258,19 @@ export async function readTab(
         "SHEET_HEADER_ROW_MISSING",
       );
     }
+    // Numeric evidence must not depend on display formatting. Read only the
+    // explicitly numeric columns as raw serials; ordinary calendar dates keep
+    // their existing formatted-date contract.
+    await Promise.all((options.numericColumns ?? []).map(async column => {
+      const letter = columnLetter(column);
+      const raw = await requestSheets<{ values?: Array<Array<string | number | boolean | null>> }>(
+        `/values/${encodeURIComponent(`${quoteSheetName(name)}!${letter}1:${letter}`)}?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`,
+      );
+      for (let i = 0; i < rows.length; i++) {
+        const value = raw.values?.[i]?.[0];
+        rows[i][column] = value == null ? "" : String(value);
+      }
+    }));
     const value = { rows, headerRow, dataStartRow };
     snapshotCache.set(cacheKey, {
       value,

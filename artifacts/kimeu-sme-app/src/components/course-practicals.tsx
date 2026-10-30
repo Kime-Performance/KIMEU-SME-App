@@ -5,6 +5,7 @@ import {
   getGetKimeuPracticalsQueryKey, getGetKimeuTodayQueryKey, useGetKimeuPracticals, useSaveKimeuPractical,
 } from '@workspace/api-client-react';
 import type { PracticalRecord } from '@workspace/api-client-react';
+import { practicalWindow } from '../lib/practical-window';
 
 const MAX_NOTES = 4000;
 
@@ -40,7 +41,7 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
   const client = useQueryClient();
   const save = useSaveKimeuPractical();
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [formError, setFormError] = useState<{ text: string; conflict: boolean } | null>(null);
+  const [formError, setFormError] = useState<{ text: string; conflict: boolean; latestRevision?: string } | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [editorSection, setEditorSection] = useState<'practical' | 'kstar'>('practical');
   const kStarSection = useRef<HTMLFieldSetElement>(null);
@@ -64,8 +65,22 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
   const open = (r: PracticalRecord, section: 'practical' | 'kstar' = 'practical') => {
     setSuccess(null); setFormError(null);
     setEditorSection(section);
-    setDraft({ recordKey: r.recordKey, revision: r.revision, result: r.result === 'Pass' || r.result === 'Fail' ? r.result : '', practicalDate: r.practicalDate || '', notes: '',
+    setDraft({ recordKey: r.recordKey, revision: r.revision, result: r.result === 'Pass' || r.result === 'Fail' ? r.result : '', practicalDate: r.practicalDate || laToday(), notes: '',
       kStarPerformed: r.kStarPerformed === true, kStarStars: r.kStarStars == null ? '' : String(r.kStarStars) });
+  };
+
+  const reviewLatest = async () => {
+    const key = draft?.recordKey;
+    const latest = await refetch();
+    const record = latest.data?.records.find(r => r.recordKey === key);
+    if (latest.isError || !record) {
+      setFormError({ text: 'The latest record could not be loaded. Your draft is kept. Try again shortly.', conflict: true });
+      return;
+    }
+    setFormError({
+      text: 'Latest saved values are shown above. Your draft is unchanged. Review the result, practical date, K-Star and history before using this version for another save.',
+      conflict: true, latestRevision: record.revision,
+    });
   };
 
   const submit = (r: PracticalRecord) => {
@@ -97,9 +112,9 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
       },
       onError: (err) => {
         const { status, message } = errorInfo(err);
-        if (status === 409) setFormError({ text: 'This record changed since you opened it (someone else may have signed it off). Your draft is kept below. Reload to see the latest, then reassess.', conflict: true });
+        if (status === 409) setFormError({ text: 'This record changed since you opened it. Your draft is kept. Review the latest saved values before saving again; no page refresh is needed.', conflict: true });
         else if (status === 403) setFormError({ text: `Not permitted: ${message}`, conflict: false });
-        else setFormError({ text: message, conflict: false });
+        else setFormError({ text: `${message} Your draft is kept. Review the latest saved values before retrying, since the save may already have reached the sheet.`, conflict: true });
       },
     });
   };
@@ -113,13 +128,15 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
       {canSignOff ? <>Use Record RD practical to mark Passed or Not passed, then Save sign-off.{kStarCourse && <> Use Record K-Star result for the optional fitness test and 0–4 result.</>} These controls require saved attendance and an elapsed workshop session.</> : <><Lock size={13} aria-hidden="true" /> Read only. Only the assigned Regional Director or an admin can record practical results{kStarCourse ? ' and K-Star recognition' : ''}.</>}
     </p>}
     {success && <div className="inline-message inline-message-success" role="status" data-testid="status-practical-success">{success}</div>}
+    {isError && data && <div className="inline-message inline-message-error" role="alert">The latest refresh failed. Previously loaded records and your draft are kept. Try refreshing records again shortly.</div>}
     {isLoading ? <div className="session-list" aria-label="Loading practicals">{[0, 1].map((i) => <div className="session-skeleton" key={i}><div className="skeleton skeleton-line w-40" /><div className="skeleton skeleton-line w-56" /></div>)}</div>
-      : isError ? <div className="state-card state-error" role="alert" data-testid="error-practicals"><div className="state-icon"><CircleAlert size={18} /></div><div><h3>Practicals could not load</h3><p>No records are shown rather than guessing. Try again shortly.</p><button type="button" className="button-quiet" onClick={() => refetch()} data-testid="button-retry-practicals"><RefreshCw size={14} /> Try again</button></div></div>
+      : isError && !data ? <div className="state-card state-error" role="alert" data-testid="error-practicals"><div className="state-icon"><CircleAlert size={18} /></div><div><h3>Practicals could not load</h3><p>No records are shown rather than guessing. Try again shortly.</p><button type="button" className="button-quiet" onClick={() => refetch()} data-testid="button-retry-practicals"><RefreshCw size={14} /> Try again</button></div></div>
       : !matchingRecords.length ? <div className="state-card" data-testid="empty-practicals"><div className="state-icon"><ClipboardCheck size={18} /></div><div><h3>Save this PT’s attendance to unlock RD sign-off</h3><p>Checking attendance without clicking Save does not create a practical record. After saving, Record RD practical{kStarCourse ? ' and Record K-Star result' : ''} will appear here for an eligible session. Regional Directors see only their assigned PTs.</p></div></div>
       : <ul className="practical-list">
         {matchingRecords.map((r) => {
           const id = slug(r.recordKey);
           const editing = draft?.recordKey === r.recordKey;
+          const window = practicalWindow(r.sessionDate, editing ? draft?.practicalDate || '' : r.practicalDate || '', laToday());
           const res = r.result;
           return <li key={r.recordKey} className="practical-card" data-testid={`card-practical-${id}`}>
             <div className="practical-head">
@@ -133,6 +150,10 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
               <div><dt>Scored by</dt><dd data-testid={`text-practical-scorer-${id}`}>{r.scoredBy || 'None'}</dd></div>
               <div><dt>RD</dt><dd>{r.rd || 'Not set'}</dd></div>
             </dl>
+            {window && <p className={`practical-window ${window.onTime ? 'is-on-time' : 'is-outside-window'}`} data-testid={`status-practical-window-${id}`}>
+              <strong>{window.onTime ? (editing || r.practicalDate ? 'Within two-week window' : 'Within two-week window — ready for practical') : window.future ? 'Workshop has not occurred yet' : 'Outside preferred two-week window'}</strong>
+              <span>Preferred practical window: {window.start} through {window.end}. Any actual practical date in this range is on time. Later practicals may still be saved; future dates may not.</span>
+            </p>}
             {kStarCourse && <p className="ct-meta" data-testid={`text-k-star-saved-${id}`}>K-Star: {r.kStarPerformed === null || r.kStarPerformed === undefined ? 'Not recorded' : r.kStarPerformed ? r.kStarStars ? `KR${r.kStarStars}` : r.kStarStars === 0 ? 'Attempted; no star earned' : 'Performed; result not recorded' : 'Not performed'}{r.kStarHighestEarned ? ` · Highest earned: KR${r.kStarHighestEarned}` : ''}</p>}
             {r.history.length > 0 && <details className="practical-history" data-testid={`history-practical-${id}`}>
               <summary><History size={13} aria-hidden="true" /> History ({r.history.length})</summary>
@@ -146,10 +167,10 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
               : <p className="practical-ineligible" data-testid={`text-ineligible-${id}`}>Not yet eligible: attendance must be Yes and the session date must have passed.</p>)}
             {canSignOff && editing && draft && <form className="practical-form" onSubmit={(e) => { e.preventDefault(); submit(r); }} data-testid={`form-practical-${id}`}>
               <fieldset className="practical-choice"><legend>RD practical completion</legend>
-                {(['Pass', 'Fail'] as const).map((v) => <label key={v} className={draft.result === v ? 'is-on' : ''}><input type="radio" name={`result-${id}`} checked={draft.result === v} onChange={() => setDraft({ ...draft, result: v })} data-testid={`radio-result-${v.toLowerCase()}-${id}`} />{v === 'Pass' ? 'Passed — practical complete' : 'Not passed'}</label>)}
+                {(['Pass', 'Fail'] as const).map((v) => <label key={v} className={draft.result === v ? 'is-on' : ''}><input type="radio" disabled={save.isPending} name={`result-${id}`} checked={draft.result === v} onChange={() => setDraft({ ...draft, result: v })} data-testid={`radio-result-${v.toLowerCase()}-${id}`} />{v === 'Pass' ? 'Passed — practical complete' : 'Not passed'}</label>)}
               </fieldset>
-              <label>Practical date<input type="date" value={draft.practicalDate} min={r.sessionDate?.slice(0, 10) || undefined} max={laToday()} onChange={(e) => setDraft({ ...draft, practicalDate: e.target.value })} data-testid={`input-practical-date-${id}`} /></label>
-              <label>Notes {draft.result === 'Fail' ? '(required)' : '(optional)'}<textarea rows={3} maxLength={MAX_NOTES} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="What was observed. No patient identifiers." data-testid={`input-practical-notes-${id}`} /></label>
+              <label>Actual practical date<input type="date" disabled={save.isPending} value={draft.practicalDate} min={r.sessionDate?.slice(0, 10) || undefined} max={laToday()} onChange={(e) => setDraft({ ...draft, practicalDate: e.target.value })} data-testid={`input-practical-date-${id}`} /></label>
+              <label>Notes {draft.result === 'Fail' ? '(required)' : '(optional)'}<textarea disabled={save.isPending} rows={3} maxLength={MAX_NOTES} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="What was observed. No patient identifiers." data-testid={`input-practical-notes-${id}`} /></label>
               {kStarCourse && <fieldset ref={kStarSection} className="k-star-fields" disabled={save.isPending}>
                 <legend>Optional K-Star recognition</legend>
                 <label className="k-star-check"><input type="checkbox" checked={draft.kStarPerformed} onChange={(e) => setDraft({ ...draft, kStarPerformed: e.target.checked, kStarStars: e.target.checked ? draft.kStarStars : '' })} data-testid={`checkbox-k-star-${id}`} />K-Star fitness test performed</label>
@@ -161,10 +182,13 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
                 <p className="ct-meta">Optional and separate from course completion. A lower result or an unchecked test never removes a previously earned level.{r.kStarHighestEarned ? ` Highest earned: KR${r.kStarHighestEarned}.` : ''}</p>
               </fieldset>}
               <div className="practical-form-meta"><span><ShieldAlert size={12} aria-hidden="true" /> No PHI: never include patient names, dates of birth or record numbers.</span><span>{draft.notes.length}/{MAX_NOTES}</span></div>
-              {formError && <div className="inline-message inline-message-error" role="alert" data-testid={`error-practical-${id}`}>{formError.text}{formError.conflict && <> <button type="button" className="practical-link" onClick={() => refetch()} data-testid={`button-reload-practical-${id}`}>Reload records</button></>}</div>}
+              {formError && <div className="inline-message inline-message-error" role="alert" data-testid={`error-practical-${id}`}>{formError.text}{formError.conflict && <>
+                <button type="button" className="practical-link" disabled={isFetching || save.isPending} onClick={reviewLatest} data-testid={`button-reload-practical-${id}`}>Review latest saved values</button>
+                {formError.latestRevision && <button type="button" className="practical-link" disabled={save.isPending || formError.latestRevision !== r.revision} onClick={() => { setDraft({ ...draft, revision: formError.latestRevision! }); setFormError(null); }} data-testid={`button-use-reviewed-practical-${id}`}>Use reviewed version for this draft</button>}
+              </>}</div>}
               <div className="close-actions">
                 <button type="button" className="button-quiet" onClick={() => { setDraft(null); setFormError(null); }} disabled={save.isPending} data-testid={`button-cancel-practical-${id}`}>Cancel</button>
-                <button type="submit" className="practical-save" disabled={save.isPending} data-testid={`button-save-practical-${id}`}>{save.isPending ? 'Saving...' : 'Save sign-off'}</button>
+                <button type="submit" className="practical-save" disabled={save.isPending || formError?.conflict === true} data-testid={`button-save-practical-${id}`}>{save.isPending ? 'Saving...' : 'Save sign-off'}</button>
               </div>
             </form>}
           </li>;
