@@ -29,6 +29,8 @@ const WRITE_ALLOWLIST: Record<string, ReadonlySet<string>> = {
     "Attended", "RD Result", "Signed By", "Signed At", "Notes", "Last Updated By", "Last Updated",
   ]),
   "03b-Advanced Workshop Log": new Set([
+    "K-Star Test Performed",
+    "K-Star Stars Earned",
     "PT Email",
     "PT Name",
     "Workshop ID",

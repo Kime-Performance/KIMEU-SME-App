@@ -17,4 +17,11 @@ export interface PracticalSignoff {
   practicalDate: string;
   /** @maxLength 4000 */
   notes: string;
+  kStarPerformed?: boolean;
+  /**
+     * @minimum 0
+     * @maximum 4
+     * @nullable
+     */
+  kStarStars?: number | null;
 }

@@ -255,6 +255,13 @@ export interface PracticalSignoff {
   practicalDate: string;
   /** @maxLength 4000 */
   notes: string;
+  kStarPerformed?: boolean;
+  /**
+     * @minimum 0
+     * @maximum 4
+     * @nullable
+     */
+  kStarStars?: number | null;
 }
 
 export interface PracticalHistory {
@@ -276,6 +283,20 @@ export interface PracticalRecord {
   practicalDate: string;
   scoredBy: string;
   eligible: boolean;
+  /** @nullable */
+  kStarPerformed?: boolean | null;
+  /**
+     * @minimum 0
+     * @maximum 4
+     * @nullable
+     */
+  kStarStars?: number | null;
+  /**
+     * @minimum 1
+     * @maximum 4
+     * @nullable
+     */
+  kStarHighestEarned?: number | null;
   history: PracticalHistory[];
 }
 

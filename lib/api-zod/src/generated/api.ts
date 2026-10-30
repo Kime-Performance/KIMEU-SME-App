@@ -325,6 +325,13 @@ export const GetKimeuPracticalsParams = zod.object({
   "workshopId": zod.coerce.string().min(1)
 })
 
+export const getKimeuPracticalsResponseRecordsItemKStarStarsMin = 0;
+export const getKimeuPracticalsResponseRecordsItemKStarStarsMax = 4;
+
+export const getKimeuPracticalsResponseRecordsItemKStarHighestEarnedMax = 4;
+
+
+
 export const GetKimeuPracticalsResponse = zod.object({
   "canSignOff": zod.boolean(),
   "records": zod.array(zod.object({
@@ -339,6 +346,9 @@ export const GetKimeuPracticalsResponse = zod.object({
   "practicalDate": zod.string(),
   "scoredBy": zod.string(),
   "eligible": zod.boolean(),
+  "kStarPerformed": zod.boolean().nullish(),
+  "kStarStars": zod.number().int().min(getKimeuPracticalsResponseRecordsItemKStarStarsMin).max(getKimeuPracticalsResponseRecordsItemKStarStarsMax).nullish(),
+  "kStarHighestEarned": zod.number().int().min(1).max(getKimeuPracticalsResponseRecordsItemKStarHighestEarnedMax).nullish(),
   "history": zod.array(zod.object({
   "id": zod.string(),
   "created": zod.string(),
@@ -361,6 +371,9 @@ export const SaveKimeuPracticalParams = zod.object({
 export const saveKimeuPracticalBodyPracticalDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const saveKimeuPracticalBodyNotesMax = 4000;
 
+export const saveKimeuPracticalBodyKStarStarsMin = 0;
+export const saveKimeuPracticalBodyKStarStarsMax = 4;
+
 
 
 export const SaveKimeuPracticalBody = zod.object({
@@ -368,8 +381,17 @@ export const SaveKimeuPracticalBody = zod.object({
   "revision": zod.string().min(1),
   "result": zod.enum(['Pass', 'Fail']),
   "practicalDate": zod.string().regex(saveKimeuPracticalBodyPracticalDateRegExp),
-  "notes": zod.string().max(saveKimeuPracticalBodyNotesMax)
+  "notes": zod.string().max(saveKimeuPracticalBodyNotesMax),
+  "kStarPerformed": zod.boolean().optional(),
+  "kStarStars": zod.number().int().min(saveKimeuPracticalBodyKStarStarsMin).max(saveKimeuPracticalBodyKStarStarsMax).nullish()
 })
+
+export const saveKimeuPracticalResponseRecordsItemKStarStarsMin = 0;
+export const saveKimeuPracticalResponseRecordsItemKStarStarsMax = 4;
+
+export const saveKimeuPracticalResponseRecordsItemKStarHighestEarnedMax = 4;
+
+
 
 export const SaveKimeuPracticalResponse = zod.object({
   "canSignOff": zod.boolean(),
@@ -385,6 +407,9 @@ export const SaveKimeuPracticalResponse = zod.object({
   "practicalDate": zod.string(),
   "scoredBy": zod.string(),
   "eligible": zod.boolean(),
+  "kStarPerformed": zod.boolean().nullish(),
+  "kStarStars": zod.number().int().min(saveKimeuPracticalResponseRecordsItemKStarStarsMin).max(saveKimeuPracticalResponseRecordsItemKStarStarsMax).nullish(),
+  "kStarHighestEarned": zod.number().int().min(1).max(saveKimeuPracticalResponseRecordsItemKStarHighestEarnedMax).nullish(),
   "history": zod.array(zod.object({
   "id": zod.string(),
   "created": zod.string(),

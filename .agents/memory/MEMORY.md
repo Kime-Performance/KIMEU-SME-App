@@ -9,3 +9,4 @@
 - [SME roles and onboarding](workshop-roles-and-onboarding.md) — SME Assist leads Foundations; SME Lead leads Fellowship; Orientation and weekly Evaluation Retention are RD-led.
 - [Brand-book guidance](brand-book-guidance.md) — use the supplied KIME brand book, approved KIMEU marks, and black contrast for the SME app.
 - [Isolated UI fixtures](isolated-ui-fixtures.md) — standalone browser-test bundles must use one frontend React dependency instance.
+- [K-Star recognition](k-star-recognition.md) — optional KB-only highest-earned awards; preserve course evidence and distinguish cross-app verification.

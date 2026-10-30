@@ -25,7 +25,7 @@ function errorInfo(err: unknown): { status?: number; message: string } {
   return { status, message };
 }
 
-type Draft = { recordKey: string; revision: string; result: 'Pass' | 'Fail' | ''; practicalDate: string; notes: string };
+type Draft = { recordKey: string; revision: string; result: 'Pass' | 'Fail' | ''; practicalDate: string; notes: string; kStarPerformed: boolean; kStarStars: string };
 
 function slug(k: string) { return k.replace(/[^a-zA-Z0-9_-]/g, '_'); }
 
@@ -44,6 +44,7 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
   const [success, setSuccess] = useState<string | null>(null);
 
   const canSignOff = data?.canSignOff === true;
+  const kStarCourse = workshopId === 'FW-KB';
   const records = data?.records ?? [];
   const matchingRecords = records.filter(record => record.clinicianEmail === selectedEmail);
   useEffect(() => { onDirtyChange(draft !== null); }, [draft, onDirtyChange]);
@@ -55,7 +56,8 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
 
   const open = (r: PracticalRecord) => {
     setSuccess(null); setFormError(null);
-    setDraft({ recordKey: r.recordKey, revision: r.revision, result: r.result === 'Pass' || r.result === 'Fail' ? r.result : '', practicalDate: r.practicalDate || '', notes: '' });
+    setDraft({ recordKey: r.recordKey, revision: r.revision, result: r.result === 'Pass' || r.result === 'Fail' ? r.result : '', practicalDate: r.practicalDate || '', notes: '',
+      kStarPerformed: r.kStarPerformed === true, kStarStars: r.kStarStars == null ? '' : String(r.kStarStars) });
   };
 
   const submit = (r: PracticalRecord) => {
@@ -68,9 +70,11 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
     if (draft.practicalDate > today) return setFormError({ text: 'The practical date cannot be in the future (Los Angeles time).', conflict: false });
     if (draft.result === 'Fail' && !notes) return setFormError({ text: 'Notes are required when the result is Not passed.', conflict: false });
     if (draft.notes.length > MAX_NOTES) return setFormError({ text: `Notes are limited to ${MAX_NOTES} characters.`, conflict: false });
+    if (kStarCourse && draft.kStarPerformed && !/^[0-4]$/.test(draft.kStarStars)) return setFormError({ text: 'Select a K-Star test result from 0 to 4. An attempted test without an award is 0.', conflict: false });
     setFormError(null);
     const sent = { ...draft };
-    save.mutate({ workshopId, data: { recordKey: sent.recordKey, revision: sent.revision, result: sent.result as 'Pass' | 'Fail', practicalDate: sent.practicalDate, notes } }, {
+    save.mutate({ workshopId, data: { recordKey: sent.recordKey, revision: sent.revision, result: sent.result as 'Pass' | 'Fail', practicalDate: sent.practicalDate, notes,
+      ...(kStarCourse ? { kStarPerformed: sent.kStarPerformed, kStarStars: sent.kStarPerformed ? Number(sent.kStarStars) : null } : {}) } }, {
       onSuccess: (ws) => {
         client.setQueryData(queryKey, ws);
         client.invalidateQueries({ queryKey: getGetKimeuTodayQueryKey() });
@@ -78,7 +82,7 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
         const back = ws.records.find((x) => x.recordKey === sent.recordKey);
         if (back && back.result === sent.result && back.practicalDate === sent.practicalDate) {
           setDraft(null);
-          setSuccess(`${back.name || back.clinicianEmail}: ${resultLabel(back.result)} on ${back.practicalDate} saved and confirmed.`);
+          setSuccess(`${back.name || back.clinicianEmail}: ${resultLabel(back.result)} on ${back.practicalDate} saved and confirmed.${kStarCourse ? ` K-Star: ${back.kStarHighestEarned ? `highest earned KR${back.kStarHighestEarned} retained` : back.kStarPerformed ? 'attempt recorded; no star earned' : 'not performed'}.` : ''}`);
         } else {
           setFormError({ text: 'The server responded but the saved result could not be confirmed on readback. Reload and check before trying again.', conflict: true });
         }
@@ -121,6 +125,7 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
               <div><dt>Scored by</dt><dd data-testid={`text-practical-scorer-${id}`}>{r.scoredBy || 'None'}</dd></div>
               <div><dt>RD</dt><dd>{r.rd || 'Not set'}</dd></div>
             </dl>
+            {kStarCourse && <p className="ct-meta" data-testid={`text-k-star-saved-${id}`}>K-Star: {r.kStarPerformed === null || r.kStarPerformed === undefined ? 'Not recorded' : r.kStarPerformed ? r.kStarStars ? `KR${r.kStarStars}` : r.kStarStars === 0 ? 'Attempted; no star earned' : 'Performed; result not recorded' : 'Not performed'}{r.kStarHighestEarned ? ` · Highest earned: KR${r.kStarHighestEarned}` : ''}</p>}
             {r.history.length > 0 && <details className="practical-history" data-testid={`history-practical-${id}`}>
               <summary><History size={13} aria-hidden="true" /> History ({r.history.length})</summary>
               <ol>{r.history.map((h) => <li key={h.id}><span>{h.created} / {h.author}</span><p>{h.note}</p></li>)}</ol>
@@ -134,6 +139,16 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
               </fieldset>
               <label>Practical date<input type="date" value={draft.practicalDate} min={r.sessionDate?.slice(0, 10) || undefined} max={laToday()} onChange={(e) => setDraft({ ...draft, practicalDate: e.target.value })} data-testid={`input-practical-date-${id}`} /></label>
               <label>Notes {draft.result === 'Fail' ? '(required)' : '(optional)'}<textarea rows={3} maxLength={MAX_NOTES} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="What was observed. No patient identifiers." data-testid={`input-practical-notes-${id}`} /></label>
+              {kStarCourse && <fieldset className="k-star-fields" disabled={save.isPending}>
+                <legend>Optional K-Star recognition</legend>
+                <label className="k-star-check"><input type="checkbox" checked={draft.kStarPerformed} onChange={(e) => setDraft({ ...draft, kStarPerformed: e.target.checked, kStarStars: e.target.checked ? draft.kStarStars : '' })} data-testid={`checkbox-k-star-${id}`} />K-Star fitness test performed</label>
+                {draft.kStarPerformed && <label>Test result (required)<select required value={draft.kStarStars} onChange={(e) => setDraft({ ...draft, kStarStars: e.target.value })} data-testid={`select-k-star-${id}`}>
+                  <option value="">Select a result</option>
+                  <option value="0">0 — Attempted; no star earned</option>
+                  {[1, 2, 3, 4].map(level => <option key={level} value={level}>{level} — KR{level}</option>)}
+                </select></label>}
+                <p className="ct-meta">Optional and separate from course completion. A lower result or an unchecked test never removes a previously earned level.{r.kStarHighestEarned ? ` Highest earned: KR${r.kStarHighestEarned}.` : ''}</p>
+              </fieldset>}
               <div className="practical-form-meta"><span><ShieldAlert size={12} aria-hidden="true" /> No PHI: never include patient names, dates of birth or record numbers.</span><span>{draft.notes.length}/{MAX_NOTES}</span></div>
               {formError && <div className="inline-message inline-message-error" role="alert" data-testid={`error-practical-${id}`}>{formError.text}{formError.conflict && <> <button type="button" className="practical-link" onClick={() => refetch()} data-testid={`button-reload-practical-${id}`}>Reload records</button></>}</div>}
               <div className="close-actions">

@@ -7,6 +7,7 @@ import {
   todayInAppTimeZone, withPracticalWriteLock, type CellValue,
 } from "./sheets";
 import { isAssignedRd, validPracticalInput } from "./practical-rules";
+import { K_STAR_WORKSHOP, K_STAR_PERFORMED, K_STAR_STARS, kStarColumns, readKStar, validateKStar, mergeKStar } from "./k-star";
 
 const NOTES = "03g-Clinician Notes";
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -35,6 +36,7 @@ async function load(user: AppUser, workshopId: string) {
     readTab(NOTES, { force: true }),
   ]);
   const headers = headersFor(snapshot);
+  const kColumns = workshopId === K_STAR_WORKSHOP ? kStarColumns(headers) : null;
   const nh = headersFor(notes);
   // Privacy and audit headers must exist before the feature can write anything.
   for (const name of ["Review ID", "Visibility", "Author", "Note ID", "Note", "Created", "Workshop ID", "PT Email"]) headerIndex(nh, name);
@@ -84,13 +86,22 @@ async function load(user: AppUser, workshopId: string) {
         note: cell(n.values, headerIndex(nh, "Note")),
       })).reverse();
     const attended = cell(row.values, idx.attended) === "Yes";
+    const kRows = kColumns ? dataRows(snapshot).filter(r =>
+      normalizeEmail(cell(r.values, idx.email)) === email &&
+      cell(r.values, column("Workshop ID")) === K_STAR_WORKSHOP) : [];
+    const kEvidence = kRows.map(r => readKStar(cell(r.values, kColumns!.performed), cell(r.values, kColumns!.stars)));
+    const kSaved = kColumns ? readKStar(cell(row.values, kColumns.performed), cell(row.values, kColumns.stars)) : null;
+    const earned = kEvidence.flatMap(e => e.performed && e.stars !== null && e.stars > 0 ? [e.stars] : []);
     return [{
-      recordKey, revision: hash([row.values, matchingNotes.map(n => cell(n.values, headerIndex(nh, "Note ID")))]),
+      recordKey, revision: hash([row.values, matchingNotes.map(n => cell(n.values, headerIndex(nh, "Note ID"))),
+        ...(kColumns ? [kRows.map(r => [r.rowNumber, cell(r.values, kColumns.performed), cell(r.values, kColumns.stars)])] : [])]),
       clinicianEmail: email, name: cell(row.values, idx.name), rd, sessionDate, attended,
       result: cell(row.values, idx.result), practicalDate: formatSheetDate(cell(row.values, idx.date)),
       scoredBy: cell(row.values, idx.scoredBy) || (matchingNotes.length ? cell(matchingNotes[matchingNotes.length - 1].values, headerIndex(nh, "Author")) : ""),
       eligible: attended && sessionDate <= todayInAppTimeZone(), history,
+      ...(kSaved ? { kStarPerformed: kSaved.performed, kStarStars: kSaved.stars, kStarHighestEarned: earned.length ? Math.max(...earned) : null } : {}),
       rowNumber: row.rowNumber,
+      kEvidence,
     }];
   });
   if (new Set(records.map(r => r.recordKey)).size !== records.length) {
@@ -98,8 +109,8 @@ async function load(user: AppUser, workshopId: string) {
   }
   return {
     canSignOff: privileged(user),
-    records: records.map(({ rowNumber: _row, ...record }) => record),
-    internal: records.map(record => ({ ...record, tabName, idx, foundation })),
+    records: records.map(({ rowNumber: _row, kEvidence: _evidence, ...record }) => record),
+    internal: records.map(record => ({ ...record, tabName, idx, foundation, kColumns })),
   };
 }
 
@@ -112,6 +123,7 @@ export async function savePractical(user: AppUser, workshopId: string, input: Pr
   assignedCourse(user, workshopId);
   if (!privileged(user)) throw new KimeuError("Only an assigned RD or Admin can sign off a practical.", 403, "ROLE_NOT_ALLOWED");
   if (!user.nameInSheets.trim()) throw new KimeuError("Your Name in Sheets is required for sign-off.", 409, "AUTHOR_NAME_REQUIRED");
+  const hasKStar = validateKStar(workshopId, input.kStarPerformed, input.kStarStars);
   return withPracticalWriteLock(async () => {
     const current = await load(user, workshopId);
     const record = current.internal.find(r => r.recordKey === input.recordKey);
@@ -120,11 +132,16 @@ export async function savePractical(user: AppUser, workshopId: string, input: Pr
     if (!record.eligible) throw new KimeuError("Confirmed workshop attendance is required before post-workshop sign-off.", 409, "ATTENDANCE_REQUIRED");
     const error = validPracticalInput(input.result, input.practicalDate, input.notes, record.sessionDate, todayInAppTimeZone());
     if (error) throw new KimeuError(error, 400, "INVALID_PRACTICAL");
-    const timestamp = formatSheetTimestamp();
+    const timestamp = workshopId === K_STAR_WORKSHOP ? new Date().toISOString() : formatSheetTimestamp();
+    const kStar = hasKStar ? mergeKStar(record.kEvidence, input.kStarPerformed!, input.kStarStars ?? null) : null;
     const noteId = randomUUID();
     const extra: Array<{ tabName: string; rowNumber: number; columnIndex: number; header: string; value: CellValue }> = [];
-    const add = (header: string, columnIndex: number, value: string) =>
+    const add = (header: string, columnIndex: number, value: CellValue) =>
       extra.push({ tabName: record.tabName, rowNumber: record.rowNumber, header, columnIndex, value });
+    if (kStar && record.kColumns) {
+      add(K_STAR_PERFORMED, record.kColumns.performed, kStar.performed === true);
+      add(K_STAR_STARS, record.kColumns.stars, kStar.stars ?? "");
+    }
     add("Practical Date", record.idx.date, input.practicalDate);
     add("Practical Result", record.idx.result, input.result);
     if (!record.foundation) add("Practical Scored By (RD)", record.idx.scoredBy, user.nameInSheets);
@@ -137,7 +154,7 @@ export async function savePractical(user: AppUser, workshopId: string, input: Pr
       { header: "Workshop ID", value: workshopId },
       { header: "Session ID", value: `${workshopId}-${record.sessionDate.replaceAll("-", "")}` },
       { header: "Review ID", value: `RD:${record.recordKey}:${noteId}` },
-      { header: "Note", value: `${input.result === "Pass" ? "Passed" : "Not passed"} — ${input.practicalDate}${input.notes.trim() ? `\n${input.notes.trim()}` : ""}` },
+      { header: "Note", value: `${input.result === "Pass" ? "Passed" : "Not passed"} — ${input.practicalDate}${input.notes.trim() ? `\n${input.notes.trim()}` : ""}${kStar ? `\nK-Star submitted: performed=${input.kStarPerformed}, stars=${input.kStarStars ?? "blank"}; retained: performed=${kStar.performed}, stars=${kStar.stars ?? "blank"}.` : ""}` },
       { header: "Author", value: user.nameInSheets },
       { header: "Author Role", value: user.roles.includes("RD") ? "RD" : "Admin" },
       { header: "Visibility", value: "Aaron + author" },
@@ -146,6 +163,7 @@ export async function savePractical(user: AppUser, workshopId: string, input: Pr
     const result = await getPracticals(user, workshopId);
     const saved = result.records.find(r => r.recordKey === record.recordKey);
     if (!saved || saved.result !== input.result || saved.practicalDate !== input.practicalDate ||
+        (kStar && (saved.kStarPerformed !== kStar.performed || saved.kStarStars !== kStar.stars)) ||
         !saved.history.some(n => n.id === noteId)) {
       throw new KimeuError("The save was sent but could not be confirmed. Refresh before retrying.", 503, "PRACTICAL_READBACK_FAILED");
     }

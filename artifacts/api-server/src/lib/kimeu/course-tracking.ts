@@ -5,6 +5,7 @@ import { readCourseDirectory } from "./course-directory";
 import { openSession } from "./sessions";
 import { canLeadStage, canonicalRole } from "./site-access-policy";
 import { isRdOnboarding } from "./courses";
+import { K_STAR_WORKSHOP, K_STAR_PERFORMED, K_STAR_STARS, kStarColumns } from "./k-star";
 import {
   cell, dataRows, formatSheetDate, formatSheetTimestamp, headerIndex, headersFor,
   KimeuError, normalizeEmail, readTab, sessionIdFor, todayInAppTimeZone,
@@ -48,7 +49,7 @@ async function load(user: AppUser, workshopId: string, sessionDate: string, forc
   const tabName = foundation ? "03c-Foundations Tracker" : "03b-Advanced Workshop Log";
   const [directory, snapshot, sessions] = await Promise.all([
     readCourseDirectory(forceDirectory),
-    readTab(tabName, { force: true, dataStartRow: 4 }),
+    readTab(tabName, { force: true, dataStartRow: foundation ? 4 : 3 }),
     readTab("03f-Session Log", { force: true }),
   ]);
   const headers = headersFor(snapshot), sh = headersFor(sessions);
@@ -136,7 +137,7 @@ export async function saveCourseTracking(user: AppUser, workshopId: string, inpu
       return { person, checked: mark.checked };
     });
     const timestamp = formatSheetTimestamp();
-    const updates: Array<{ tabName: string; rowNumber: number; header: string; value: string; columnIndex?: number }> = [];
+    const updates: Array<{ tabName: string; rowNumber: number; header: string; value: string | boolean; columnIndex?: number }> = [];
     if (input.kind === "attendance") {
       if (!state.workspace.canSaveAttendance) throw new KimeuError("Attendance is read-only for future, completed, or cancelled sessions.", 409, "ATTENDANCE_READ_ONLY");
       const reserved = new Set<number>();
@@ -157,6 +158,12 @@ export async function saveCourseTracking(user: AppUser, workshopId: string, inpu
           if (!state.foundation) {
             updates.push({ tabName: state.tabName, rowNumber, header: "Workshop ID", value: workshopId });
             updates.push({ tabName: state.tabName, rowNumber, header: "PT Name", value: person.name });
+            if (workshopId === K_STAR_WORKSHOP) {
+              const columns = kStarColumns(headersFor(state.snapshot));
+              // Initialize only genuinely new rows, never infer historical awards.
+              updates.push({ tabName: state.tabName, rowNumber, header: K_STAR_PERFORMED, columnIndex: columns.performed, value: false });
+              updates.push({ tabName: state.tabName, rowNumber, header: K_STAR_STARS, columnIndex: columns.stars, value: "" });
+            }
           }
         }
         const add = (header: string, value: string, columnIndex?: number) =>
@@ -165,7 +172,7 @@ export async function saveCourseTracking(user: AppUser, workshopId: string, inpu
         add(state.foundation ? "Attended (SME)" : "Attended", checked ? "Yes" : "No", state.indices.attended);
         if (!state.foundation) add("Attendance Confirmed By", user.nameInSheets);
         add("Last Updated By", user.nameInSheets);
-        add("Last Updated", timestamp);
+        add("Last Updated", workshopId === K_STAR_WORKSHOP ? new Date().toISOString() : timestamp);
       }
       if (addedTemplateRows) {
         await prepareTrackingTemplateRows(state.tabName, state.snapshot.rows.length + 1, addedTemplateRows);
