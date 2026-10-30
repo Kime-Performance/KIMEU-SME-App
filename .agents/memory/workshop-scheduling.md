@@ -21,6 +21,12 @@ Practical scheduling must allow dates within two weeks after a workshop, across 
 
 **How to apply:** Permit today/future planned dates from workshop day through day 14 inclusively. Keep plans separate from actual completion evidence: scheduling must not mark attendance, Pass/Fail, a practical completion date, or K-Star. Preserve actual-date validation and allow recording late completed practicals. The Calendar connection remains one-way; planning does not create Google Calendar events.
 
+When a PT has multiple dated occurrences of the same workshop, show one practical record at a time and require an explicit session selection.
+
+**Why:** The user interpreted multiple saved KB occurrences as duplicate RD practical requirements. Silently choosing the latest could instead put a sign-off on the wrong occurrence.
+
+**How to apply:** Keep all occurrence history and highest-earned K-Star evidence. Do not delete or merge sheet records to resolve this display confusion. Preserve draft-loss warnings when switching the session being edited.
+
 The user chose Foundations and Advanced workshops only for the app's upcoming list, not all KIMEU Calendar events.
 
 **Why:** The user selected this scope explicitly.

@@ -59,6 +59,19 @@ test("wrong or unenrolled PT cannot see another person's practical buttons", () 
   assert.match(html, /Save this PT/);
   assert.match(html, /attendance to unlock RD sign-off/);
 });
+test("multiple workshop sessions require an explicit date selection instead of duplicate practical cards", () => {
+  globalThis.__practicalControls.records = [
+    { ...person, recordKey: "older", sessionDate: "2026-10-10", result: "Pass" },
+    { ...person, recordKey: "newer", sessionDate: "2026-10-30", result: "Pass" },
+  ];
+  const html = render();
+  assert.match(html, /data-testid="select-practical-session"/);
+  assert.match(html, /2026-10-10/);
+  assert.match(html, /2026-10-30/);
+  assert.match(html, /not 2 required practicals/);
+  assert.doesNotMatch(html, /data-testid="card-practical-/);
+  assert.doesNotMatch(html, /data-testid="button-assess-/);
+});
 test.after(async () => {
   delete globalThis.__practicalControls;
   await rm(temp, { recursive: true, force: true });

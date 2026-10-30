@@ -44,6 +44,7 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
   const [draft, setDraft] = useState<Draft | null>(null);
   const [scheduleRecordKey, setScheduleRecordKey] = useState<string | null>(null);
   const [scheduleBusy, setScheduleBusy] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<{ scope: string; recordKey: string } | null>(null);
   const [formError, setFormError] = useState<{ text: string; conflict: boolean; latestRevision?: string } | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [editorSection, setEditorSection] = useState<'practical' | 'kstar'>('practical');
@@ -53,11 +54,21 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
   const kStarCourse = workshopId === 'FW-KB';
   const records = data?.records ?? [];
   const matchingRecords = records.filter(record => record.clinicianEmail === selectedEmail);
+  const sessionScope = `${workshopId}:${selectedEmail}`;
+  const activeRecordKey = selectedSession?.scope === sessionScope ? selectedSession.recordKey
+    : draft?.recordKey || scheduleRecordKey || (matchingRecords.length === 1 ? matchingRecords[0].recordKey : '');
+  const visibleRecords = matchingRecords.filter(record => record.recordKey === activeRecordKey);
+  const chooseSession = (recordKey: string) => {
+    if (save.isPending || scheduleBusy) return;
+    if ((draft || scheduleRecordKey) && !window.confirm('You have unsaved practical changes. Switching workshop sessions will discard them. Continue?')) return;
+    setSelectedSession({ scope: sessionScope, recordKey });
+    setDraft(null); setScheduleRecordKey(null); setFormError(null); setSuccess(null);
+  };
   useEffect(() => { onDirtyChange(draft !== null || scheduleRecordKey !== null); }, [draft, scheduleRecordKey, onDirtyChange]);
   useEffect(() => { onBusyChange(save.isPending || scheduleBusy); }, [save.isPending, scheduleBusy, onBusyChange]);
   useEffect(() => {
-    setDraft(null); setScheduleRecordKey(null); setFormError(null); setSuccess('');
-  }, [selectedEmail]);
+    setDraft(null); setScheduleRecordKey(null); setSelectedSession(null); setFormError(null); setSuccess('');
+  }, [selectedEmail, workshopId]);
   useEffect(() => () => { onDirtyChange(false); onBusyChange(false); }, [onDirtyChange, onBusyChange]);
   useEffect(() => {
     if (!draft || editorSection !== 'kstar') return;
@@ -135,8 +146,20 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
     {isLoading ? <div className="session-list" aria-label="Loading practicals">{[0, 1].map((i) => <div className="session-skeleton" key={i}><div className="skeleton skeleton-line w-40" /><div className="skeleton skeleton-line w-56" /></div>)}</div>
       : isError && !data ? <div className="state-card state-error" role="alert" data-testid="error-practicals"><div className="state-icon"><CircleAlert size={18} /></div><div><h3>Practicals could not load</h3><p>No records are shown rather than guessing. Try again shortly.</p><button type="button" className="button-quiet" onClick={() => refetch()} data-testid="button-retry-practicals"><RefreshCw size={14} /> Try again</button></div></div>
       : !matchingRecords.length ? <div className="state-card" data-testid="empty-practicals"><div className="state-icon"><ClipboardCheck size={18} /></div><div><h3>Save this PT’s attendance to unlock RD sign-off</h3><p>Checking attendance without clicking Save does not create a practical record. After saving, Record RD practical{kStarCourse ? ' and Record K-Star result' : ''} will appear here for an eligible session. Regional Directors see only their assigned PTs.</p></div></div>
-      : <ul className="practical-list">
-        {matchingRecords.map((r) => {
+      : <>
+      {matchingRecords.length > 1 && <div className="ct-panel" data-testid="panel-practical-sessions">
+        <label className="ct-field">Workshop session for RD practical
+          <select value={activeRecordKey} onChange={event => chooseSession(event.target.value)} disabled={save.isPending || scheduleBusy} data-testid="select-practical-session">
+            <option value="">Select a workshop session</option>
+            {[...matchingRecords].sort((a, b) => b.sessionDate.localeCompare(a.sessionDate)).map(record =>
+              <option key={record.recordKey} value={record.recordKey}>{record.sessionDate} — {resultLabel(record.result)}</option>)}
+          </select>
+        </label>
+        <p className="ct-explain">This PT has {matchingRecords.length} saved workshop sessions, not {matchingRecords.length} required practicals for one session. Choose a date to view or edit one record. All other sessions and their history are retained.</p>
+        {!visibleRecords.length && <p role="status">Select the workshop date above to view its practical record.</p>}
+      </div>}
+      <ul className="practical-list">
+        {visibleRecords.map((r) => {
           const id = slug(r.recordKey);
           const editing = draft?.recordKey === r.recordKey;
           const window = practicalWindow(r.sessionDate, editing ? draft?.practicalDate || '' : r.practicalDate || '', laToday());
@@ -199,6 +222,6 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
             </form>}
           </li>;
         })}
-      </ul>}
+      </ul></>}
   </section>;
 }
