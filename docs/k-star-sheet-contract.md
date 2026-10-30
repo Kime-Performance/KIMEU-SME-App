@@ -31,6 +31,10 @@ K-Star numeric evidence is read using `UNFORMATTED_VALUE` and `SERIAL_NUMBER` fo
 
 Practical timing is shown as an inclusive two-week window from the workshop date through day 14. On-time dates are green; late dates remain saveable, while future completion dates and dates before the workshop remain invalid. New practical forms default the actual date to today, which can be changed to the date the practical actually occurred.
 
+All Foundations, Fellowship and Advanced workshop course workspaces also provide a **separate practical schedule**, permitting today/future dates from workshop day through day 14 inclusively. Scheduling does not require marking attendance complete. Plans can be edited or removed; stale or uncertain saves keep the selected date and require explicit review before retrying.
+
+Plans are appended to the existing Master `03g-Clinician Notes` audit history with a server-created `RD:<recordKey>:SCHEDULE:<noteId>` review marker. No columns are added or renamed, and scheduling writes no course/attendance/completion/award cells or Google Calendar events. The actual completion date remains separate and future dates cannot be recorded as completed. A saved workshop/session record must exist to identify the PT and dated occurrence.
+
 On a stale or uncertain save, the form keeps the draft and does not auto-retry writes. Users review the latest saved card/history, explicitly accept that reviewed revision if another save is needed, then save again. A background read failure keeps cached records and the draft visible.
 
 Isolated provider tests cover typed AE/AF writes, numeric zero, invalid and mismatched inputs, highest-level retention across historical rows, stale revisions, preserved course evidence, new attendance initialization, unrelated edits, authorized roles, header safety, and readback failure. Browser checks use the actual component with synthetic records and mocked network traffic. No real clinician award is created for testing.

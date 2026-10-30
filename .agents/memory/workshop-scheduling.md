@@ -15,11 +15,11 @@ The user confirmed: "Google calendar one way to reference occurence, do not take
 
 **How to apply:** Use a one-way Calendar connection for scheduled occurrences. Never import invitations, guests, or RSVPs as actual attendance. SMEs record actual attendance live in the app. Account for multiple dated offerings per workshop, regional locations, and rescheduling.
 
-The practical following a workshop should be on time within a two-week range, not on one specific date.
+Practical scheduling must allow dates within two weeks after a workshop, across all workshops, rather than one finite date.
 
-**Why:** The user said, "Within 2 weeks following should be a green light."
+**Why:** The user clarified that the allowance is about scheduling, not green coloring, said it should apply to all workshops, and explicitly chose "Allow scheduling within two weeks."
 
-**How to apply:** Show the inclusive workshop-day-through-day-14 window in green for on-time practicals. Keep the actual completion date as evidence; allow late sign-offs without falsely marking them on time, and never permit a future completion date.
+**How to apply:** Permit today/future planned dates from workshop day through day 14 inclusively. Keep plans separate from actual completion evidence: scheduling must not mark attendance, Pass/Fail, a practical completion date, or K-Star. Preserve actual-date validation and allow recording late completed practicals. The Calendar connection remains one-way; planning does not create Google Calendar events.
 
 The user chose Foundations and Advanced workshops only for the app's upcoming list, not all KIMEU Calendar events.
 

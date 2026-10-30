@@ -237,6 +237,18 @@ export interface CourseTracking {
   people: CourseTrackingPerson[];
 }
 
+export interface PracticalScheduleInput {
+  /** @minLength 1 */
+  recordKey: string;
+  /** @minLength 1 */
+  revision: string;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  scheduledDate: string | null;
+}
+
 export type PracticalSignoffResult = typeof PracticalSignoffResult[keyof typeof PracticalSignoffResult];
 
 
@@ -281,6 +293,8 @@ export interface PracticalRecord {
   attended: boolean;
   result: string;
   practicalDate: string;
+  /** @nullable */
+  scheduledDate?: string | null;
   scoredBy: string;
   eligible: boolean;
   /** @nullable */

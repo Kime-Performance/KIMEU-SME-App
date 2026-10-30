@@ -344,6 +344,7 @@ export const GetKimeuPracticalsResponse = zod.object({
   "attended": zod.boolean(),
   "result": zod.string(),
   "practicalDate": zod.string(),
+  "scheduledDate": zod.string().nullish(),
   "scoredBy": zod.string(),
   "eligible": zod.boolean(),
   "kStarPerformed": zod.boolean().nullish(),
@@ -405,11 +406,65 @@ export const SaveKimeuPracticalResponse = zod.object({
   "attended": zod.boolean(),
   "result": zod.string(),
   "practicalDate": zod.string(),
+  "scheduledDate": zod.string().nullish(),
   "scoredBy": zod.string(),
   "eligible": zod.boolean(),
   "kStarPerformed": zod.boolean().nullish(),
   "kStarStars": zod.number().int().min(saveKimeuPracticalResponseRecordsItemKStarStarsMin).max(saveKimeuPracticalResponseRecordsItemKStarStarsMax).nullish(),
   "kStarHighestEarned": zod.number().int().min(1).max(saveKimeuPracticalResponseRecordsItemKStarHighestEarnedMax).nullish(),
+  "history": zod.array(zod.object({
+  "id": zod.string(),
+  "created": zod.string(),
+  "author": zod.string(),
+  "note": zod.string()
+}))
+}))
+})
+
+
+
+
+
+export const SaveKimeuPracticalScheduleParams = zod.object({
+  "workshopId": zod.coerce.string().min(1)
+})
+
+
+
+export const saveKimeuPracticalScheduleBodyScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const SaveKimeuPracticalScheduleBody = zod.object({
+  "recordKey": zod.string().min(1),
+  "revision": zod.string().min(1),
+  "scheduledDate": zod.string().regex(saveKimeuPracticalScheduleBodyScheduledDateRegExp).nullable()
+})
+
+export const saveKimeuPracticalScheduleResponseRecordsItemKStarStarsMin = 0;
+export const saveKimeuPracticalScheduleResponseRecordsItemKStarStarsMax = 4;
+
+export const saveKimeuPracticalScheduleResponseRecordsItemKStarHighestEarnedMax = 4;
+
+
+
+export const SaveKimeuPracticalScheduleResponse = zod.object({
+  "canSignOff": zod.boolean(),
+  "records": zod.array(zod.object({
+  "recordKey": zod.string(),
+  "revision": zod.string(),
+  "clinicianEmail": zod.string(),
+  "name": zod.string(),
+  "rd": zod.string(),
+  "sessionDate": zod.string(),
+  "attended": zod.boolean(),
+  "result": zod.string(),
+  "practicalDate": zod.string(),
+  "scheduledDate": zod.string().nullish(),
+  "scoredBy": zod.string(),
+  "eligible": zod.boolean(),
+  "kStarPerformed": zod.boolean().nullish(),
+  "kStarStars": zod.number().int().min(saveKimeuPracticalScheduleResponseRecordsItemKStarStarsMin).max(saveKimeuPracticalScheduleResponseRecordsItemKStarStarsMax).nullish(),
+  "kStarHighestEarned": zod.number().int().min(1).max(saveKimeuPracticalScheduleResponseRecordsItemKStarHighestEarnedMax).nullish(),
   "history": zod.array(zod.object({
   "id": zod.string(),
   "created": zod.string(),

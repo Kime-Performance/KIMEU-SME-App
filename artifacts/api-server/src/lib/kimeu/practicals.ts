@@ -1,12 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { AppUser } from "./access";
-import type { PracticalSignoff } from "@workspace/api-zod";
+import type { PracticalSignoff, PracticalScheduleInput } from "@workspace/api-zod";
 import {
   appendSparseInputRow, cell, dataRows, formatSheetDate, formatSheetTimestamp,
   headerIndex, headersFor, KimeuError, normalizeEmail, readTab,
   todayInAppTimeZone, withPracticalWriteLock, type CellValue,
 } from "./sheets";
-import { isAssignedRd, validPracticalInput } from "./practical-rules";
+import { isAssignedRd, validPracticalInput, validPracticalSchedule } from "./practical-rules";
 import { K_STAR_WORKSHOP, K_STAR_PERFORMED, K_STAR_STARS, kStarColumns, readKStar, validateKStar, mergeKStar } from "./k-star";
 
 const NOTES = "03g-Clinician Notes";
@@ -86,6 +86,13 @@ async function load(user: AppUser, workshopId: string) {
         author: cell(n.values, headerIndex(nh, "Author")),
         note: cell(n.values, headerIndex(nh, "Note")),
       })).reverse();
+    const scheduleNote = matchingNotes.filter(n =>
+      cell(n.values, headerIndex(nh, "Review ID")).startsWith(`RD:${recordKey}:SCHEDULE:`)).at(-1);
+    const scheduledDate = scheduleNote
+      ? /^Practical scheduled: (\d{4}-\d{2}-\d{2})\.$/.exec(cell(scheduleNote.values, headerIndex(nh, "Note")))?.[1] ?? null
+      : null;
+    const signoffNotes = matchingNotes.filter(n =>
+      !cell(n.values, headerIndex(nh, "Review ID")).startsWith(`RD:${recordKey}:SCHEDULE:`));
     const attended = cell(row.values, idx.attended) === "Yes";
     const kRows = kColumns ? dataRows(snapshot).filter(r =>
       normalizeEmail(cell(r.values, idx.email)) === email &&
@@ -98,7 +105,8 @@ async function load(user: AppUser, workshopId: string) {
         ...(kColumns ? [kRows.map(r => [r.rowNumber, cell(r.values, kColumns.performed), cell(r.values, kColumns.stars)])] : [])]),
       clinicianEmail: email, name: cell(row.values, idx.name), rd, sessionDate, attended,
       result: cell(row.values, idx.result), practicalDate: formatSheetDate(cell(row.values, idx.date)),
-      scoredBy: cell(row.values, idx.scoredBy) || (matchingNotes.length ? cell(matchingNotes[matchingNotes.length - 1].values, headerIndex(nh, "Author")) : ""),
+      scheduledDate,
+      scoredBy: cell(row.values, idx.scoredBy) || (signoffNotes.length ? cell(signoffNotes[signoffNotes.length - 1].values, headerIndex(nh, "Author")) : ""),
       eligible: attended && sessionDate <= todayInAppTimeZone(), history,
       ...(kSaved ? { kStarPerformed: kSaved.performed, kStarStars: kSaved.stars, kStarHighestEarned: earned.length ? Math.max(...earned) : null } : {}),
       rowNumber: row.rowNumber,
@@ -118,6 +126,40 @@ async function load(user: AppUser, workshopId: string) {
 export async function getPracticals(user: AppUser, workshopId: string) {
   const { internal: _internal, ...workspace } = await load(user, workshopId);
   return workspace;
+}
+
+export async function savePracticalSchedule(user: AppUser, workshopId: string, input: PracticalScheduleInput) {
+  assignedCourse(user, workshopId);
+  if (!privileged(user)) throw new KimeuError("Only an assigned RD or Admin can schedule a practical.", 403, "ROLE_NOT_ALLOWED");
+  if (!user.nameInSheets.trim()) throw new KimeuError("Your Name in Sheets is required.", 409, "AUTHOR_NAME_REQUIRED");
+  return withPracticalWriteLock(async () => {
+    const current = await load(user, workshopId);
+    const record = current.internal.find(r => r.recordKey === input.recordKey);
+    if (!record) throw new KimeuError("This practical is not assigned to you or is no longer available.", 403, "PRACTICAL_NOT_ASSIGNED");
+    if (record.revision !== input.revision) throw new KimeuError("This record changed. Review its latest values before scheduling.", 409, "PRACTICAL_CHANGED");
+    const error = validPracticalSchedule(input.scheduledDate, record.sessionDate, todayInAppTimeZone());
+    if (error) throw new KimeuError(error, 400, "INVALID_PRACTICAL_SCHEDULE");
+    const noteId = randomUUID();
+    await appendSparseInputRow(NOTES, [
+      { header: "Note ID", value: noteId }, { header: "Created", value: new Date().toISOString() },
+      { header: "PT Email", value: record.clinicianEmail },
+      { header: "Note Type", value: "Practical scheduling" },
+      { header: "Workshop ID", value: workshopId },
+      { header: "Session ID", value: `${workshopId}-${record.sessionDate.replaceAll("-", "")}` },
+      { header: "Review ID", value: `RD:${record.recordKey}:SCHEDULE:${noteId}` },
+      { header: "Note", value: input.scheduledDate ? `Practical scheduled: ${input.scheduledDate}.` : "Practical schedule cleared." },
+      { header: "Author", value: user.nameInSheets },
+      { header: "Author Role", value: user.roles.includes("RD") ? "RD" : "Admin" },
+      { header: "Visibility", value: "Aaron + author" },
+      { header: "Follow-up Needed", value: false },
+    ], { autoHeaders: ["PT Name (auto)"] });
+    const result = await getPracticals(user, workshopId);
+    const saved = result.records.find(r => r.recordKey === input.recordKey);
+    if (!saved || saved.scheduledDate !== input.scheduledDate || !saved.history.some(n => n.id === noteId)) {
+      throw new KimeuError("The schedule was sent but could not be confirmed. Review saved values before retrying.", 503, "PRACTICAL_SCHEDULE_READBACK_FAILED");
+    }
+    return result;
+  });
 }
 
 export async function savePractical(user: AppUser, workshopId: string, input: PracticalSignoff) {

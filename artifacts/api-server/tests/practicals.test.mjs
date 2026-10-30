@@ -27,7 +27,7 @@ await build({
 });
 const originalSheet = process.env.KIMEU_SHEET_ID;
 process.env.KIMEU_SHEET_ID = "isolated-test-copy";
-const { getPracticals, savePractical } = await import(pathToFileURL(output).href);
+const { getPracticals, savePractical, savePracticalSchedule } = await import(pathToFileURL(output).href);
 const F = "03c-Foundations Tracker";
 const A = "03b-Advanced Workshop Log";
 const N = "03g-Clinician Notes";
@@ -182,6 +182,49 @@ test("all six Foundations practicals write the selected PT's correct columns and
         }
       }
     }
+  }
+});
+test("all workshop pathways schedule, reschedule and clear within 14 days without changing completion cells", async () => {
+  process.env.KIMEU_SHEET_ID = "isolated-test-copy-scheduling";
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const day = offset => new Date(Date.parse(`${today}T12:00:00Z`) + offset * 86400000).toISOString().slice(0, 10);
+  for (const stage of ["Foundations", "Fellowship", "Advanced"]) {
+    process.env.KIMEU_SHEET_ID = `isolated-test-copy-scheduling-${stage}`;
+    const id = `${stage}-SCHEDULE`;
+    data["03a-KIMEU Workshops"] = [[], ["Workshop ID", "Workshop Name", "Stage"], [id, "Synthetic workshop", stage]];
+    data[F] = [
+      ["", "", "", `${id} — Test`],
+      ["PT Email", "PT Name", "RD", "Session Date", "Attended (SME)", "Practical Date", "Practical Result", "Complete", "Last Updated By", "Last Updated"],
+      [], ["fixture@example.test", "Fixture PT", "Fixture RD", today, "No", "", "", "=untouched", "Prior author", "Prior timestamp"],
+    ];
+    data[A] = [[], ["Record ID", "PT Email", "PT Name", "RD", "Workshop ID", "Session Date", "Attended", "Practical Date", "Practical Result", "Practical Scored By (RD)", "Workshop Status", "Last Updated By", "Last Updated"],
+      ["fixture", "fixture@example.test", "Fixture PT", "Fixture RD", id, today, "No", "", "", "", "=untouched", "Prior author", "Prior timestamp"]];
+    const actor = { ...rd, workshopIds: [id] };
+    const baseline = structuredClone([data[F], data[A]]);
+    const original = (await getPracticals(actor, id)).records[0];
+    assert.equal(original.eligible, false, "Scheduling does not require attendance to be marked complete");
+    const body = (r, scheduledDate) => ({ recordKey: r.recordKey, revision: r.revision, scheduledDate });
+    for (const date of [day(-1), day(15), "2026-02-30"]) {
+      await assert.rejects(() => savePracticalSchedule(actor, id, body(original, date)), /date|between|today/);
+    }
+    for (const unauthorized of [{ ...actor, roles: ["SME Lead"] }, { ...actor, nameInSheets: "Other RD" }, { ...actor, workshopIds: [] }]) {
+      await assert.rejects(() => savePracticalSchedule(unauthorized, id, body(original, day(1))), /assigned|Only/);
+    }
+    await assert.rejects(() => savePracticalSchedule(actor, id, { ...body(original, day(1)), recordKey: "foreign" }), /not assigned/);
+    let saved = (await savePracticalSchedule(actor, id, body(original, day(1)))).records[0];
+    assert.equal(saved.scheduledDate, day(1));
+    assert.equal(saved.result, "");
+    assert.equal(saved.practicalDate, "");
+    assert.equal(saved.scoredBy, "", "A scheduling author is not a practical scorer");
+    assert.equal((await getPracticals(actor, id)).records[0].scheduledDate, day(1), "Plan persists after reload");
+    await assert.rejects(() => savePracticalSchedule(actor, id, body(original, day(2))), /changed/);
+    saved = (await savePracticalSchedule(actor, id, body(saved, day(14)))).records[0];
+    assert.equal(saved.scheduledDate, day(14), "Day 14 is inclusive");
+    saved = (await savePracticalSchedule(actor, id, body(saved, null))).records[0];
+    assert.equal(saved.scheduledDate, null);
+    assert.ok(saved.history.some(n => n.note === "Practical schedule cleared."));
+    assert.deepEqual([data[F], data[A]], baseline, `${stage}: no course inputs, formula cells or completion evidence changed`);
+    assert.ok(batches.at(-1).data.every(write => write.range.startsWith(`'${N}'`)), "Only append-only notes are written");
   }
 });
 test.after(async () => {

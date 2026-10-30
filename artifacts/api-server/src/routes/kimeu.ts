@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { getUpcomingWorkshops } from "../lib/kimeu/calendar";
 import { getCourses, requireCourseWriter } from "../lib/kimeu/courses";
-import { getPracticals, savePractical } from "../lib/kimeu/practicals";
+import { getPracticals, savePractical, savePracticalSchedule } from "../lib/kimeu/practicals";
 import { Router, type IRouter } from "express";
 import {
   AppendKimeuClinicianNoteBody,
@@ -16,6 +16,9 @@ import {
   SaveKimeuPracticalParams,
   SaveKimeuPracticalBody,
   SaveKimeuPracticalResponse,
+  SaveKimeuPracticalScheduleParams,
+  SaveKimeuPracticalScheduleBody,
+  SaveKimeuPracticalScheduleResponse,
   GetKimeuSessionParams,
   GetKimeuSessionResponse,
   GetKimeuTodayResponse,
@@ -59,6 +62,16 @@ import {
 } from "../lib/kimeu/sessions";
 
 const router: IRouter = Router();
+
+router.post("/kimeu/courses/:workshopId/practical-schedule", async (req, res): Promise<void> => {
+  const params = requireValidRequest(SaveKimeuPracticalScheduleParams.safeParse(req.params), "workshop ID");
+  const body = requireValidRequest(SaveKimeuPracticalScheduleBody.safeParse(req.body), "practical schedule");
+  const user = await requireActiveAppUser(req);
+  requireRole(user, "Admin", "RD");
+  requireWorkshopAccess(user, params.workshopId);
+  res.setHeader("Cache-Control", "no-store");
+  res.json(SaveKimeuPracticalScheduleResponse.parse(await savePracticalSchedule(user, params.workshopId, body)));
+});
 
 router.get("/kimeu/courses/:workshopId/practicals", async (req, res): Promise<void> => {
   const params = requireValidRequest(GetKimeuPracticalsParams.safeParse(req.params), "workshop ID");

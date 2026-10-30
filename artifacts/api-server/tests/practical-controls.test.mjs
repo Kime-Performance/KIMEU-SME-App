@@ -26,7 +26,8 @@ await build({
       ? "export const useQueryClient=()=>({});"
       : `export const getGetKimeuPracticalsQueryKey=()=>[]; export const getGetKimeuTodayQueryKey=()=>[];
          export const useGetKimeuPracticals=()=>({data:globalThis.__practicalControls,refetch:()=>{}});
-         export const useSaveKimeuPractical=()=>({isPending:false});` }));
+         export const useSaveKimeuPractical=()=>({isPending:false});
+         export const useSaveKimeuPracticalSchedule=()=>({isPending:false});` }));
   } }],
 });
 const { render } = await import(pathToFileURL(join(temp, "module.mjs")).href);

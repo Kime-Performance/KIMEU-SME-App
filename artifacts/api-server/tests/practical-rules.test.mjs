@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isAssignedRd, validPracticalInput } from "../src/lib/kimeu/practical-rules.ts";
+import { isAssignedRd, validPracticalInput, validPracticalSchedule } from "../src/lib/kimeu/practical-rules.ts";
 
 test("RD assignment requires an exact name or email; blank and substring assignments deny", () => {
   assert.equal(isAssignedRd(" RD Example ", "rd example", "rd@example.test"), true);
@@ -23,4 +23,16 @@ test("practical dates must be real, on or after workshop, and not future", () =>
     assert.notEqual(validPracticalInput("Pass", date, "", "2026-10-19", "2026-10-28"), null);
   }
   assert.equal(validPracticalInput("Pass", "2026-10-19", "", "2026-10-19", "2026-10-28"), null);
+});
+
+test("scheduling permits today and future days through day 14, independently of completion dates", () => {
+  for (const date of ["2026-10-21", "2026-10-22", "2026-11-02"]) {
+    assert.equal(validPracticalSchedule(date, "2026-10-19", "2026-10-21"), null);
+  }
+  assert.equal(validPracticalSchedule("2026-10-19", "2026-10-19", "2026-10-19"), null);
+  assert.notEqual(validPracticalInput("Pass", "2026-11-02", "", "2026-10-19", "2026-10-21"), null);
+  for (const date of ["2026-10-18", "2026-10-20", "2026-11-03", "2026-02-30", "not a date"]) {
+    assert.notEqual(validPracticalSchedule(date, "2026-10-19", "2026-10-21"), null);
+  }
+  assert.equal(validPracticalSchedule(null, "2026-10-19", "2026-11-30"), null);
 });

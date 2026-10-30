@@ -165,6 +165,26 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PracticalWorkspace" }
+  /kimeu/courses/{workshopId}/practical-schedule:
+    post:
+      operationId: saveKimeuPracticalSchedule
+      tags: [Kimeu]
+      parameters:
+        - name: workshopId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PracticalScheduleInput" }
+      responses:
+        "200":
+          description: Practical schedule saved without changing completion evidence
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PracticalWorkspace" }
   /healthz:
     get:
       operationId: healthCheck
@@ -567,6 +587,13 @@ components:
         practicalPassed: { type: boolean }
         preCourseComplete: { type: boolean }
         sheetStatus: { type: string }
+    PracticalScheduleInput:
+      type: object
+      required: [recordKey, revision, scheduledDate]
+      properties:
+        recordKey: { type: string, minLength: 1 }
+        revision: { type: string, minLength: 1 }
+        scheduledDate: { type: ["string", "null"], pattern: '^\d{4}-\d{2}-\d{2}$' }
     PracticalSignoff:
       type: object
       required: [recordKey, revision, result, practicalDate, notes]
@@ -599,6 +626,7 @@ components:
         attended: { type: boolean }
         result: { type: string }
         practicalDate: { type: string }
+        scheduledDate: { type: ["string", "null"] }
         scoredBy: { type: string }
         eligible: { type: boolean }
         kStarPerformed: { type: ["boolean", "null"] }

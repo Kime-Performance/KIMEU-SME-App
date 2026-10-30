@@ -93,6 +93,22 @@ const input = (record, kStarPerformed, kStarStars) => ({
 });
 test.beforeEach(reset);
 
+test("KB scheduling preserves all course and award evidence, including before the workshop date", async () => {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const day = offset => new Date(Date.parse(`${today}T12:00:00Z`) + offset * 86400000).toISOString().slice(0, 10);
+  tables[A][2][8] = day(3);
+  tables[A][2][30] = true; tables[A][2][31] = 3;
+  const before = structuredClone(tables[A]);
+  const r = await get();
+  assert.equal(r.eligible, false);
+  const ws = await api.savePracticalSchedule(rd, "FW-KB", { recordKey: r.recordKey, revision: r.revision, scheduledDate: day(4) });
+  const saved = ws.records.find(record => record.recordKey === r.recordKey);
+  assert.equal(saved.scheduledDate, day(4));
+  assert.equal(saved.kStarHighestEarned, 3);
+  assert.deepEqual(tables[A], before);
+  assert.ok(batches[0].data.every(write => write.range.startsWith(`'${N}'`)));
+});
+
 test("date-formatted star cells are read as underlying numeric awards and save confirms without refresh", async () => {
   dateFormattedStars = true;
   const r = await get();

@@ -37,6 +37,7 @@ import type {
   OnboardingInput,
   OnboardingWorkspace,
   OpenSessionInput,
+  PracticalScheduleInput,
   PracticalSignoff,
   PracticalWorkspace,
   SessionDetail,
@@ -999,6 +1000,89 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getSaveKimeuPracticalMutationOptions(options));
+    }
+
+export const getSaveKimeuPracticalScheduleUrl = (workshopId: string,) => {
+
+
+
+
+  return `/api/kimeu/courses/${workshopId}/practical-schedule`
+}
+
+export const saveKimeuPracticalSchedule = async (workshopId: string,
+    practicalScheduleInput: PracticalScheduleInput, options?: Parameters<typeof customFetch>[1]): Promise<PracticalWorkspace> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PracticalWorkspace>(getSaveKimeuPracticalScheduleUrl(workshopId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(practicalScheduleInput)
+  }
+);}
+
+
+
+
+
+export const getSaveKimeuPracticalScheduleMutationKey = () => ['saveKimeuPracticalSchedule'] as const;
+
+export const getSaveKimeuPracticalScheduleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveKimeuPracticalSchedule>>, TError,SaveKimeuPracticalScheduleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveKimeuPracticalSchedule>>, TError,SaveKimeuPracticalScheduleMutationVariables, TContext> => {
+
+const mutationKey = getSaveKimeuPracticalScheduleMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveKimeuPracticalSchedule>>, SaveKimeuPracticalScheduleMutationVariables> = (props) => {
+          const {workshopId,data} = props ?? {};
+
+          return  saveKimeuPracticalSchedule(workshopId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveKimeuPracticalScheduleMutationResult = NonNullable<Awaited<ReturnType<typeof saveKimeuPracticalSchedule>>>
+    export type SaveKimeuPracticalScheduleMutationBody = BodyType<PracticalScheduleInput>
+    export type SaveKimeuPracticalScheduleMutationError = ErrorType<unknown>
+    export type SaveKimeuPracticalScheduleMutationVariables = {workshopId: string;data: BodyType<PracticalScheduleInput>}
+
+    export const useSaveKimeuPracticalSchedule = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveKimeuPracticalSchedule>>, TError,SaveKimeuPracticalScheduleMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveKimeuPracticalSchedule>>,
+        TError,
+        SaveKimeuPracticalScheduleMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveKimeuPracticalScheduleMutationOptions(options));
     }
 
 export const getHealthCheckUrl = () => {

@@ -47,6 +47,7 @@ export * from './onboardingWorkspace';
 export * from './openSessionInput';
 export * from './practicalHistory';
 export * from './practicalRecord';
+export * from './practicalScheduleInput';
 export * from './practicalSignoff';
 export * from './practicalSignoffResult';
 export * from './practicalWorkspace';

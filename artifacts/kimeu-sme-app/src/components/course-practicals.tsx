@@ -6,6 +6,7 @@ import {
 } from '@workspace/api-client-react';
 import type { PracticalRecord } from '@workspace/api-client-react';
 import { practicalWindow } from '../lib/practical-window';
+import { PracticalSchedule } from './practical-schedule';
 
 const MAX_NOTES = 4000;
 
@@ -41,6 +42,8 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
   const client = useQueryClient();
   const save = useSaveKimeuPractical();
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [scheduleRecordKey, setScheduleRecordKey] = useState<string | null>(null);
+  const [scheduleBusy, setScheduleBusy] = useState(false);
   const [formError, setFormError] = useState<{ text: string; conflict: boolean; latestRevision?: string } | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [editorSection, setEditorSection] = useState<'practical' | 'kstar'>('practical');
@@ -50,10 +53,10 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
   const kStarCourse = workshopId === 'FW-KB';
   const records = data?.records ?? [];
   const matchingRecords = records.filter(record => record.clinicianEmail === selectedEmail);
-  useEffect(() => { onDirtyChange(draft !== null); }, [draft, onDirtyChange]);
-  useEffect(() => { onBusyChange(save.isPending); }, [save.isPending, onBusyChange]);
+  useEffect(() => { onDirtyChange(draft !== null || scheduleRecordKey !== null); }, [draft, scheduleRecordKey, onDirtyChange]);
+  useEffect(() => { onBusyChange(save.isPending || scheduleBusy); }, [save.isPending, scheduleBusy, onBusyChange]);
   useEffect(() => {
-    setDraft(null); setFormError(null); setSuccess('');
+    setDraft(null); setScheduleRecordKey(null); setFormError(null); setSuccess('');
   }, [selectedEmail]);
   useEffect(() => () => { onDirtyChange(false); onBusyChange(false); }, [onDirtyChange, onBusyChange]);
   useEffect(() => {
@@ -122,10 +125,10 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
   return <section className="practicals" aria-label="Post-workshop practical" data-testid="section-practicals">
     <div className="section-title-row">
       <div><span className="section-kicker">POST-WORKSHOP / REGIONAL DIRECTOR</span><h2>{kStarCourse ? 'RD practical completion & K-Star' : 'RD practical completion'}</h2></div>
-      <button type="button" className="button-quiet" onClick={() => refetch()} disabled={isFetching} data-testid="button-refresh-practicals"><RefreshCw size={14} className={isFetching ? 'spin' : ''} /> Refresh</button>
+      <button type="button" className="button-quiet" onClick={() => refetch()} disabled={isFetching || save.isPending || scheduleBusy} data-testid="button-refresh-practicals"><RefreshCw size={14} className={isFetching ? 'spin' : ''} /> Refresh</button>
     </div>
     {!isLoading && !isError && <p className="practicals-intro" data-testid="text-practicals-access">
-      {canSignOff ? <>Use Record RD practical to mark Passed or Not passed, then Save sign-off.{kStarCourse && <> Use Record K-Star result for the optional fitness test and 0–4 result.</>} These controls require saved attendance and an elapsed workshop session.</> : <><Lock size={13} aria-hidden="true" /> Read only. Only the assigned Regional Director or an admin can record practical results{kStarCourse ? ' and K-Star recognition' : ''}.</>}
+      {canSignOff ? <>Use Schedule practical to plan a date within two weeks after any workshop, without marking completion. Use Record RD practical only after the practical happens; completion requires saved attendance and an elapsed workshop session.{kStarCourse && <> Use Record K-Star result for the optional fitness test and 0–4 result.</>}</> : <><Lock size={13} aria-hidden="true" /> Read only. Only the assigned Regional Director or an admin can schedule or record practical results{kStarCourse ? ' and K-Star recognition' : ''}.</>}
     </p>}
     {success && <div className="inline-message inline-message-success" role="status" data-testid="status-practical-success">{success}</div>}
     {isError && data && <div className="inline-message inline-message-error" role="alert">The latest refresh failed. Previously loaded records and your draft are kept. Try refreshing records again shortly.</div>}
@@ -147,22 +150,25 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
               <div><dt>Session</dt><dd>{r.sessionDate || 'Not set'}</dd></div>
               <div><dt>Attended</dt><dd>{r.attended ? 'Yes' : 'No'}</dd></div>
               <div><dt>Practical</dt><dd data-testid={`text-practical-date-${id}`}>{r.practicalDate || 'None'}</dd></div>
+              <div><dt>Scheduled practical</dt><dd data-testid={`text-practical-schedule-${id}`}>{r.scheduledDate || 'Not scheduled'}</dd></div>
               <div><dt>Scored by</dt><dd data-testid={`text-practical-scorer-${id}`}>{r.scoredBy || 'None'}</dd></div>
               <div><dt>RD</dt><dd>{r.rd || 'Not set'}</dd></div>
             </dl>
             {window && <p className={`practical-window ${window.onTime ? 'is-on-time' : 'is-outside-window'}`} data-testid={`status-practical-window-${id}`}>
               <strong>{window.onTime ? (editing || r.practicalDate ? 'Within two-week window' : 'Within two-week window — ready for practical') : window.future ? 'Workshop has not occurred yet' : 'Outside preferred two-week window'}</strong>
-              <span>Preferred practical window: {window.start} through {window.end}. Any actual practical date in this range is on time. Later practicals may still be saved; future dates may not.</span>
+              <span>Practical scheduling window: {window.start} through {window.end}. Future dates in this range may be scheduled separately. Completion is recorded only after the practical happens.</span>
             </p>}
             {kStarCourse && <p className="ct-meta" data-testid={`text-k-star-saved-${id}`}>K-Star: {r.kStarPerformed === null || r.kStarPerformed === undefined ? 'Not recorded' : r.kStarPerformed ? r.kStarStars ? `KR${r.kStarStars}` : r.kStarStars === 0 ? 'Attempted; no star earned' : 'Performed; result not recorded' : 'Not performed'}{r.kStarHighestEarned ? ` · Highest earned: KR${r.kStarHighestEarned}` : ''}</p>}
             {r.history.length > 0 && <details className="practical-history" data-testid={`history-practical-${id}`}>
               <summary><History size={13} aria-hidden="true" /> History ({r.history.length})</summary>
               <ol>{r.history.map((h) => <li key={h.id}><span>{h.created} / {h.author}</span><p>{h.note}</p></li>)}</ol>
             </details>}
+            {canSignOff && scheduleRecordKey !== r.recordKey && <button type="button" className="button-quiet" disabled={draft !== null || scheduleRecordKey !== null || save.isPending} onClick={() => { setSuccess(null); setScheduleRecordKey(r.recordKey); }} data-testid={`button-schedule-practical-${id}`}>{r.scheduledDate ? 'Edit practical schedule' : 'Schedule practical'}</button>}
+            {canSignOff && scheduleRecordKey === r.recordKey && <PracticalSchedule workshopId={workshopId} record={r} today={laToday()} onBusyChange={setScheduleBusy} onClose={() => setScheduleRecordKey(null)} onSaved={message => { setScheduleRecordKey(null); setSuccess(message); }} onReview={async () => { const latest = await refetch(); if (latest.isError || !latest.data) throw new Error('Latest records unavailable'); return latest.data; }} />}
             {canSignOff && !editing && (r.eligible
               ? <div className="practical-entry-actions">
-                <button type="button" className="practical-open" onClick={() => open(r)} disabled={save.isPending} data-testid={`button-assess-${id}`}>{res ? 'Edit RD practical' : 'Record RD practical'}</button>
-                {kStarCourse && <button type="button" className="button-quiet" onClick={() => open(r, 'kstar')} disabled={save.isPending} data-testid={`button-k-star-${id}`}>Record K-Star result</button>}
+                <button type="button" className="practical-open" onClick={() => open(r)} disabled={save.isPending || scheduleRecordKey !== null} data-testid={`button-assess-${id}`}>{res ? 'Edit RD practical' : 'Record RD practical'}</button>
+                {kStarCourse && <button type="button" className="button-quiet" onClick={() => open(r, 'kstar')} disabled={save.isPending || scheduleRecordKey !== null} data-testid={`button-k-star-${id}`}>Record K-Star result</button>}
               </div>
               : <p className="practical-ineligible" data-testid={`text-ineligible-${id}`}>Not yet eligible: attendance must be Yes and the session date must have passed.</p>)}
             {canSignOff && editing && draft && <form className="practical-form" onSubmit={(e) => { e.preventDefault(); submit(r); }} data-testid={`form-practical-${id}`}>

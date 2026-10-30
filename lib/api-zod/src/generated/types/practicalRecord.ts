@@ -17,6 +17,8 @@ export interface PracticalRecord {
   attended: boolean;
   result: string;
   practicalDate: string;
+  /** @nullable */
+  scheduledDate?: string | null;
   scoredBy: string;
   eligible: boolean;
   /** @nullable */

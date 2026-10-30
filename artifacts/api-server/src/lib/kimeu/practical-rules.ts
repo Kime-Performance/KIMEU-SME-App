@@ -19,3 +19,15 @@ export function validPracticalInput(
   if (date > today) return "The practical date cannot be in the future.";
   return null;
 }
+
+export function validPracticalSchedule(date: string | null, sessionDate: string, today: string): string | null {
+  if (date === null) return null; // Clear a plan, never erase its audit history.
+  const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    Number.isFinite(Date.parse(`${value}T12:00:00Z`)) &&
+    new Date(`${value}T12:00:00Z`).toISOString().slice(0, 10) === value;
+  if (!validDate(date) || !validDate(sessionDate)) return "Enter a valid scheduled practical date.";
+  const end = new Date(Date.parse(`${sessionDate}T12:00:00Z`) + 14 * 86400000).toISOString().slice(0, 10);
+  if (date < sessionDate || date > end) return `Schedule the practical between ${sessionDate} and ${end} (within two weeks after the workshop).`;
+  if (date < today) return "Choose today or a future date for scheduling. Use RD practical completion to record a practical that already happened.";
+  return null;
+}
