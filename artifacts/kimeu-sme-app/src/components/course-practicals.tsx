@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, ClipboardCheck, History, Lock, RefreshCw, ShieldAlert } from 'lucide-react';
 import {
@@ -42,6 +42,8 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
   const [draft, setDraft] = useState<Draft | null>(null);
   const [formError, setFormError] = useState<{ text: string; conflict: boolean } | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [editorSection, setEditorSection] = useState<'practical' | 'kstar'>('practical');
+  const kStarSection = useRef<HTMLFieldSetElement>(null);
 
   const canSignOff = data?.canSignOff === true;
   const kStarCourse = workshopId === 'FW-KB';
@@ -53,9 +55,15 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
     setDraft(null); setFormError(null); setSuccess('');
   }, [selectedEmail]);
   useEffect(() => () => { onDirtyChange(false); onBusyChange(false); }, [onDirtyChange, onBusyChange]);
+  useEffect(() => {
+    if (!draft || editorSection !== 'kstar') return;
+    kStarSection.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    kStarSection.current?.querySelector('input')?.focus({ preventScroll: true });
+  }, [draft?.recordKey, editorSection]);
 
-  const open = (r: PracticalRecord) => {
+  const open = (r: PracticalRecord, section: 'practical' | 'kstar' = 'practical') => {
     setSuccess(null); setFormError(null);
+    setEditorSection(section);
     setDraft({ recordKey: r.recordKey, revision: r.revision, result: r.result === 'Pass' || r.result === 'Fail' ? r.result : '', practicalDate: r.practicalDate || '', notes: '',
       kStarPerformed: r.kStarPerformed === true, kStarStars: r.kStarStars == null ? '' : String(r.kStarStars) });
   };
@@ -98,16 +106,16 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
 
   return <section className="practicals" aria-label="Post-workshop practical" data-testid="section-practicals">
     <div className="section-title-row">
-      <div><span className="section-kicker">POST-WORKSHOP</span><h2>Practical sign-off</h2></div>
+      <div><span className="section-kicker">POST-WORKSHOP / REGIONAL DIRECTOR</span><h2>{kStarCourse ? 'RD practical completion & K-Star' : 'RD practical completion'}</h2></div>
       <button type="button" className="button-quiet" onClick={() => refetch()} disabled={isFetching} data-testid="button-refresh-practicals"><RefreshCw size={14} className={isFetching ? 'spin' : ''} /> Refresh</button>
     </div>
     {!isLoading && !isError && <p className="practicals-intro" data-testid="text-practicals-access">
-      {canSignOff ? <>Record whether each attendee demonstrated the skill in a real practical. Eligible rows need confirmed attendance and an elapsed session.</> : <><Lock size={13} aria-hidden="true" /> Read only. Only the assigned Regional Director or an admin can record practical results.</>}
+      {canSignOff ? <>Use Record RD practical to mark Passed or Not passed, then Save sign-off.{kStarCourse && <> Use Record K-Star result for the optional fitness test and 0–4 result.</>} These controls require saved attendance and an elapsed workshop session.</> : <><Lock size={13} aria-hidden="true" /> Read only. Only the assigned Regional Director or an admin can record practical results{kStarCourse ? ' and K-Star recognition' : ''}.</>}
     </p>}
     {success && <div className="inline-message inline-message-success" role="status" data-testid="status-practical-success">{success}</div>}
     {isLoading ? <div className="session-list" aria-label="Loading practicals">{[0, 1].map((i) => <div className="session-skeleton" key={i}><div className="skeleton skeleton-line w-40" /><div className="skeleton skeleton-line w-56" /></div>)}</div>
       : isError ? <div className="state-card state-error" role="alert" data-testid="error-practicals"><div className="state-icon"><CircleAlert size={18} /></div><div><h3>Practicals could not load</h3><p>No records are shown rather than guessing. Try again shortly.</p><button type="button" className="button-quiet" onClick={() => refetch()} data-testid="button-retry-practicals"><RefreshCw size={14} /> Try again</button></div></div>
-      : !matchingRecords.length ? <div className="state-card" data-testid="empty-practicals"><div className="state-icon"><ClipboardCheck size={18} /></div><div><h3>No saved practical record for this PT</h3><p>Save attendance for the selected PT first. Checking an attendance box without saving does not create a practical record. Regional Directors see only their assigned PTs.</p></div></div>
+      : !matchingRecords.length ? <div className="state-card" data-testid="empty-practicals"><div className="state-icon"><ClipboardCheck size={18} /></div><div><h3>Save this PT’s attendance to unlock RD sign-off</h3><p>Checking attendance without clicking Save does not create a practical record. After saving, Record RD practical{kStarCourse ? ' and Record K-Star result' : ''} will appear here for an eligible session. Regional Directors see only their assigned PTs.</p></div></div>
       : <ul className="practical-list">
         {matchingRecords.map((r) => {
           const id = slug(r.recordKey);
@@ -131,22 +139,25 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
               <ol>{r.history.map((h) => <li key={h.id}><span>{h.created} / {h.author}</span><p>{h.note}</p></li>)}</ol>
             </details>}
             {canSignOff && !editing && (r.eligible
-              ? <button type="button" className="practical-open" onClick={() => open(r)} disabled={save.isPending} data-testid={`button-assess-${id}`}>{res ? 'Reassess' : 'Assess'}</button>
+              ? <div className="practical-entry-actions">
+                <button type="button" className="practical-open" onClick={() => open(r)} disabled={save.isPending} data-testid={`button-assess-${id}`}>{res ? 'Edit RD practical' : 'Record RD practical'}</button>
+                {kStarCourse && <button type="button" className="button-quiet" onClick={() => open(r, 'kstar')} disabled={save.isPending} data-testid={`button-k-star-${id}`}>Record K-Star result</button>}
+              </div>
               : <p className="practical-ineligible" data-testid={`text-ineligible-${id}`}>Not yet eligible: attendance must be Yes and the session date must have passed.</p>)}
             {canSignOff && editing && draft && <form className="practical-form" onSubmit={(e) => { e.preventDefault(); submit(r); }} data-testid={`form-practical-${id}`}>
-              <fieldset className="practical-choice"><legend>Result</legend>
-                {(['Pass', 'Fail'] as const).map((v) => <label key={v} className={draft.result === v ? 'is-on' : ''}><input type="radio" name={`result-${id}`} checked={draft.result === v} onChange={() => setDraft({ ...draft, result: v })} data-testid={`radio-result-${v.toLowerCase()}-${id}`} />{resultLabel(v)}</label>)}
+              <fieldset className="practical-choice"><legend>RD practical completion</legend>
+                {(['Pass', 'Fail'] as const).map((v) => <label key={v} className={draft.result === v ? 'is-on' : ''}><input type="radio" name={`result-${id}`} checked={draft.result === v} onChange={() => setDraft({ ...draft, result: v })} data-testid={`radio-result-${v.toLowerCase()}-${id}`} />{v === 'Pass' ? 'Passed — practical complete' : 'Not passed'}</label>)}
               </fieldset>
               <label>Practical date<input type="date" value={draft.practicalDate} min={r.sessionDate?.slice(0, 10) || undefined} max={laToday()} onChange={(e) => setDraft({ ...draft, practicalDate: e.target.value })} data-testid={`input-practical-date-${id}`} /></label>
               <label>Notes {draft.result === 'Fail' ? '(required)' : '(optional)'}<textarea rows={3} maxLength={MAX_NOTES} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="What was observed. No patient identifiers." data-testid={`input-practical-notes-${id}`} /></label>
-              {kStarCourse && <fieldset className="k-star-fields" disabled={save.isPending}>
+              {kStarCourse && <fieldset ref={kStarSection} className="k-star-fields" disabled={save.isPending}>
                 <legend>Optional K-Star recognition</legend>
                 <label className="k-star-check"><input type="checkbox" checked={draft.kStarPerformed} onChange={(e) => setDraft({ ...draft, kStarPerformed: e.target.checked, kStarStars: e.target.checked ? draft.kStarStars : '' })} data-testid={`checkbox-k-star-${id}`} />K-Star fitness test performed</label>
-                {draft.kStarPerformed && <label>Test result (required)<select required value={draft.kStarStars} onChange={(e) => setDraft({ ...draft, kStarStars: e.target.value })} data-testid={`select-k-star-${id}`}>
-                  <option value="">Select a result</option>
-                  <option value="0">0 — Attempted; no star earned</option>
-                  {[1, 2, 3, 4].map(level => <option key={level} value={level}>{level} — KR{level}</option>)}
-                </select></label>}
+                <label>K-Star earned {draft.kStarPerformed ? '(required)' : '(check performed to select)'}<select required={draft.kStarPerformed} disabled={!draft.kStarPerformed} value={draft.kStarStars} onChange={(e) => setDraft({ ...draft, kStarStars: e.target.value })} data-testid={`select-k-star-${id}`}>
+                  <option value="">{draft.kStarPerformed ? 'Select a result' : 'Test not performed'}</option>
+                  <option value="0">Attempted — no star earned</option>
+                  {[1, 2, 3, 4].map(level => <option key={level} value={level}>{level} {level === 1 ? 'Star' : 'Stars'} — KR{level}</option>)}
+                </select></label>
                 <p className="ct-meta">Optional and separate from course completion. A lower result or an unchecked test never removes a previously earned level.{r.kStarHighestEarned ? ` Highest earned: KR${r.kStarHighestEarned}.` : ''}</p>
               </fieldset>}
               <div className="practical-form-meta"><span><ShieldAlert size={12} aria-hidden="true" /> No PHI: never include patient names, dates of birth or record numbers.</span><span>{draft.notes.length}/{MAX_NOTES}</span></div>

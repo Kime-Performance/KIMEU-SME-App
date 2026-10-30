@@ -15,7 +15,7 @@ TRUE with 0 means an attempted test without a credential. TRUE with 1–4 is KR1
 
 ## Form and persistence
 
-The existing RD practical form for KB Resilience includes an optional **K-Star fitness test performed** checkbox. Checking it reveals a required result selector with an empty initial choice. Reopening loads the saved fields. Other courses do not expose or accept these inputs.
+The existing RD practical form for KB Resilience includes an optional **K-Star fitness test performed** checkbox. Its **K-Star earned** selector is visible but disabled until checked, then requires a result with an empty initial choice. Reopening loads the saved fields. Eligible PT records have explicit **Record/Edit RD practical** and **Record K-Star result** entry buttons. Other courses do not expose or accept K-Star inputs.
 
 Existing practical permissions, attendance/date eligibility, RD assignment checks, and fail-feedback requirements still apply. The same explicit **Save sign-off** action persists the optional fields together with the practical and private audit note.
 

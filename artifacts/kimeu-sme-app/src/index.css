@@ -1004,4 +1004,6 @@ h1, h2, h3, .page-heading h1, .hero-copy h1, .auth-intro h1, .section-title-row 
 .practical-form .k-star-check { display: flex; align-items: center; gap: 9px; }
 .practical-form .k-star-check input { width: 18px; height: 18px; flex-shrink: 0; }
 .k-star-fields select { width: 100%; min-width: 0; min-height: 42px; padding: 8px; background: white; color: var(--pp-fg); border: 1px solid var(--pp-line); border-radius: 4px; }
+.practical-entry-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.k-star-fields select:disabled { opacity: .65; cursor: not-allowed; }
 @media (max-width: 767px) { .fa-grid { grid-template-columns: 1fr; } .fa-panel { position: static; } }
