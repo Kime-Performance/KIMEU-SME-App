@@ -6,6 +6,7 @@ import {
   useGetKimeuOnboarding, useSaveKimeuOnboarding,
 } from '@workspace/api-client-react';
 import type { OnboardingInputResult, OnboardingPerson, OnboardingWorkspace } from '@workspace/api-client-react';
+import { matchesParticipantSearch } from '@/lib/participant-search';
 
 export type OnboardingCourseId = 'F-11' | 'F-12' | 'EN-CAD' | 'F-SURG-OBS';
 export const isOnboardingCourse = (id: string): id is OnboardingCourseId => ['F-11', 'F-12', 'EN-CAD', 'F-SURG-OBS'].includes(id);
@@ -75,9 +76,8 @@ export function CourseOnboarding({ courseId }: { courseId: OnboardingCourseId })
   }, [dirtyCount]);
 
   const people = useMemo(() => {
-    const q = search.trim().toLowerCase();
     const list = data?.people ?? [];
-    return q ? list.filter((p) => `${p.name} ${p.location} ${p.email}`.toLowerCase().includes(q)) : list;
+    return list.filter((p) => matchesParticipantSearch(search, p.name, p.email, p.location));
   }, [data, search]);
 
   function update(p: OnboardingPerson, week: number, patch: Partial<Draft>) {

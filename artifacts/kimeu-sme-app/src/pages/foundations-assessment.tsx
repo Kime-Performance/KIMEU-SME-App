@@ -6,6 +6,7 @@ import {
   useGetKimeuBootstrap, useGetKimeuFoundationsAssessment, useSaveKimeuFoundationsAssessment,
 } from '@workspace/api-client-react';
 import type { FoundationsAssessmentInputResult, FoundationsAssessmentPerson, FoundationsAssessmentWorkspace } from '@workspace/api-client-react';
+import { matchesParticipantSearch } from '@/lib/participant-search';
 
 type Msg = { tone: 'success' | 'error'; text: string };
 
@@ -52,8 +53,7 @@ export function FoundationsAssessmentPage() {
   }, [dirty]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return q ? people.filter((p) => `${p.name} ${p.email} ${p.location}`.toLowerCase().includes(q)) : people;
+    return people.filter((p) => matchesParticipantSearch(search, p.name, p.email, p.location));
   }, [people, search]);
 
   function choose(p: FoundationsAssessmentPerson) {

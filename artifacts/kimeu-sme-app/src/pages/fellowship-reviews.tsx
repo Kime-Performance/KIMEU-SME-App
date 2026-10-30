@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { matchesParticipantSearch } from '@/lib/participant-search';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, GraduationCap, History, Lock, RefreshCw, Search, UserCheck } from 'lucide-react';
 import { getGetKimeuFellowshipReviewsQueryKey, useGetKimeuFellowshipReviews, useSaveKimeuFellowshipReview } from '@workspace/api-client-react';
@@ -77,9 +78,8 @@ export function FellowshipReviewsPage() {
     return m;
   }, [data]);
   const people = useMemo(() => {
-    const q = search.trim().toLowerCase();
     const list = data?.people ?? [];
-    return q ? list.filter((p) => `${p.name} ${p.location} ${p.email}`.toLowerCase().includes(q)) : list;
+    return list.filter((p) => matchesParticipantSearch(search, p.name, p.email, p.location));
   }, [data, search]);
   const person = data?.people.find((p) => p.email === selected) ?? null;
   const workshopName = (id: string | null) => (id ? data?.workshops.find((w) => w.workshopId === id)?.name ?? id : '');

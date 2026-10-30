@@ -7,6 +7,30 @@ const source = readFileSync(new URL("../../kimeu-sme-app/src/lib/participant-sea
 const code = transformSync(source, { loader: "ts", format: "esm" }).code;
 const { matchesParticipantSearch } = await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
 
+test("all PT entry screens share the workshop search matcher", () => {
+  for (const path of [
+    "components/workshop-workspace.tsx", "components/course-onboarding.tsx",
+    "pages/foundations-assessment.tsx", "pages/fellowship-reviews.tsx",
+  ]) {
+    const component = readFileSync(new URL(`../../kimeu-sme-app/src/${path}`, import.meta.url), "utf8");
+    assert.match(component, /import \{ matchesParticipantSearch \} from '@\/lib\/participant-search'/, path);
+    assert.match(component, /matchesParticipantSearch\(search,/, path);
+    assert.doesNotMatch(component, /toLowerCase\(\)\.includes\(q\)/, path);
+  }
+});
+
+test("compound names, punctuation and accents remain searchable without changing emails", () => {
+  for (const name of ["Alex De La Cruz", "Taylor O’Neil", "Jordan Smith-Jones", "José Example", "Casey Example Jr."]) {
+    const email = "clinician@example.test";
+    const words = name.split(/\s+/);
+    for (const query of [name, name.toUpperCase(), `  ${words.join("   ")}  `, words.toReversed().join(" "), `${words[0]} ${words.at(-1)}`, email]) {
+      assert.equal(matchesParticipantSearch(query, name, email), true, `${name}: ${query}`);
+    }
+  }
+  assert.equal(matchesParticipantSearch("Jose", "José Example", "clinician@example.test"), true);
+  assert.equal(matchesParticipantSearch("constructor", "Alex Example", "clinician@example.test"), false);
+});
+
 test("PT search supports name parts, spacing and Nate as a short form without changing identity", () => {
   const name = "Nathaniel Van Dusen", email = "nathaniel@example.test";
   for (const query of ["Nate Van Dusen", "  NATE   van   DUSEN ", "Van Dusen", "Dusen Nathaniel", email]) {
