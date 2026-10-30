@@ -981,3 +981,22 @@ h1, h2, h3, .page-heading h1, .hero-copy h1, .auth-intro h1, .section-title-row 
 .ct-who strong { color:var(--k-black); }
 .ct-who small, .ct-meta, .ct-explain { color:#626060; }
 @media (max-width:860px) { .ct-actions { background:#fff; } }
+
+/* Foundations Assessment */
+.fa-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: start; margin-top: 16px; }
+.fa-roster, .fa-panel { background: #fff; border: 1px solid var(--k-gray, #dde2e9); border-radius: 4px; padding: 16px; }
+.fa-panel { position: sticky; top: 16px; display: grid; gap: 10px; }
+.fa-panel h2 { margin: 0; }
+.fa-email { margin: 0; font-family: ui-monospace, monospace; font-size: 13px; color: #2767F4; word-break: break-all; }
+.fa-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 60vh; overflow: auto; }
+.fa-row { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px; border: 1px solid transparent; border-radius: 4px; background: transparent; cursor: pointer; }
+.fa-row:hover:not(:disabled) { background: #f4f6f9; }
+.fa-row:disabled { opacity: .5; cursor: not-allowed; }
+.fa-row-on { border-color: #2767F4; background: #eef3fe; }
+.fa-current { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.fa-tag { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 8px; border-radius: 3px; background: #f4f6f9; color: #525a66; white-space: nowrap; }
+.fa-tag-pass { background: #e6f2ea; color: #23633a; }
+.fa-tag-fail { background: #fdecec; color: #8f2e2d; }
+.fa-nav-link { display: flex; align-items: center; gap: 6px; width: 100%; white-space: normal; font-weight: 600; border-top: 1px solid rgba(208,206,206,.25); margin-top: 5px; padding-top: 10px; }
+.fa-nav-link svg { flex-shrink: 0; }
+@media (max-width: 767px) { .fa-grid { grid-template-columns: 1fr; } .fa-panel { position: static; } }

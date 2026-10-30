@@ -13,6 +13,28 @@ tags:
   - name: kimeu
     description: KIMEU workshop operations backed by Google Sheets
 paths:
+  /kimeu/foundations-assessment:
+    get:
+      operationId: getKimeuFoundationsAssessment
+      responses:
+        "200":
+          description: RD assessment roster and current sheet results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FoundationsAssessmentWorkspace" }
+    post:
+      operationId: saveKimeuFoundationsAssessment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FoundationsAssessmentInput" }
+      responses:
+        "200":
+          description: Assessment result verified in Exam Result column H
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FoundationsAssessmentWorkspace" }
   /kimeu/fellowship-reviews:
     get:
       operationId: getKimeuFellowshipReviews
@@ -346,6 +368,29 @@ paths:
           description: Test spreadsheet or service account is not configured
 components:
   schemas:
+    FoundationsAssessmentInput:
+      type: object
+      required: [email, result, revision]
+      properties:
+        email: { type: string, format: email }
+        result: { type: string, enum: [Pass, Fail] }
+        revision: { type: string, minLength: 1 }
+    FoundationsAssessmentWorkspace:
+      type: object
+      required: [people]
+      properties:
+        people:
+          type: array
+          items: { $ref: "#/components/schemas/FoundationsAssessmentPerson" }
+    FoundationsAssessmentPerson:
+      type: object
+      required: [email, name, location, result, revision]
+      properties:
+        email: { type: string }
+        name: { type: string }
+        location: { type: string }
+        result: { type: string }
+        revision: { type: string }
     FellowshipReviewInput:
       type: object
       additionalProperties: false

@@ -8,6 +8,8 @@ The SME app writes individual attendance and RD sign-off inputs, not an overall-
 
 Join by normalized **PT Email**, never name or row number.
 
+The RD-only **Foundations Assessment** subpage writes `Pass` or `Fail` to `03c-Foundations Tracker` → **Exam Result (H)**. The existing header stays unchanged. It matches an active roster clinician to exactly one existing Foundations row by PT Email; it never creates a partial tracker row. RDs see their assigned clinicians; administrators can record any eligible clinician. Each explicit save appends private audit history and verifies the saved result by rereading the sheet. It does not edit Kajabi percentages, exam scores, workshop checkmarks, or overall pathway formulas. The Clinician Development Tool should read this same Exam Result field for its separate assessment box.
+
 In `03c-Foundations Tracker`, headers are row 2, real clinician data begins at row 4 (row 3 is the pre-existing example):
 
 | Columns | Headers |

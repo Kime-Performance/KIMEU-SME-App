@@ -8,6 +8,37 @@
 import * as zod from 'zod';
 
 
+export const GetKimeuFoundationsAssessmentResponse = zod.object({
+  "people": zod.array(zod.object({
+  "email": zod.string(),
+  "name": zod.string(),
+  "location": zod.string(),
+  "result": zod.string(),
+  "revision": zod.string()
+}))
+})
+
+
+
+
+
+export const SaveKimeuFoundationsAssessmentBody = zod.object({
+  "email": zod.string().email(),
+  "result": zod.enum(['Pass', 'Fail']),
+  "revision": zod.string().min(1)
+})
+
+export const SaveKimeuFoundationsAssessmentResponse = zod.object({
+  "people": zod.array(zod.object({
+  "email": zod.string(),
+  "name": zod.string(),
+  "location": zod.string(),
+  "result": zod.string(),
+  "revision": zod.string()
+}))
+})
+
+
 export const getKimeuFellowshipReviewsResponseTodayRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 
 

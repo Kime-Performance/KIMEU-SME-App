@@ -22,6 +22,7 @@ import { UpcomingWorkshops } from './components/upcoming-workshops';
 import { CourseNav, decodeSafe } from './components/course-nav';
 import { CoursesPage, CourseDetailPage } from './pages/courses';
 import { FellowshipReviewsPage } from './pages/fellowship-reviews';
+import { FoundationsAssessmentPage } from './pages/foundations-assessment';
 import { useCourseCatalog } from './lib/courses';
 import { SmeAssignmentsPanel } from './components/sme-assignments';
 
@@ -189,7 +190,7 @@ function Shell({ children }: { children: ReactNode }) {
       <main className="main-area">
         <header className="topbar">
           <button type="button" className="mobile-menu" aria-label="Open menu" onClick={() => setMenuOpen(true)} data-testid="button-open-menu"><Menu size={21} /></button>
-          <div className="crumb"><span>KIMEU</span><span className="crumb-slash">/</span>{location.startsWith('/courses') ? <CourseCrumb location={location} /> : <b>{location === '/today' ? 'Today' : location === '/fellowship-reviews' ? 'Fellowship Reviews' : location.startsWith('/session') ? 'Session' : 'Settings'}</b>}</div>
+          <div className="crumb"><span>KIMEU</span><span className="crumb-slash">/</span>{location.startsWith('/courses') ? <CourseCrumb location={location} /> : <b>{location === '/today' ? 'Today' : location === '/fellowship-reviews' ? 'Fellowship Reviews' : location === '/foundations-assessment' ? 'Foundations Assessment' : location.startsWith('/session') ? 'Session' : 'Settings'}</b>}</div>
           <SyncStatus />
         </header>
         {isError && <div className="access-banner" role="alert" data-testid="status-access-refresh-error"><CircleAlert size={18} /><div><strong>Access refresh unavailable</strong><span>Your last verified workspace and unsaved forms are kept open. Every save still checks current staff access on the server.</span></div><button type="button" className="button-quiet" onClick={() => refetch()}>Retry</button></div>}
@@ -511,6 +512,7 @@ function AppRoutes() {
          <Route path="/today">{() => <><Show when="signed-in"><Shell><TodayPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
          <Route path="/courses">{() => <><Show when="signed-in"><Shell><CoursesPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
          <Route path="/fellowship-reviews">{() => <><Show when="signed-in"><Shell><FellowshipReviewsPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
+         <Route path="/foundations-assessment">{() => <><Show when="signed-in"><Shell><FoundationsAssessmentPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
          <Route path="/courses/:workshopId">{() => <><Show when="signed-in"><Shell><CourseDetailPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
          <Route path="/session/:sessionId">{() => <><Show when="signed-in"><SessionPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
          <Route path="/settings">{() => <><Show when="signed-in"><SettingsPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>

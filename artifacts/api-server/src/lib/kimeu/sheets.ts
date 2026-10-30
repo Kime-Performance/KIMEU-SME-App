@@ -43,6 +43,7 @@ const WRITE_ALLOWLIST: Record<string, ReadonlySet<string>> = {
   ]),
   "03c-Foundations Tracker": new Set([
     "PT Email",
+    "Exam Result",
     "Session Date",
     "Attended (SME)",
     "Practical Date",

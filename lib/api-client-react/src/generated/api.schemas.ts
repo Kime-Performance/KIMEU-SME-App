@@ -5,6 +5,33 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type FoundationsAssessmentInputResult = typeof FoundationsAssessmentInputResult[keyof typeof FoundationsAssessmentInputResult];
+
+
+export const FoundationsAssessmentInputResult = {
+  Pass: 'Pass',
+  Fail: 'Fail',
+} as const;
+
+export interface FoundationsAssessmentInput {
+  email: string;
+  result: FoundationsAssessmentInputResult;
+  /** @minLength 1 */
+  revision: string;
+}
+
+export interface FoundationsAssessmentPerson {
+  email: string;
+  name: string;
+  location: string;
+  result: string;
+  revision: string;
+}
+
+export interface FoundationsAssessmentWorkspace {
+  people: FoundationsAssessmentPerson[];
+}
+
 export type FellowshipReviewInputResult = typeof FellowshipReviewInputResult[keyof typeof FellowshipReviewInputResult];
 
 
