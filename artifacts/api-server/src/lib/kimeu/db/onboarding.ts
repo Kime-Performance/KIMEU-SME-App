@@ -13,14 +13,14 @@ const ONBOARDING_TABLE = "kimeu_rd_onboarding";
 const NOTES_TABLE = "kimeu_clinician_notes";
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-// Sheet-header contract for the canonical tables; asserted before any write.
+// Canonical snake_case column contract for the tables; asserted before any write.
 const UNIT_HEADERS = [
-  "Record ID", "PT Email", "Workshop ID", "Week", "Session Date", "Minutes",
-  "Attended", "RD Result", "Signed By", "Signed At", "Notes", "Last Updated By", "Last Updated",
+  "record_id", "pt_email", "workshop_id", "week", "session_date", "minutes",
+  "attended", "rd_result", "signed_by", "signed_at", "notes", "last_updated_by", "last_updated",
 ] as const;
 const NOTE_HEADERS = [
-  "Note ID", "Created", "PT Email", "Note Type", "Workshop ID", "Review ID", "Note",
-  "Author", "Author Role", "Visibility",
+  "note_id", "created", "pt_email", "note_type", "workshop_id", "review_id", "note",
+  "author", "author_role", "visibility",
 ] as const;
 
 type RosterRow = { person_id: string; email: string; name: string; assigned_rd: string | null };

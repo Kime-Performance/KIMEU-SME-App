@@ -114,7 +114,7 @@ test("getSessionDetail returns the session summary and roster from Postgres", as
   const sql = fakeSql([
     { match: /from kimeu_sessions/, rows: [sessionRow()] },
     { match: /from kimeu_workshop_records/, rows: [
-      { pt_email: "One@Example.test", full_name: "Fixture One", attended: "Yes", computed_status: "In Progress", practical_status: "Pass" },
+      { pt_email: "One@Example.test", full_name: "Fixture One", attended: true, computed_status: "In Progress", practical_status: "Pass" },
       { pt_email: "two@example.test", full_name: null, attended: null, computed_status: null, practical_status: null },
     ] },
   ]);
@@ -184,7 +184,7 @@ test("saveAttendance updates workshop_records and writes one audit note atomical
     { match: /insert into kimeu_clinician_notes/, rows: [], count: 1 },
     { match: /from kimeu_sessions/, rows: [sessionRow()] },
     { match: /from kimeu_workshop_records/, rows: [
-      { pt_email: "one@example.test", full_name: "Fixture One", attended: "Yes", computed_status: "Attended", practical_status: null },
+      { pt_email: "one@example.test", full_name: "Fixture One", attended: true, computed_status: "Attended", practical_status: null },
     ] },
   ]);
   client.setSql(sql);
@@ -196,7 +196,7 @@ test("saveAttendance updates workshop_records and writes one audit note atomical
   assert.ok(update && note, "attendance update and audit note were both issued");
   assert.equal(update.inTx, true, "attendance update ran inside the transaction");
   assert.equal(note.inTx, true, "audit note ran inside the same transaction");
-  assert.equal(update.values[0], "Yes");
+  assert.equal(update.values[0], true, "attended boolean column receives the mark as true");
   assert.equal(update.values[1], "SME One");
   assert.equal(update.values[4], "one@example.test", "matched case-insensitively on normalized email");
   assert.equal(update.values[5], "FW-TEST");
@@ -227,7 +227,7 @@ test("saveAttendance updates foundations_blocks for a Foundations session", asyn
     { match: /insert into kimeu_clinician_notes/, rows: [], count: 1 },
     { match: /from kimeu_sessions/, rows: [foundation] },
     { match: /from kimeu_foundations_blocks/, rows: [
-      { pt_email: "two@example.test", full_name: "Fixture Two", attended: "No", computed_status: null, practical_status: null },
+      { pt_email: "two@example.test", full_name: "Fixture Two", attended: false, computed_status: null, practical_status: null },
     ] },
   ]);
   client.setSql(sql);
@@ -238,7 +238,7 @@ test("saveAttendance updates foundations_blocks for a Foundations session", asyn
   assert.ok(update, "foundations block update was issued");
   assert.equal(update.inTx, true);
   assert.equal(update.values[0], "2026-11-03");
-  assert.equal(update.values[1], "No");
+  assert.equal(update.values[1], false, "attended_sme boolean column receives the mark as false");
   assert.equal(result.results[0].attended, "No");
   assert.deepEqual(sql.unused(), []);
 });
@@ -266,7 +266,7 @@ test("saveAttendance rolls back when the roster row is ambiguous", async () => {
 
 test("completeSession rejects unmarked attendance unless confirmed, then updates status", async () => {
   const unmarkedRoster = [
-    { pt_email: "one@example.test", full_name: "Fixture One", attended: "Yes", computed_status: null, practical_status: null },
+    { pt_email: "one@example.test", full_name: "Fixture One", attended: true, computed_status: null, practical_status: null },
     { pt_email: "two@example.test", full_name: "Fixture Two", attended: null, computed_status: null, practical_status: null },
   ];
   // Unconfirmed: rejected before any write.

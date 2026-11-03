@@ -111,20 +111,20 @@ export async function getSessionRecord(
   const sql = getSql();
   const rows = await sql<SessionRow[]>`
     select
-      s."Session ID" as session_id,
-      s."Workshop ID" as workshop_id,
-      coalesce(w."Workshop Name", '') as workshop_name,
-      coalesce(w."Stage", '') as stage,
-      s."Session Date"::text as session_date,
-      s."Start Time" as start_time,
-      s."Location" as location,
-      s."Lead SME" as lead_sme,
-      s."Session Status" as session_status,
-      s."Session Notes" as session_notes,
-      s."Changes for Next Session" as changes_for_next_session
+      s.session_id,
+      s.workshop_id,
+      coalesce(w.workshop_name, '') as workshop_name,
+      coalesce(w.stage, '') as stage,
+      s.session_date::text as session_date,
+      s.start_time,
+      s.location,
+      s.lead_sme,
+      s.session_status,
+      s.session_notes,
+      s.changes_for_next_session
     from kimeu_sessions s
-    left join kimeu_workshops w on w."Workshop ID" = s."Workshop ID"
-    where s."Session ID" = ${sessionId}
+    left join kimeu_workshops w on w.workshop_id = s.workshop_id
+    where s.session_id = ${sessionId}
   `;
   if (rows.length === 0) {
     throw new KimeuError("Session not found.", 404, "SESSION_NOT_FOUND");
@@ -142,7 +142,7 @@ export async function getSessionRecord(
 type RosterRow = {
   pt_email: string;
   full_name: string | null;
-  attended: string | null;
+  attended: boolean | null;
   computed_status: string | null;
   practical_status: string | null;
 };
@@ -152,12 +152,14 @@ function rosterPersonFromRow(
   sourceTab: RosterPerson["sourceTab"],
   fallbackName: string,
 ): RosterPerson {
+  const attended =
+    row.attended === true ? "Yes" :
+    row.attended === false ? "No" :
+    null;
   return {
     clinicianEmail: row.pt_email,
     name: row.full_name || fallbackName || "Unnamed clinician",
-    attended: (["Yes", "No"].includes(row.attended ?? "")
-      ? row.attended
-      : null) as "Yes" | "No" | null,
+    attended: attended as "Yes" | "No" | null,
     sourceTab,
     computedStatus: row.computed_status || null,
     practicalStatus: row.practical_status || null,
@@ -182,18 +184,17 @@ export async function getRoster(
   if (/foundation/i.test(session.stage)) {
     const rows = await sql<RosterRow[]>`
       select
-        b."PT Email" as pt_email,
-        coalesce(p.full_name, ap.full_name, '') as full_name,
-        b."Attended (SME)" as attended,
-        b."Complete" as computed_status,
-        b."Practical Result" as practical_status
+        p.email as pt_email,
+        coalesce(p.full_name, '') as full_name,
+        b.attended_sme as attended,
+        b.complete as computed_status,
+        b.practical_result as practical_status
       from kimeu_foundations_blocks b
-      left join person p on lower(p.email::text) = lower(b."PT Email")
-      left join person_email_alias pea on lower(pea.email::text) = lower(b."PT Email")
-      left join person ap on ap.person_id = pea.person_id
-      where b."Workshop ID" = ${session.workshopId}
-        and b."Session Date"::text = ${session.sessionDate}
-        and b."PT Email" <> ''
+      join person p on p.person_id = b.person_id
+      where b.workshop_id = ${session.workshopId}
+        and b.session_date::text = ${session.sessionDate}
+        and b.deleted_at is null
+        and p.email is not null
     `;
     return rows.map((row) =>
       rosterPersonFromRow(row, "03c-Foundations Tracker", ""),
@@ -203,18 +204,17 @@ export async function getRoster(
   if (/fellowship|enrichment/i.test(session.stage)) {
     const rows = await sql<RosterRow[]>`
       select
-        r."PT Email" as pt_email,
-        coalesce(p.full_name, ap.full_name, r."PT Name", '') as full_name,
-        r."Attended" as attended,
-        r."Workshop Status" as computed_status,
-        r."Practical Result" as practical_status
+        r.pt_email,
+        coalesce(p.full_name, r.pt_name, '') as full_name,
+        r.attended,
+        r.workshop_status as computed_status,
+        r.practical_result as practical_status
       from kimeu_workshop_records r
-      left join person p on lower(p.email::text) = lower(r."PT Email")
-      left join person_email_alias pea on lower(pea.email::text) = lower(r."PT Email")
-      left join person ap on ap.person_id = pea.person_id
-      where r."Workshop ID" = ${session.workshopId}
-        and r."Session Date"::text = ${session.sessionDate}
-        and r."PT Email" <> ''
+      left join person p on p.person_id = r.person_id
+      where r.workshop_id = ${session.workshopId}
+        and r.session_date::text = ${session.sessionDate}
+        and r.deleted_at is null
+        and r.pt_email is not null
     `;
     return rows
       .map((row) => rosterPersonFromRow(row, "03b-Advanced Workshop Log", ""))
@@ -271,21 +271,21 @@ export async function getToday(user: AppUser) {
   const sql = getSql();
   const rows = await sql<SessionRow[]>`
     select
-      s."Session ID" as session_id,
-      s."Workshop ID" as workshop_id,
-      coalesce(w."Workshop Name", '') as workshop_name,
-      coalesce(w."Stage", '') as stage,
-      s."Session Date"::text as session_date,
-      s."Start Time" as start_time,
-      s."Location" as location,
-      s."Lead SME" as lead_sme,
-      s."Session Status" as session_status,
-      s."Session Notes" as session_notes,
-      s."Changes for Next Session" as changes_for_next_session
+      s.session_id,
+      s.workshop_id,
+      coalesce(w.workshop_name, '') as workshop_name,
+      coalesce(w.stage, '') as stage,
+      s.session_date::text as session_date,
+      s.start_time,
+      s.location,
+      s.lead_sme,
+      s.session_status,
+      s.session_notes,
+      s.changes_for_next_session
     from kimeu_sessions s
-    left join kimeu_workshops w on w."Workshop ID" = s."Workshop ID"
-    where s."Session Date"::text = ${today}
-      and s."Session Status" <> 'Cancelled'
+    left join kimeu_workshops w on w.workshop_id = s.workshop_id
+    where s.session_date::text = ${today}
+      and s.session_status <> 'Cancelled'
   `;
   const sessions = await Promise.all(
     rows
@@ -319,7 +319,7 @@ export async function openSession(
 ) {
   const sql = getSql();
   const catalog = await sql<{ found: number }[]>`
-    select 1 as found from kimeu_workshops where "Workshop ID" = ${workshopId}
+    select 1 as found from kimeu_workshops where workshop_id = ${workshopId}
   `;
   if (catalog.length === 0) {
     throw new KimeuError("Workshop ID is not in the workshop catalog.", 400, "UNKNOWN_WORKSHOP");
@@ -330,10 +330,9 @@ export async function openSession(
     const matches = await tx<
       { session_id: string; workshop_id: string; session_date: string; session_status: string }[]
     >`
-      select "Session ID" as session_id, "Workshop ID" as workshop_id,
-             "Session Date"::text as session_date, "Session Status" as session_status
+      select session_id, workshop_id, session_date::text as session_date, session_status
       from kimeu_sessions
-      where "Session ID" = ${sessionId}
+      where session_id = ${sessionId}
     `;
     if (matches.length > 1) {
       throw new KimeuError(
@@ -361,13 +360,13 @@ export async function openSession(
           "SESSION_CLOSED",
         );
       }
-      assertWrites("kimeu_sessions", ["Session Status", "Last Updated By", "Last Updated"]);
+      assertWrites("kimeu_sessions", ["session_status", "last_updated_by", "last_updated"]);
       const updated = await tx`
         update kimeu_sessions
-        set "Session Status" = 'Live',
-            "Last Updated By" = ${user.nameInSheets},
-            "Last Updated" = ${timestamp}
-        where "Session ID" = ${sessionId}
+        set session_status = 'Live',
+            last_updated_by = ${user.nameInSheets},
+            last_updated = ${timestamp}
+        where session_id = ${sessionId}
       `;
       if (updated.count !== 1) {
         throw new KimeuError(
@@ -378,16 +377,16 @@ export async function openSession(
       }
     } else {
       assertWrites("kimeu_sessions", [
-        "Session ID", "Workshop ID", "Session Date", "Lead SME",
-        "Session Status", "Last Updated By", "Last Updated",
+        "session_id", "workshop_id", "session_date", "lead_sme",
+        "session_status", "last_updated_by", "last_updated",
       ]);
       await tx`
         insert into kimeu_sessions
-          ("Session ID", "Workshop ID", "Session Date", "Lead SME",
-           "Session Status", "Last Updated By", "Last Updated")
+          (session_id, workshop_id, session_date, lead_sme,
+           session_status, last_updated_by, last_updated, source)
         values
           (${sessionId}, ${workshopId}, ${sessionDate}, ${user.nameInSheets},
-           'Live', ${user.nameInSheets}, ${timestamp})
+           'Live', ${user.nameInSheets}, ${timestamp}, 'sme_app')
       `;
     }
   });
@@ -439,17 +438,18 @@ export async function saveAttendance(
       const email = normalizeEmail(person.clinicianEmail);
       if (person.sourceTab === "03b-Advanced Workshop Log") {
         assertWrites("kimeu_workshop_records", [
-          "Attended", "Attendance Confirmed By", "Last Updated By", "Last Updated",
+          "attended", "attendance_confirmed_by", "last_updated_by", "last_updated",
         ]);
         const updated = await tx`
           update kimeu_workshop_records
-          set "Attended" = ${mark},
-              "Attendance Confirmed By" = ${user.nameInSheets},
-              "Last Updated By" = ${user.nameInSheets},
-              "Last Updated" = ${timestamp}
-          where lower("PT Email") = ${email}
-            and "Workshop ID" = ${session.workshopId}
-            and "Session Date"::text = ${session.sessionDate}
+          set attended = ${mark === "Yes"},
+              attendance_confirmed_by = ${user.nameInSheets},
+              last_updated_by = ${user.nameInSheets},
+              last_updated = ${timestamp}
+          where lower(pt_email) = ${email}
+            and workshop_id = ${session.workshopId}
+            and session_date::text = ${session.sessionDate}
+            and deleted_at is null
         `;
         if (updated.count !== 1) {
           throw new KimeuError(
@@ -460,17 +460,20 @@ export async function saveAttendance(
         }
       } else {
         assertWrites("kimeu_foundations_blocks", [
-          "Session Date", "Attended (SME)", "Last Updated By", "Last Updated",
+          "session_date", "attended_sme", "last_updated_by", "last_updated",
         ]);
         const updated = await tx`
           update kimeu_foundations_blocks
-          set "Session Date" = ${session.sessionDate},
-              "Attended (SME)" = ${mark},
-              "Last Updated By" = ${user.nameInSheets},
-              "Last Updated" = ${timestamp}
-          where lower("PT Email") = ${email}
-            and "Workshop ID" = ${session.workshopId}
-            and "Session Date"::text = ${session.sessionDate}
+          set session_date = ${session.sessionDate},
+              attended_sme = ${mark === "Yes"},
+              last_updated_by = ${user.nameInSheets},
+              last_updated = ${timestamp}
+          where person_id in (
+            select person_id from person where lower(email) = ${email}
+          )
+            and workshop_id = ${session.workshopId}
+            and session_date::text = ${session.sessionDate}
+            and deleted_at is null
         `;
         if (updated.count !== 1) {
           throw new KimeuError(
@@ -484,13 +487,13 @@ export async function saveAttendance(
     // Single audit row per save, replacing the sheet's per-cell Last Updated trail.
     const noteId = randomUUID();
     assertWrites("kimeu_clinician_notes", [
-      "Note ID", "Created", "PT Email", "Note Type", "Workshop ID", "Session ID",
-      "Note", "Follow-up Needed", "Author", "Author Role", "Visibility",
+      "note_id", "created", "pt_email", "note_type", "workshop_id", "session_id",
+      "note", "follow_up_needed", "author", "author_role", "visibility",
     ]);
     await tx`
       insert into kimeu_clinician_notes
-        ("Note ID", "Created", "PT Email", "Note Type", "Workshop ID", "Session ID",
-         "Note", "Follow-up Needed", "Author", "Author Role", "Visibility")
+        (note_id, created, pt_email, note_type, workshop_id, session_id,
+         note, follow_up_needed, author, author_role, visibility, source)
       values
         (${noteId}, ${new Date().toISOString()}, ${""}, ${"Attendance"},
          ${session.workshopId}, ${session.sessionId},
@@ -498,7 +501,7 @@ export async function saveAttendance(
            .map(([email, item]) => `${email}=${item.mark}`)
            .join(", ")}`},
          ${false}, ${user.nameInSheets},
-         ${user.roles.includes("Admin") ? "Admin" : "SME"}, ${"Aaron + author"})
+         ${user.roles.includes("Admin") ? "Admin" : "SME"}, ${"Aaron + author"}, ${'sme_app'})
     `;
   });
 
@@ -547,17 +550,17 @@ export async function completeSession(
   const timestamp = formatSheetTimestamp();
   await withKimeuLock(async (tx) => {
     assertWrites("kimeu_sessions", [
-      "Session Status", "Session Notes", "Changes for Next Session",
-      "Last Updated By", "Last Updated",
+      "session_status", "session_notes", "changes_for_next_session",
+      "last_updated_by", "last_updated",
     ]);
     const updated = await tx`
       update kimeu_sessions
-      set "Session Status" = 'Complete',
-          "Session Notes" = ${input.sessionNotes},
-          "Changes for Next Session" = ${input.changesForNextSession},
-          "Last Updated By" = ${user.nameInSheets},
-          "Last Updated" = ${timestamp}
-      where "Session ID" = ${sessionId}
+      set session_status = 'Complete',
+          session_notes = ${input.sessionNotes},
+          changes_for_next_session = ${input.changesForNextSession},
+          last_updated_by = ${user.nameInSheets},
+          last_updated = ${timestamp}
+      where session_id = ${sessionId}
     `;
     if (updated.count !== 1) {
       throw new KimeuError(

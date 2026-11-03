@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { FellowshipReviewInput } from "@workspace/api-zod";
 import { requireRole, type AppUser } from "../access";
 import { KimeuError, normalizeEmail, todayInAppTimeZone } from "../sheets";
@@ -10,15 +10,16 @@ const REVIEWS_TABLE = "kimeu_fellowship_reviews";
 const NOTES_TABLE = "kimeu_clinician_notes";
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-// Sheet-header -> canonical column contract. Every header written below is
-// asserted against the allowlist before any statement is built.
+// Canonical column contract. Every column written below is asserted against
+// the allowlist before any statement is built.
 const REVIEW_HEADERS = [
-  "Review Date", "Reviewed By", "Review Type", "PT Email", "PT Name", "Result", "Score",
-  "Workshop ID (Refocus)", "Specific Need", "Notes", "Last Updated By", "Last Updated",
+  "review_date", "reviewed_by", "review_type", "pt_email", "pt_name", "result", "score",
+  "workshop_id_refocus", "specific_need", "notes", "refocus_strategy",
+  "last_updated_by", "last_updated",
 ] as const;
 const NOTE_HEADERS = [
-  "Note ID", "Created", "PT Email", "Note Type", "Review ID", "Note",
-  "Author", "Author Role", "Visibility",
+  "note_id", "created", "pt_email", "note_type", "review_id", "note",
+  "author", "author_role", "visibility",
 ] as const;
 
 type RosterRow = { person_id: string; email: string; name: string };
@@ -113,12 +114,13 @@ export async function saveFellowshipReview(user: AppUser, input: FellowshipRevie
     throw new KimeuError("A refocus workshop applies only to failed reviews.", 400, "INVALID_REVIEW");
   }
   const payload = { email, reviewDate: input.reviewDate, result: input.result, score: input.score, notes, workshopId: input.workshopId };
-  const fingerprint = hash(payload), auditId = `FELLOWSHIP:${input.requestId}`;
+  const fingerprint = hash(payload);
+  const auditReviewId = `FELLOWSHIP:${input.requestId}`;
   return withKimeuLock(async (tx) => {
-    // Idempotency gate: a matching audit note means this request already saved.
-    const oldAudit = (await tx<{ note_id: string; note: string | null }[]>`
-      select note_id, note from kimeu_clinician_notes
-      where note_id = ${auditId} and deleted_at is null
+    // Idempotency gate: a matching audit note (review_id) means this request already saved.
+    const oldAudit = (await tx<{ review_id: string; note: string | null }[]>`
+      select review_id, note from kimeu_clinician_notes
+      where review_id = ${auditReviewId} and deleted_at is null
       limit 1
     `)[0];
     if (oldAudit) {
@@ -142,6 +144,7 @@ export async function saveFellowshipReview(user: AppUser, input: FellowshipRevie
     for (const header of NOTE_HEADERS) assertInputHeader(NOTES_TABLE, header);
     const at = new Date();
     const reviewId = `FR-${input.reviewDate}-${email}-${input.requestId.slice(0, 8)}`;
+    const noteId = randomUUID();
     await tx`
       insert into kimeu_fellowship_reviews (
         review_id, person_id, review_date, reviewed_by, review_type, pt_email, pt_name,
@@ -159,8 +162,8 @@ export async function saveFellowshipReview(user: AppUser, input: FellowshipRevie
         note_id, person_id, created, pt_email, note_type, review_id, note,
         author, author_role, visibility, source, synced_at
       ) values (
-        ${auditId}, ${person.personId}, ${at}, ${email}, 'General',
-        ${`Fellowship exam:${input.requestId}`},
+        ${noteId}, ${person.personId}, ${at}, ${email}, 'General',
+        ${auditReviewId},
         ${JSON.stringify({ ...payload, fingerprint, authorEmail: user.email, reviewId })},
         ${user.nameInSheets}, ${user.roles.includes("Admin") ? "Admin" : "Fellowship Reviewer"},
         'Aaron + author', 'sme_app', ${at}
@@ -191,7 +194,7 @@ export async function saveFellowshipReview(user: AppUser, input: FellowshipRevie
     }
     const auditBack = (await tx<{ note_id: string }[]>`
       select note_id from kimeu_clinician_notes
-      where note_id = ${auditId} and deleted_at is null
+      where review_id = ${auditReviewId} and deleted_at is null
     `)[0];
     if (!auditBack) {
       throw new KimeuError("The review audit could not be confirmed. Retry the same draft safely.", 503, "REVIEW_UNCONFIRMED");

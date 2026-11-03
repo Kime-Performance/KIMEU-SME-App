@@ -27,13 +27,13 @@ import { assertInputHeader } from "./allowlist";
  * path is untouched.
  *
  * Table mapping:
- * - kimeu_workshops: workshop catalog ("Workshop ID", "Stage")
+ * - kimeu_workshops: workshop catalog (workshop_id, stage)
  * - kimeu_workshop_records: advanced/fellowship session records, one row per
- *   "Workshop ID" + person_id + "Session Date"
+ *   workshop_id + person_id + session_date
  * - kimeu_foundations_blocks: foundations per-person blocks keyed by
  *   person_id + workshop_id + block_index; the latest non-deleted block is
  *   the record of truth for practical sign-off
- * - kimeu_clinician_notes: append-only audit notes (Review ID =
+ * - kimeu_clinician_notes: append-only audit notes (review_id =
  *   RD:{recordKey}:{uuid}, schedules use RD:{recordKey}:SCHEDULE:{uuid})
  * - person / person_email_alias: roster identity joined onto foundations
  *   blocks so email aliases resolve to one clinician
@@ -127,9 +127,9 @@ const lowerEmail = (value: unknown): string => text(value).toLowerCase();
 async function load(user: AppUser, workshopId: string, sql: Sql): Promise<PracticalWorkspace> {
   assignedCourse(user, workshopId);
   const workshops = (await sql`
-    select "Workshop ID" as workshop_id, "Stage" as stage
+    select workshop_id, stage
     from kimeu_workshops
-    where "Workshop ID" = ${workshopId}
+    where workshop_id = ${workshopId}
   `) as unknown as WorkshopRow[];
   if (workshops.length !== 1) {
     throw new KimeuError("The workshop could not be uniquely identified.", 409, "COURSE_AMBIGUOUS");
@@ -143,43 +143,37 @@ async function load(user: AppUser, workshopId: string, sql: Sql): Promise<Practi
     ? ((await sql`
         select distinct on (b.person_id)
                b.person_id, b.block_index,
-               b."Session Date" as session_date, b."Attended (SME)" as attended,
-               b."Practical Date" as practical_date, b."Practical Result" as practical_result,
+               b.session_date, b.attended_sme as attended,
+               b.practical_date, b.practical_result,
                null::text as scored_by, null::text as k_performed, null::text as k_stars,
-               coalesce(b."RD", '') as rd,
+               coalesce(fp.rd, '') as rd,
                coalesce(p.full_name, '') as pt_name,
-               coalesce(a.email, '') as pt_email,
-               b."Last Updated By" as last_updated_by, b."Last Updated" as last_updated
+               coalesce(p.email, '') as pt_email,
+               b.last_updated_by, b.last_updated
         from kimeu_foundations_blocks b
-        join person p on p.id = b.person_id
-        left join lateral (
-          select lower(pea.email) as email
-          from person_email_alias pea
-          where pea.person_id = p.id
-          order by pea.is_primary desc nulls last, pea.email asc
-          limit 1
-        ) a on true
+        join person p on p.person_id = b.person_id
+        left join kimeu_foundations_pt fp on fp.person_id = b.person_id and fp.deleted_at is null
         where b.workshop_id = ${workshopId} and b.deleted_at is null
         order by b.person_id, b.block_index desc
       `) as unknown as RecordRow[])
     : ((await sql`
         select r.person_id, null::int as block_index,
-               r."PT Email" as pt_email, r."PT Name" as pt_name, coalesce(r."RD", '') as rd,
-               r."Session Date" as session_date, r."Attended" as attended,
-               r."Practical Date" as practical_date, r."Practical Result" as practical_result,
-               r."Practical Scored By (RD)" as scored_by,
-               r."K-Star Test Performed" as k_performed, r."K-Star Stars Earned" as k_stars,
-               r."Last Updated By" as last_updated_by, r."Last Updated" as last_updated
+               r.pt_email, r.pt_name, coalesce(r.rd, '') as rd,
+               r.session_date, r.attended,
+               r.practical_date, r.practical_result,
+               r.practical_scored_by as scored_by,
+               r.k_star_test_performed as k_performed, r.k_star_stars_earned as k_stars,
+               r.last_updated_by, r.last_updated
         from kimeu_workshop_records r
-        where r."Workshop ID" = ${workshopId} and r.deleted_at is null
+        where r.workshop_id = ${workshopId} and r.deleted_at is null
       `) as unknown as RecordRow[]);
 
   const noteRows = (await sql`
-    select "Note ID" as id, "Created" as created, "Author" as author, "Note" as note,
-           "Review ID" as review_id, "Visibility" as visibility, "PT Email" as pt_email
+    select note_id as id, created, author, note,
+           review_id, visibility, pt_email
     from kimeu_clinician_notes
-    where "Workshop ID" = ${workshopId}
-    order by "Created" asc, "Note ID" asc
+    where workshop_id = ${workshopId}
+    order by created asc, note_id asc
   `) as unknown as NoteRow[];
 
   const isKStar = workshopId === K_STAR_WORKSHOP;
@@ -219,9 +213,9 @@ async function load(user: AppUser, workshopId: string, sql: Sql): Promise<Practi
     let kStarHighestEarned: number | null = null;
     if (isKStar) {
       const evidenceRows = (await sql`
-        select "K-Star Test Performed" as performed, "K-Star Stars Earned" as stars
+        select k_star_test_performed as performed, k_star_stars_earned as stars
         from kimeu_workshop_records
-        where "Workshop ID" = ${K_STAR_WORKSHOP} and lower("PT Email") = ${email} and deleted_at is null
+        where workshop_id = ${K_STAR_WORKSHOP} and lower(pt_email) = ${email} and deleted_at is null
       `) as unknown as Array<{ performed: unknown; stars: unknown }>;
       kEvidence = evidenceRows.map(r => readKStar(kFlagText(r.performed), text(r.stars)));
       kSaved = readKStar(kFlagText(row.k_performed), text(row.k_stars));
@@ -329,16 +323,16 @@ export async function savePractical(user: AppUser, workshopId: string, input: Pr
     const kStar = hasKStar ? mergeKStar(record.kEvidence, input.kStarPerformed!, input.kStarStars ?? null) : null;
     const noteId = randomUUID();
     if (record.foundation) {
-      for (const column of ["Practical Date", "Practical Result", "Last Updated By", "Last Updated"]) {
+      for (const column of ["practical_date", "practical_result", "last_updated_by", "last_updated"]) {
         assertInputHeader(BLOCKS, column);
       }
       // Sign-off lands on the latest non-deleted block for the person/workshop.
       await tx`
         update kimeu_foundations_blocks
-        set "Practical Date" = ${input.practicalDate},
-            "Practical Result" = ${input.result},
-            "Last Updated By" = ${user.nameInSheets},
-            "Last Updated" = ${timestamp}
+        set practical_date = ${input.practicalDate},
+            practical_result = ${input.result},
+            last_updated_by = ${user.nameInSheets},
+            last_updated = ${timestamp}
         where person_id = ${record.personId}
           and workshop_id = ${workshopId}
           and block_index = ${record.blockIndex}
@@ -346,37 +340,37 @@ export async function savePractical(user: AppUser, workshopId: string, input: Pr
       `;
     } else {
       const columns = [
-        "Practical Date", "Practical Result", "Practical Scored By (RD)",
-        "Last Updated By", "Last Updated",
-        ...(kStar ? ["K-Star Test Performed", "K-Star Stars Earned"] : []),
+        "practical_date", "practical_result", "practical_scored_by",
+        "last_updated_by", "last_updated",
+        ...(kStar ? ["k_star_test_performed", "k_star_stars_earned"] : []),
       ];
       for (const column of columns) assertInputHeader(RECORDS, column);
       if (kStar) {
         await tx`
           update kimeu_workshop_records
-          set "Practical Date" = ${input.practicalDate},
-              "Practical Result" = ${input.result},
-              "Practical Scored By (RD)" = ${user.nameInSheets},
-              "Last Updated By" = ${user.nameInSheets},
-              "Last Updated" = ${timestamp},
-              "K-Star Test Performed" = ${kStar.performed === true ? "TRUE" : "FALSE"},
-              "K-Star Stars Earned" = ${kStar.stars === null ? null : String(kStar.stars)}
-          where "Workshop ID" = ${workshopId}
-            and "Session Date" = ${record.sessionDate}
-            and (person_id = ${record.personId} or lower("PT Email") = ${record.clinicianEmail})
+          set practical_date = ${input.practicalDate},
+              practical_result = ${input.result},
+              practical_scored_by = ${user.nameInSheets},
+              last_updated_by = ${user.nameInSheets},
+              last_updated = ${timestamp},
+              k_star_test_performed = ${kStar.performed},
+              k_star_stars_earned = ${kStar.stars === null ? null : kStar.stars}
+          where workshop_id = ${workshopId}
+            and session_date = ${record.sessionDate}
+            and (person_id = ${record.personId} or lower(pt_email) = ${record.clinicianEmail})
             and deleted_at is null
         `;
       } else {
         await tx`
           update kimeu_workshop_records
-          set "Practical Date" = ${input.practicalDate},
-              "Practical Result" = ${input.result},
-              "Practical Scored By (RD)" = ${user.nameInSheets},
-              "Last Updated By" = ${user.nameInSheets},
-              "Last Updated" = ${timestamp}
-          where "Workshop ID" = ${workshopId}
-            and "Session Date" = ${record.sessionDate}
-            and (person_id = ${record.personId} or lower("PT Email") = ${record.clinicianEmail})
+          set practical_date = ${input.practicalDate},
+              practical_result = ${input.result},
+              practical_scored_by = ${user.nameInSheets},
+              last_updated_by = ${user.nameInSheets},
+              last_updated = ${timestamp}
+          where workshop_id = ${workshopId}
+            and session_date = ${record.sessionDate}
+            and (person_id = ${record.personId} or lower(pt_email) = ${record.clinicianEmail})
             and deleted_at is null
         `;
       }
@@ -421,18 +415,18 @@ type NoteInsert = {
 
 async function insertNote(tx: Sql, input: NoteInsert): Promise<void> {
   const columns = [
-    "Note ID", "Created", "PT Email", "Note Type", "Workshop ID", "Session ID",
-    "Review ID", "Note", "Follow-up Needed", "Author", "Author Role", "Visibility",
+    "note_id", "created", "pt_email", "note_type", "workshop_id", "session_id",
+    "review_id", "note", "follow_up_needed", "author", "author_role", "visibility",
   ];
   for (const column of columns) assertInputHeader(NOTES, column);
   await tx`
     insert into kimeu_clinician_notes
-      ("Note ID", "Created", "PT Email", "Note Type", "Workshop ID", "Session ID",
-       "Review ID", "Note", "Follow-up Needed", "Author", "Author Role", "Visibility")
+      (note_id, created, pt_email, note_type, workshop_id, session_id,
+       review_id, note, follow_up_needed, author, author_role, visibility, source)
     values
       (${input.noteId}, ${input.created}, ${input.clinicianEmail}, ${input.noteType},
        ${input.workshopId}, ${input.sessionId}, ${input.reviewId}, ${input.note},
-       ${input.followUp}, ${input.author}, ${input.authorRole}, 'Aaron + author')
+       ${input.followUp}, ${input.author}, ${input.authorRole}, 'Aaron + author', 'sme_app')
   `;
 }
 

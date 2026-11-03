@@ -35,8 +35,8 @@ const db = {
     { email: "sme@kimeperformance.com", name_in_sheets: "SME", active: true, app_roles: "SME Assist,SME Lead", workshop_ids: "F-01,F-02" },
   ],
   workshops: [
-    { "Workshop ID": "F-01", "Workshop Name": "Foundations 1", "Stage": "Foundations" },
-    { "Workshop ID": "F-02", "Workshop Name": "Foundations 2", "Stage": "Foundations" },
+    { workshop_id: "F-01", workshop_name: "Foundations 1", stage: "Foundations" },
+    { workshop_id: "F-02", workshop_name: "Foundations 2", stage: "Foundations" },
   ],
 };
 

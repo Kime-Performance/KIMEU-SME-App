@@ -26,7 +26,7 @@ async function load(sql: Sql, user: AppUser) {
       and email is not null
   `;
   const courseRows = await sql<{ workshop_id: string; workshop_name: string; stage: string }[]>`
-    select "Workshop ID", "Workshop Name", "Stage"
+    select workshop_id, workshop_name, stage
     from kimeu_workshops
     where deleted_at is null
   `;

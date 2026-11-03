@@ -123,7 +123,7 @@ function createFakeSql(seed) {
       row.scored_by = values[2];
       row.last_updated_by = values[3];
       row.last_updated = values[4];
-      if (text.includes('"K-Star Test Performed"')) {
+      if (text.includes("k_star_test_performed")) {
         row.k_performed = values[5];
         row.k_stars = values[6];
       }
@@ -154,7 +154,7 @@ function createFakeSql(seed) {
     if (text.includes("from kimeu_foundations_blocks")) {
       return state.blocks.filter(b => b.workshop_id === values[0]).map(blockRow);
     }
-    if (text.includes('"Practical Scored By (RD)" as scored_by')) {
+    if (text.includes("practical_scored_by as scored_by")) {
       return state.records.filter(r => r.workshop_id === values[0]).map(recordRow);
     }
     if (text.includes("from kimeu_workshop_records")) {
@@ -320,10 +320,10 @@ test("K-Star merge keeps the maximum stars across multiple evidence records", as
     records: [
       { workshop_id: "FW-KB", person_id: "p1", pt_email: "pt@example.com", pt_name: "Pat",
         rd: "RD Example", session_date: sessionOne, attended: "Yes",
-        k_performed: "TRUE", k_stars: "3" },
+        k_performed: true, k_stars: 3 },
       { workshop_id: "FW-KB", person_id: "p1", pt_email: "pt@example.com", pt_name: "Pat",
         rd: "RD Example", session_date: sessionTwo, attended: "Yes",
-        k_performed: "TRUE", k_stars: "2" },
+        k_performed: true, k_stars: 2 },
     ],
   });
   setSql(sql);
@@ -342,8 +342,8 @@ test("K-Star merge keeps the maximum stars across multiple evidence records", as
     kStarPerformed: true, kStarStars: 1,
   });
   const updated = state.records.find(r => r.session_date === sessionTwo);
-  assert.equal(updated.k_performed, "TRUE");
-  assert.equal(updated.k_stars, "3", "merge retains max stars across all session evidence");
+  assert.equal(updated.k_performed, true);
+  assert.equal(updated.k_stars, 3, "merge retains max stars across all session evidence");
   const saved = result.records.find(r => r.recordKey === target.recordKey);
   assert.equal(saved.kStarStars, 3);
   assert.match(state.notes.at(-1).note, /K-Star submitted: performed=true, stars=1; retained: performed=true, stars=3\./);
@@ -356,7 +356,7 @@ test("K-Star merge keeps the maximum stars across multiple evidence records", as
     result: "Pass", practicalDate: today, notes: "",
     kStarPerformed: false, kStarStars: null,
   });
-  assert.equal(state.records.find(r => r.session_date === sessionTwo).k_stars, "3");
+  assert.equal(state.records.find(r => r.session_date === sessionTwo).k_stars, 3);
   assert.equal(resultTwo.records.find(r => r.recordKey === target.recordKey).kStarStars, 3);
 });
 

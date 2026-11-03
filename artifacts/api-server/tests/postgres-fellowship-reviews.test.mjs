@@ -68,7 +68,9 @@ async function sql(strings, ...values) {
     return [];
   }
   if (/from kimeu_clinician_notes/i.test(text)) {
-    return db.notes.filter(n => n.note_id === values[0]);
+    // Idempotency gate and readback both look the audit note up by review_id
+    // (note_id is a uuid primary key generated at insert time).
+    return db.notes.filter(n => n.review_id === values[0]);
   }
   if (/from kimeu_fellowship_reviews/i.test(text)) {
     if (/where review_id/i.test(text)) return db.reviews.filter(r => r.review_id === values[0]);
@@ -111,7 +113,9 @@ test("saves a review, appends the audit note, and confirms readback", async () =
   const res = await saveFellowshipReview(reviewer, draft);
   assert.equal(db.reviews.length, before + 1);
   assert.equal(db.notes.length, before + 1);
-  assert.equal(db.notes[0].note_id, `FELLOWSHIP:${draft.requestId}`);
+  assert.equal(db.notes[0].review_id, `FELLOWSHIP:${draft.requestId}`);
+  assert.match(db.notes[0].note_id, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    "note_id is a generated uuid, not the request marker");
   const saved = res.reviews.find(r => r.email === "pt@fixture.test");
   assert.equal(saved.result, "Pass");
   assert.equal(saved.score, 90);
