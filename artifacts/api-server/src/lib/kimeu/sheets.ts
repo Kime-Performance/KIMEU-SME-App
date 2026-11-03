@@ -330,6 +330,7 @@ export function todayInAppTimeZone(): string {
 }
 
 export function formatSheetTimestamp(date = new Date()): string {
+  // Sheets path: Pacific wall-clock, matching the existing sheet convention.
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: APP_TIME_ZONE,
     year: "numeric",
@@ -342,6 +343,13 @@ export function formatSheetTimestamp(date = new Date()): string {
   }).formatToParts(date);
   const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
   return `${part("year")}-${part("month")}-${part("day")} ${part("hour")}:${part("minute")}:${part("second")}`;
+}
+
+export function formatDbTimestamp(date = new Date()): string {
+  // Postgres path: UTC ISO-8601 with explicit offset for timestamptz columns.
+  // A Pacific wall-clock string with no offset would be interpreted in the
+  // server's time zone and drift 7-8 hours.
+  return date.toISOString();
 }
 
 export function sessionIdFor(workshopId: string, sessionDate: string): string {

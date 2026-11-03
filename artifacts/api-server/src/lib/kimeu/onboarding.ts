@@ -1,6 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { OnboardingInput } from "@workspace/api-zod";
 import { type AppUser, requireRole } from "./access";
+import { isPostgresMode } from "./db/env";
+import { getOnboarding as pgGetOnboarding, saveOnboarding as pgSaveOnboarding } from "./db/onboarding";
 import { readCourseDirectory } from "./course-directory";
 import { isAssignedRd } from "./practical-rules";
 import { onboardingWeeks, validateOnboardingUnit } from "./onboarding-rules";
@@ -44,9 +46,13 @@ async function load(user: AppUser, courseId: string, fresh = false) {
   });
   return { workspace: { courseId, requiredWeeks, canSignOff: true, people }, snapshot, records, h };
 }
-export async function getOnboarding(user: AppUser, courseId: string) { return (await load(user, courseId)).workspace; }
+export async function getOnboarding(user: AppUser, courseId: string) {
+  if (isPostgresMode()) return pgGetOnboarding(user, courseId);
+  return (await load(user, courseId)).workspace;
+}
 
 export async function saveOnboarding(user: AppUser, courseId: string, input: OnboardingInput) {
+  if (isPostgresMode()) return pgSaveOnboarding(user, courseId, input);
   requireRole(user, "RD");
   if (!user.nameInSheets.trim()) throw new KimeuError("Your Name in Sheets is required.", 409, "AUTHOR_REQUIRED");
   return withPracticalWriteLock(async () => {

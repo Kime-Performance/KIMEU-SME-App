@@ -8,6 +8,8 @@ import {
 } from "./sheets";
 import { isAssignedRd, validPracticalInput, validPracticalSchedule } from "./practical-rules";
 import { K_STAR_WORKSHOP, K_STAR_PERFORMED, K_STAR_STARS, kStarColumns, readKStar, validateKStar, mergeKStar } from "./k-star";
+import { isPostgresMode } from "./db/env";
+import * as postgresPracticals from "./db/practicals";
 
 const NOTES = "03g-Clinician Notes";
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -124,11 +126,13 @@ async function load(user: AppUser, workshopId: string) {
 }
 
 export async function getPracticals(user: AppUser, workshopId: string) {
+  if (isPostgresMode()) return postgresPracticals.getPracticals(user, workshopId);
   const { internal: _internal, ...workspace } = await load(user, workshopId);
   return workspace;
 }
 
 export async function savePracticalSchedule(user: AppUser, workshopId: string, input: PracticalScheduleInput) {
+  if (isPostgresMode()) return postgresPracticals.savePracticalSchedule(user, workshopId, input);
   assignedCourse(user, workshopId);
   if (!privileged(user)) throw new KimeuError("Only an assigned RD or Admin can schedule a practical.", 403, "ROLE_NOT_ALLOWED");
   if (!user.nameInSheets.trim()) throw new KimeuError("Your Name in Sheets is required.", 409, "AUTHOR_NAME_REQUIRED");
@@ -163,6 +167,7 @@ export async function savePracticalSchedule(user: AppUser, workshopId: string, i
 }
 
 export async function savePractical(user: AppUser, workshopId: string, input: PracticalSignoff) {
+  if (isPostgresMode()) return postgresPracticals.savePractical(user, workshopId, input);
   assignedCourse(user, workshopId);
   if (!privileged(user)) throw new KimeuError("Only an assigned RD or Admin can sign off a practical.", 403, "ROLE_NOT_ALLOWED");
   if (!user.nameInSheets.trim()) throw new KimeuError("Your Name in Sheets is required for sign-off.", 409, "AUTHOR_NAME_REQUIRED");
