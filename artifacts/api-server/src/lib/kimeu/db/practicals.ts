@@ -3,7 +3,7 @@ import type { AppUser } from "../access";
 import type { PracticalSignoff, PracticalScheduleInput } from "@workspace/api-zod";
 import {
   formatSheetDate,
-  formatSheetTimestamp,
+  formatDbTimestamp,
   KimeuError,
   sessionIdFor,
   todayInAppTimeZone,
@@ -319,7 +319,7 @@ export async function savePractical(user: AppUser, workshopId: string, input: Pr
     if (!record.eligible) throw new KimeuError("Confirmed workshop attendance is required before post-workshop sign-off.", 409, "ATTENDANCE_REQUIRED");
     const error = validPracticalInput(input.result, input.practicalDate, input.notes, record.sessionDate, todayInAppTimeZone());
     if (error) throw new KimeuError(error, 400, "INVALID_PRACTICAL");
-    const timestamp = workshopId === K_STAR_WORKSHOP ? new Date().toISOString() : formatSheetTimestamp();
+    const timestamp = formatDbTimestamp();
     const kStar = hasKStar ? mergeKStar(record.kEvidence, input.kStarPerformed!, input.kStarStars ?? null) : null;
     const noteId = randomUUID();
     if (record.foundation) {

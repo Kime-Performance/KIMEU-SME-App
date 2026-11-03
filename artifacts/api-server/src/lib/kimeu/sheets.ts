@@ -330,10 +330,25 @@ export function todayInAppTimeZone(): string {
 }
 
 export function formatSheetTimestamp(date = new Date()): string {
-  // UTC ISO-8601 with explicit offset. The Postgres paths store this in
-  // timestamptz columns; a Pacific wall-clock string with no offset would be
-  // interpreted in the server's time zone and drift 7-8 hours. Sheet cells
-  // accept ISO text as well, so this is safe for both data paths.
+  // Sheets path: Pacific wall-clock, matching the existing sheet convention.
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")} ${part("hour")}:${part("minute")}:${part("second")}`;
+}
+
+export function formatDbTimestamp(date = new Date()): string {
+  // Postgres path: UTC ISO-8601 with explicit offset for timestamptz columns.
+  // A Pacific wall-clock string with no offset would be interpreted in the
+  // server's time zone and drift 7-8 hours.
   return date.toISOString();
 }
 

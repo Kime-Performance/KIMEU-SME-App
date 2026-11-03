@@ -4,7 +4,7 @@ import { withKimeuLock } from "./transaction";
 import { assertInputHeader } from "./allowlist";
 import {
   formatSheetDate,
-  formatSheetTimestamp,
+  formatDbTimestamp,
   KimeuError,
   normalizeEmail,
   sessionIdFor,
@@ -328,7 +328,7 @@ export async function openSession(
     throw new KimeuError("Workshop ID is not in the workshop catalog.", 400, "UNKNOWN_WORKSHOP");
   }
   const sessionId = sessionIdFor(workshopId, sessionDate);
-  const timestamp = formatSheetTimestamp();
+  const timestamp = formatDbTimestamp();
   await withKimeuLock(async (tx) => {
     const matches = await tx<
       { session_id: string; workshop_id: string; session_date: string; session_status: string }[]
@@ -436,7 +436,7 @@ export async function saveAttendance(
     updatedRows.set(normalizeEmail(mark.clinicianEmail), { person, mark: mark.attended });
   }
 
-  const timestamp = formatSheetTimestamp();
+  const timestamp = formatDbTimestamp();
   await withKimeuLock(async (tx) => {
     // TOCTOU guard: the Live check above ran outside the lock. Re-verify the
     // session is still Live inside the advisory-lock transaction before any
@@ -568,7 +568,7 @@ export async function completeSession(
       "UNMARKED_ATTENDANCE",
     );
   }
-  const timestamp = formatSheetTimestamp();
+  const timestamp = formatDbTimestamp();
   await withKimeuLock(async (tx) => {
     assertWrites("kimeu_sessions", [
       "session_status", "session_notes", "changes_for_next_session",
