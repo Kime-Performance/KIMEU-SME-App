@@ -14,6 +14,8 @@ import {
   appendSparseInputRow,
 } from "./sheets";
 import type { AppUser } from "./access";
+import { isPostgresMode } from "./db/env";
+import * as dbSessions from "./db/sessions";
 
 type SessionStatus = "Scheduled" | "Live" | "Complete" | "Cancelled";
 type SessionRecord = {
@@ -90,6 +92,7 @@ export async function getSessionRecord(
   sessionId: string,
   force = false,
 ): Promise<SessionRecord> {
+  if (isPostgresMode()) return dbSessions.getSessionRecord(sessionId, force);
   const snapshot = await readTab(SESSION_TAB, { force });
   const headers = headersFor(snapshot);
   const sessionIdIndex = headerIndex(headers, "Session ID");
@@ -146,6 +149,7 @@ export async function getRoster(
   session: SessionRecord,
   force = false,
 ): Promise<RosterPerson[]> {
+  if (isPostgresMode()) return dbSessions.getRoster(session, force);
   if (!session.stage) {
     throw new KimeuError(
       "The session stage formula is blank. Verify the workshop ID in 03a-KIMEU Workshops.",
@@ -255,6 +259,7 @@ function summaryFrom(
 }
 
 export async function getSessionDetail(sessionId: string, force = false) {
+  if (isPostgresMode()) return dbSessions.getSessionDetail(sessionId, force);
   const session = await getSessionRecord(sessionId, force);
   const roster = await getRoster(session, force);
   return {
@@ -268,6 +273,7 @@ export async function getSessionDetail(sessionId: string, force = false) {
 }
 
 export async function getToday(user: AppUser) {
+  if (isPostgresMode()) return dbSessions.getToday(user);
   const today = todayInAppTimeZone();
   const snapshot = await readTab(SESSION_TAB);
   const headers = headersFor(snapshot);
@@ -305,6 +311,7 @@ export async function openSession(
   workshopId: string,
   sessionDate: string,
 ) {
+  if (isPostgresMode()) return dbSessions.openSession(user, workshopId, sessionDate);
   const catalog = await readTab("03a-KIMEU Workshops");
   const catalogHeaders = headersFor(catalog);
   const workshopColumn = headerIndex(catalogHeaders, "Workshop ID");
@@ -374,6 +381,7 @@ export async function saveAttendance(
   sessionId: string,
   marks: Array<{ clinicianEmail: string; attended: "Yes" | "No" }>,
 ) {
+  if (isPostgresMode()) return dbSessions.saveAttendance(user, sessionId, marks);
   const detail = await getSessionDetail(sessionId, true);
   if (detail.session.sessionStatus !== "Live") {
     throw new KimeuError(
@@ -511,6 +519,7 @@ export async function completeSession(
     confirmUnmarked: boolean;
   },
 ) {
+  if (isPostgresMode()) return dbSessions.completeSession(user, sessionId, input);
   const detail = await getSessionDetail(sessionId, true);
   if (detail.session.sessionStatus !== "Live") {
     throw new KimeuError(

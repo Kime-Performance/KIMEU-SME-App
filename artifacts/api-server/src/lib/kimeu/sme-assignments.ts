@@ -4,6 +4,8 @@ import { type AppUser, requireRole } from "./access";
 import { getCourses, isRdOnboarding } from "./courses";
 import { canonicalRole, canLeadStage } from "./site-access-policy";
 import { cell, dataRows, formatSheetTimestamp, headerIndex, headersFor, KimeuError, normalizeEmail, readTab, withPracticalWriteLock, writeMultipleInputCells } from "./sheets";
+import { isPostgresMode } from "./db/env";
+import { getSmeAssignments as pgGetSmeAssignments } from "./db/sme-assignments";
 
 const TAB = "03h-App Users";
 const NOTES = "03g-Clinician Notes";
@@ -11,6 +13,7 @@ const list = (value: string) => [...new Set(value.split(",").map(v => v.trim()).
 const hash = (v: unknown) => createHash("sha256").update(JSON.stringify(v)).digest("hex");
 export async function getSmeAssignments(user: AppUser) {
   requireRole(user, "Admin");
+  if (isPostgresMode()) return pgGetSmeAssignments(user);
   const [snapshot, catalog] = await Promise.all([readTab(TAB, { force: true }), getCourses(user)]);
   const h = headersFor(snapshot);
   const staff = dataRows(snapshot).filter(r => cell(r.values, headerIndex(h, "Email"))).map(r => ({

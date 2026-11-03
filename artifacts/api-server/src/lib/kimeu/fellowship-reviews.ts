@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import type { FellowshipReviewInput } from "@workspace/api-zod";
 import { requireRole, type AppUser } from "./access";
+import { isPostgresMode } from "./db/env";
+import { getFellowshipReviews as pgGetFellowshipReviews, saveFellowshipReview as pgSaveFellowshipReview } from "./db/fellowship-reviews";
 import { readCourseDirectory } from "./course-directory";
 import {
   cell, dataRows, formatSheetDate, formatSheetTimestamp, headerIndex, headersFor,
@@ -52,10 +54,12 @@ async function load(user: AppUser, fresh = false) {
   return { workspace: { today: todayInAppTimeZone(), people, reviews, workshops }, snapshot, h };
 }
 export async function getFellowshipReviews(user: AppUser) {
+  if (isPostgresMode()) return pgGetFellowshipReviews(user);
   return (await load(user)).workspace;
 }
 
 export async function saveFellowshipReview(user: AppUser, input: FellowshipReviewInput) {
+  if (isPostgresMode()) return pgSaveFellowshipReview(user, input);
   authorize(user);
   if (!user.nameInSheets.trim()) throw new KimeuError("Your Name in Sheets is required.", 409, "AUTHOR_REQUIRED");
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.requestId)) {
