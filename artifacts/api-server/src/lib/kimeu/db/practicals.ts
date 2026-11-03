@@ -129,7 +129,7 @@ async function load(user: AppUser, workshopId: string, sql: Sql): Promise<Practi
   const workshops = (await sql`
     select workshop_id, stage
     from kimeu_workshops
-    where workshop_id = ${workshopId}
+    where workshop_id = ${workshopId} and deleted_at is null
   `) as unknown as WorkshopRow[];
   if (workshops.length !== 1) {
     throw new KimeuError("The workshop could not be uniquely identified.", 409, "COURSE_AMBIGUOUS");
@@ -172,7 +172,7 @@ async function load(user: AppUser, workshopId: string, sql: Sql): Promise<Practi
     select note_id as id, created, author, note,
            review_id, visibility, pt_email
     from kimeu_clinician_notes
-    where workshop_id = ${workshopId}
+    where workshop_id = ${workshopId} and deleted_at is null
     order by created asc, note_id asc
   `) as unknown as NoteRow[];
 

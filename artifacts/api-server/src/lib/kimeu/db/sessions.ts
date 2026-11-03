@@ -125,6 +125,7 @@ export async function getSessionRecord(
     from kimeu_sessions s
     left join kimeu_workshops w on w.workshop_id = s.workshop_id
     where s.session_id = ${sessionId}
+      and s.deleted_at is null
   `;
   if (rows.length === 0) {
     throw new KimeuError("Session not found.", 404, "SESSION_NOT_FOUND");
@@ -286,6 +287,7 @@ export async function getToday(user: AppUser) {
     left join kimeu_workshops w on w.workshop_id = s.workshop_id
     where s.session_date::text = ${today}
       and s.session_status <> 'Cancelled'
+      and s.deleted_at is null
   `;
   const sessions = await Promise.all(
     rows
@@ -319,7 +321,8 @@ export async function openSession(
 ) {
   const sql = getSql();
   const catalog = await sql<{ found: number }[]>`
-    select 1 as found from kimeu_workshops where workshop_id = ${workshopId}
+    select 1 as found from kimeu_workshops
+    where workshop_id = ${workshopId} and deleted_at is null
   `;
   if (catalog.length === 0) {
     throw new KimeuError("Workshop ID is not in the workshop catalog.", 400, "UNKNOWN_WORKSHOP");
@@ -333,6 +336,7 @@ export async function openSession(
       select session_id, workshop_id, session_date::text as session_date, session_status
       from kimeu_sessions
       where session_id = ${sessionId}
+        and deleted_at is null
     `;
     if (matches.length > 1) {
       throw new KimeuError(
@@ -434,6 +438,23 @@ export async function saveAttendance(
 
   const timestamp = formatSheetTimestamp();
   await withKimeuLock(async (tx) => {
+    // TOCTOU guard: the Live check above ran outside the lock. Re-verify the
+    // session is still Live inside the advisory-lock transaction before any
+    // attendance row is written; another writer may have completed or
+    // cancelled it in between.
+    const sessionRows = await tx<{ session_status: string }[]>`
+      select session_status
+      from kimeu_sessions
+      where session_id = ${sessionId}
+        and deleted_at is null
+    `;
+    if (sessionRows.length !== 1 || sessionRows[0].session_status !== "Live") {
+      throw new KimeuError(
+        "Session is no longer open for attendance.",
+        409,
+        "SESSION_NOT_LIVE",
+      );
+    }
     for (const { person, mark } of updatedRows.values()) {
       const email = normalizeEmail(person.clinicianEmail);
       if (person.sourceTab === "03b-Advanced Workshop Log") {
@@ -561,12 +582,13 @@ export async function completeSession(
           last_updated_by = ${user.nameInSheets},
           last_updated = ${timestamp}
       where session_id = ${sessionId}
+        and session_status = 'Live'
     `;
     if (updated.count !== 1) {
       throw new KimeuError(
-        "The session row changed during the write. No write was made.",
+        "The session is no longer live or already completed.",
         409,
-        "SESSION_ROW_CHANGED",
+        "SESSION_NOT_LIVE",
       );
     }
   });
