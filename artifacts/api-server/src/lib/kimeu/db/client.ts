@@ -24,7 +24,13 @@ export function getSql(): Sql {
       "DB_NOT_CONFIGURED",
     );
   }
-  sqlInstance = postgres(url, { prepare: false, max: 1 });
+  // Supabase pooler endpoints present a cert chain node rejects by default
+  // (SELF_SIGNED_CERT_IN_CHAIN). sslmode in the URL can override the ssl
+  // option, so strip it and let the explicit option govern: encrypt without
+  // CA verification. For strict checking use verify-full + Supabase's CA cert.
+  const pooledUrl = new URL(url);
+  pooledUrl.searchParams.delete("sslmode");
+  sqlInstance = postgres(pooledUrl.toString(), { prepare: false, max: 1, ssl: { rejectUnauthorized: false } });
   return sqlInstance;
 }
 
