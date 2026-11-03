@@ -180,6 +180,7 @@ test("saveAttendance updates workshop_records and writes one audit note atomical
       { pt_email: "one@example.test", full_name: "Fixture One", attended: null, computed_status: null, practical_status: null },
     ] },
     LOCK,
+    { match: /select session_status/, rows: [{ session_status: "Live" }] },
     { match: /update kimeu_workshop_records/, rows: [], count: 1 },
     { match: /insert into kimeu_clinician_notes/, rows: [], count: 1 },
     { match: /from kimeu_sessions/, rows: [sessionRow()] },
@@ -223,6 +224,7 @@ test("saveAttendance updates foundations_blocks for a Foundations session", asyn
       { pt_email: "two@example.test", full_name: "Fixture Two", attended: null, computed_status: null, practical_status: null },
     ] },
     LOCK,
+    { match: /select session_status/, rows: [{ session_status: "Live" }] },
     { match: /update kimeu_foundations_blocks/, rows: [], count: 1 },
     { match: /insert into kimeu_clinician_notes/, rows: [], count: 1 },
     { match: /from kimeu_sessions/, rows: [foundation] },
@@ -250,6 +252,7 @@ test("saveAttendance rolls back when the roster row is ambiguous", async () => {
       { pt_email: "one@example.test", full_name: "Fixture One", attended: null, computed_status: null, practical_status: null },
     ] },
     LOCK,
+    { match: /select session_status/, rows: [{ session_status: "Live" }] },
     { match: /update kimeu_workshop_records/, rows: [], count: 0 },
   ]);
   client.setSql(sql);
