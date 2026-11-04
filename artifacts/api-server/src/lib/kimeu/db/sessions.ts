@@ -48,6 +48,9 @@ type RosterPerson = {
   attendedColumn: number;
   sessionDateColumn?: number;
 };
+/** Internal roster carries the resolved person_id for writes; it is stripped
+ * from the public session detail payload to keep the API shape unchanged. */
+type InternalRosterPerson = RosterPerson & { personId: string | null };
 type SessionSummary = Omit<
   SessionRecord,
   "rowNumber" | "sessionNotes" | "changesForNextSession" | "stage"
@@ -141,6 +144,7 @@ export async function getSessionRecord(
 }
 
 type RosterRow = {
+  person_id: string | null;
   pt_email: string;
   full_name: string | null;
   attended: boolean | null;
@@ -152,12 +156,13 @@ function rosterPersonFromRow(
   row: RosterRow,
   sourceTab: RosterPerson["sourceTab"],
   fallbackName: string,
-): RosterPerson {
+): InternalRosterPerson {
   const attended =
     row.attended === true ? "Yes" :
     row.attended === false ? "No" :
     null;
   return {
+    personId: row.person_id ?? null,
     clinicianEmail: row.pt_email,
     name: row.full_name || fallbackName || "Unnamed clinician",
     attended: attended as "Yes" | "No" | null,
@@ -172,7 +177,7 @@ function rosterPersonFromRow(
 export async function getRoster(
   session: SessionRecord,
   _force = false,
-): Promise<RosterPerson[]> {
+): Promise<InternalRosterPerson[]> {
   if (!session.stage) {
     throw new KimeuError(
       "The session stage is blank. Verify the workshop ID in kimeu_workshops.",
@@ -185,6 +190,7 @@ export async function getRoster(
   if (/foundation/i.test(session.stage)) {
     const rows = await sql<RosterRow[]>`
       select
+        b.person_id,
         p.email as pt_email,
         coalesce(p.full_name, '') as full_name,
         b.attended_sme as attended,
@@ -205,6 +211,7 @@ export async function getRoster(
   if (/fellowship|enrichment/i.test(session.stage)) {
     const rows = await sql<RosterRow[]>`
       select
+        r.person_id,
         r.pt_email,
         coalesce(p.full_name, r.pt_name, '') as full_name,
         r.attended,
@@ -258,7 +265,7 @@ export async function getSessionDetail(sessionId: string, force = false) {
   return {
     session: summaryFrom(session, roster),
     roster: roster.map(
-      ({ rowNumber: _rowNumber, attendedColumn: _attendedColumn, sessionDateColumn: _dateColumn, ...person }) => person,
+      ({ rowNumber: _rowNumber, attendedColumn: _attendedColumn, sessionDateColumn: _dateColumn, personId: _personId, ...person }) => person,
     ),
     sessionNotes: session.sessionNotes,
     changesForNextSession: session.changesForNextSession,
@@ -423,7 +430,7 @@ export async function saveAttendance(
       "DUPLICATE_ATTENDANCE_MARK",
     );
   }
-  const updatedRows = new Map<string, { person: RosterPerson; mark: "Yes" | "No" }>();
+  const updatedRows = new Map<string, { person: InternalRosterPerson; mark: "Yes" | "No" }>();
   for (const mark of marks) {
     const person = rosterByEmail.get(normalizeEmail(mark.clinicianEmail));
     if (!person) {
@@ -467,7 +474,7 @@ export async function saveAttendance(
               attendance_confirmed_by = ${user.nameInSheets},
               last_updated_by = ${user.nameInSheets},
               last_updated = ${timestamp}
-          where lower(pt_email) = ${email}
+          where (person_id = ${person.personId} or lower(pt_email) = ${email})
             and workshop_id = ${session.workshopId}
             and session_date::text = ${session.sessionDate}
             and deleted_at is null
@@ -489,9 +496,7 @@ export async function saveAttendance(
               attended_sme = ${mark === "Yes"},
               last_updated_by = ${user.nameInSheets},
               last_updated = ${timestamp}
-          where person_id in (
-            select person_id from person where lower(email) = ${email}
-          )
+          where person_id = ${person.personId}
             and workshop_id = ${session.workshopId}
             and session_date::text = ${session.sessionDate}
             and deleted_at is null

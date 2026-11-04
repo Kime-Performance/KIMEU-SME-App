@@ -114,8 +114,8 @@ test("getSessionDetail returns the session summary and roster from Postgres", as
   const sql = fakeSql([
     { match: /from kimeu_sessions/, rows: [sessionRow()] },
     { match: /from kimeu_workshop_records/, rows: [
-      { pt_email: "One@Example.test", full_name: "Fixture One", attended: true, computed_status: "In Progress", practical_status: "Pass" },
-      { pt_email: "two@example.test", full_name: null, attended: null, computed_status: null, practical_status: null },
+      { person_id: "p-one", pt_email: "One@Example.test", full_name: "Fixture One", attended: true, computed_status: "In Progress", practical_status: "Pass" },
+      { person_id: "p-two", pt_email: "two@example.test", full_name: null, attended: null, computed_status: null, practical_status: null },
     ] },
   ]);
   client.setSql(sql);
@@ -177,7 +177,7 @@ test("saveAttendance updates workshop_records and writes one audit note atomical
   const sql = fakeSql([
     { match: /from kimeu_sessions/, rows: [sessionRow()] },
     { match: /from kimeu_workshop_records/, rows: [
-      { pt_email: "one@example.test", full_name: "Fixture One", attended: null, computed_status: null, practical_status: null },
+      { person_id: "p-one", pt_email: "one@example.test", full_name: "Fixture One", attended: null, computed_status: null, practical_status: null },
     ] },
     LOCK,
     { match: /select session_status/, rows: [{ session_status: "Live" }] },
@@ -185,7 +185,7 @@ test("saveAttendance updates workshop_records and writes one audit note atomical
     { match: /insert into kimeu_clinician_notes/, rows: [], count: 1 },
     { match: /from kimeu_sessions/, rows: [sessionRow()] },
     { match: /from kimeu_workshop_records/, rows: [
-      { pt_email: "one@example.test", full_name: "Fixture One", attended: true, computed_status: "Attended", practical_status: null },
+      { person_id: "p-one", pt_email: "one@example.test", full_name: "Fixture One", attended: true, computed_status: "Attended", practical_status: null },
     ] },
   ]);
   client.setSql(sql);
@@ -199,9 +199,10 @@ test("saveAttendance updates workshop_records and writes one audit note atomical
   assert.equal(note.inTx, true, "audit note ran inside the same transaction");
   assert.equal(update.values[0], true, "attended boolean column receives the mark as true");
   assert.equal(update.values[1], "SME One");
-  assert.equal(update.values[4], "one@example.test", "matched case-insensitively on normalized email");
-  assert.equal(update.values[5], "FW-TEST");
-  assert.equal(update.values[6], "2026-11-02");
+  assert.equal(update.values[4], "p-one", "resolves by linked person_id");
+  assert.equal(update.values[5], "one@example.test", "falls back to normalized email");
+  assert.equal(update.values[6], "FW-TEST");
+  assert.equal(update.values[7], "2026-11-02");
   assert.ok(note.values[6].includes("one@example.test=Yes"), "audit note summarizes the marks");
   assert.equal(note.values[4], "FW-TEST");
   assert.equal(note.values[5], "FW-TEST-20261102");
@@ -221,7 +222,7 @@ test("saveAttendance updates foundations_blocks for a Foundations session", asyn
   const sql = fakeSql([
     { match: /from kimeu_sessions/, rows: [foundation] },
     { match: /from kimeu_foundations_blocks/, rows: [
-      { pt_email: "two@example.test", full_name: "Fixture Two", attended: null, computed_status: null, practical_status: null },
+      { person_id: "p-two", pt_email: "two@example.test", full_name: "Fixture Two", attended: null, computed_status: null, practical_status: null },
     ] },
     LOCK,
     { match: /select session_status/, rows: [{ session_status: "Live" }] },
@@ -229,7 +230,7 @@ test("saveAttendance updates foundations_blocks for a Foundations session", asyn
     { match: /insert into kimeu_clinician_notes/, rows: [], count: 1 },
     { match: /from kimeu_sessions/, rows: [foundation] },
     { match: /from kimeu_foundations_blocks/, rows: [
-      { pt_email: "two@example.test", full_name: "Fixture Two", attended: false, computed_status: null, practical_status: null },
+      { person_id: "p-two", pt_email: "two@example.test", full_name: "Fixture Two", attended: false, computed_status: null, practical_status: null },
     ] },
   ]);
   client.setSql(sql);
@@ -249,7 +250,7 @@ test("saveAttendance rolls back when the roster row is ambiguous", async () => {
   const sql = fakeSql([
     { match: /from kimeu_sessions/, rows: [sessionRow()] },
     { match: /from kimeu_workshop_records/, rows: [
-      { pt_email: "one@example.test", full_name: "Fixture One", attended: null, computed_status: null, practical_status: null },
+      { person_id: "p-one", pt_email: "one@example.test", full_name: "Fixture One", attended: null, computed_status: null, practical_status: null },
     ] },
     LOCK,
     { match: /select session_status/, rows: [{ session_status: "Live" }] },
@@ -269,8 +270,8 @@ test("saveAttendance rolls back when the roster row is ambiguous", async () => {
 
 test("completeSession rejects unmarked attendance unless confirmed, then updates status", async () => {
   const unmarkedRoster = [
-    { pt_email: "one@example.test", full_name: "Fixture One", attended: true, computed_status: null, practical_status: null },
-    { pt_email: "two@example.test", full_name: "Fixture Two", attended: null, computed_status: null, practical_status: null },
+    { person_id: "p-one", pt_email: "one@example.test", full_name: "Fixture One", attended: true, computed_status: null, practical_status: null },
+    { person_id: "p-two", pt_email: "two@example.test", full_name: "Fixture Two", attended: null, computed_status: null, practical_status: null },
   ];
   // Unconfirmed: rejected before any write.
   const rejecting = fakeSql([
