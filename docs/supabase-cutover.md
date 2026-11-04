@@ -26,6 +26,11 @@ https://supabase.com/docs/guides/database/connecting-to-postgres
 - Verify certificate identity and database-role privileges using the app login.
 - Verify active PT visibility through RLS, approved staff access, catalog entries,
   and existing records. Do not bulk-copy sandbox records or recreate canonical tables.
+- If providers are visible but the active PT join is empty, run
+  `scripts/supabase/roster-link-diagnostics.sql` as database owner. It returns
+  aggregate counts only. Resolve missing identity links through verified,
+  unambiguous identifiers; do not fuzzy-match display names, expose auth tables
+  to the SME role, or remove the clinical eligibility filter to populate a list.
 - Complete the remaining Sheet-dependent paths: staff authorization and
   administration, course catalog and roster directory, workshop enrollment and
   tracking, Foundations Assessment, and SME-assignment saves.

@@ -8,3 +8,9 @@ Do not infer that application tables are absent from an empty `information_schem
 **Why:** During Supabase readiness checks, the application tables existed and had row-security policies, but the application's inherited role lacked table privileges. `SELECT 1` succeeded while information_schema hid those tables.
 
 **How to apply:** Before provisioning or migrating anything, inspect PostgreSQL catalog object existence, effective table privileges, role inheritance, and row-security policies separately. A successful connectivity probe establishes neither permission to read application records nor permission to write them. Never substitute broader credentials or disable row security merely to make a probe pass.
+
+Validate canonical identity relationships before a cutover, not just whether individual tables contain records.
+
+**Why:** Supabase table access and verified TLS succeeded while the active provider records had no shared person links, leaving the application's eligible-PT join empty.
+
+**How to apply:** Diagnose linkage coverage with aggregate counts before enabling the new source. Repair identity relationships only through verified, unique identifiers with appropriate owner approval. Never populate an empty roster by fuzzy-matching names or dropping its eligibility and access filters.
