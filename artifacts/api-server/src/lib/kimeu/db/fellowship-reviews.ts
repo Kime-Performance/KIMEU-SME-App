@@ -40,6 +40,8 @@ async function loadWorkspace(q: Sql, user: AppUser) {
   authorize(user);
   // Active clinical PTs come from the person spine; person_email_alias feeds
   // person.email upstream, and providers gates to active clinicians.
+  // kimeu_roster = sheet-maintained 01-PT Roster membership (keeps exec
+  // founders and non-clinical staff out of the clinical roster).
   const roster = await q<RosterRow[]>`
     select p.person_id, p.email, p.full_name as name
     from person p
@@ -48,6 +50,7 @@ async function loadWorkspace(q: Sql, user: AppUser) {
       and exists (
         select 1 from providers pr
         where pr.person_id = p.person_id and pr.status = 'active'
+          and pr.kimeu_roster
       )
     order by p.full_name
   `;
