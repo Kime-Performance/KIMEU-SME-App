@@ -36,23 +36,25 @@ async function loadWorkspace(q: Sql, user: AppUser, courseId: string) {
   if (!user.active) throw new KimeuError("Your staff access is inactive.", 403, "APP_USER_INACTIVE");
   requireRole(user, "RD");
   const requiredWeeks = onboardingWeeks(courseId);
-  // Roster directory: active clinical PTs from the person spine (aliases resolve
-  // to person.email upstream) with the assigned RD from kimeu_foundations_pt.
+  // Roster directory: resolved clinical PTs from v_kimeu_sme_roster (linked
+  // identities only) with the assigned RD from kimeu_foundations_pt.
   const roster = await q<RosterRow[]>`
-    select p.person_id, p.email, p.full_name as name, fp.rd as assigned_rd
-    from person p
+    select l.person_id,
+           l.email,
+           l.name,
+           fp.rd as assigned_rd
+    from (
+      select distinct on (v.person_id)
+             v.person_id,
+             coalesce(nullif(v.canonical_email, ''), v.roster_email) as email,
+             v.full_name as name
+      from v_kimeu_sme_roster v
+      where v.identity_state = 'linked'
+      order by v.person_id, v.canonical_email
+    ) l
     left join kimeu_foundations_pt fp
-      on fp.person_id = p.person_id and fp.deleted_at is null
-    where p.active
-      and p.email is not null
-      and exists (
-        -- kimeu_roster = sheet-maintained 01-PT Roster membership (keeps exec
-        -- founders and non-clinical staff out of the clinical roster).
-        select 1 from providers pr
-        where pr.person_id = p.person_id and pr.status = 'active'
-          and pr.kimeu_roster
-      )
-    order by p.full_name
+      on fp.person_id = l.person_id and fp.deleted_at is null
+    order by l.name
   `;
   const rows = await q<OnboardingRow[]>`
     select record_id, person_id, pt_email, workshop_id, week,
