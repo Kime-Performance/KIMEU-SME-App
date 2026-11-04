@@ -31,6 +31,11 @@ https://supabase.com/docs/guides/database/connecting-to-postgres
   aggregate counts only. Resolve missing identity links through verified,
   unambiguous identifiers; do not fuzzy-match display names, expose auth tables
   to the SME role, or remove the clinical eligibility filter to populate a list.
+- Missing provider auth-account links do not imply PTs need login accounts.
+  `scripts/supabase/clinical-roster-diagnostics.sql` checks existing active
+  clinical directories against the shared person spine by work email, returning
+  aggregate counts only. Confirm the authoritative roster and its coverage
+  before replacing the provider-based eligibility join or granting roster access.
 - Complete the remaining Sheet-dependent paths: staff authorization and
   administration, course catalog and roster directory, workshop enrollment and
   tracking, Foundations Assessment, and SME-assignment saves.

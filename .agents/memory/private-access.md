@@ -20,3 +20,9 @@ The director plans to assign SMEs through the administrative controls after publ
 **Why:** The user explicitly distinguished all-workshop visibility from the approved, secure staff login and said assignments will happen after publishing.
 
 **How to apply:** Do not assign staff or broaden site admission merely to populate navigation. Let approved SME Assist and SME Lead accounts browse the full workshop catalog, while server-side role and assignment checks continue to protect each tracking action and record.
+
+PT participants do not need authentication accounts merely to appear in the roster or have workshop requirements recorded.
+
+**Why:** The product grants workspace login to approved staff, who select PT participants for tracking; those are separate identities and permissions.
+
+**How to apply:** Keep roster eligibility independent of whether a PT has a Supabase Auth or Clerk account. Do not provision PT logins to work around missing roster links. Use the authoritative clinical roster and verified participant identifiers instead.
