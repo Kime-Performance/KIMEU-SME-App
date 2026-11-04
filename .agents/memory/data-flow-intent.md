@@ -9,6 +9,12 @@ The approved direction is Supabase-only SME application data, replacing the prio
 
 **How to apply:** Use the existing shared truth database, not a new app database. Verify permissions, row security, certificate identity, all remaining application paths, and completion calculations before activating the cutover. Treat the separate Clinician Tool migration as a real dependency, not an automatic result of connecting this app.
 
+The user has a separate agent that sets up the shared Supabase schema; coordinate proposed schema and access changes with that agent.
+
+**Why:** The user proposed having their schema agent review the roster setup script before applying changes to the shared database.
+
+**How to apply:** Hand off verified findings, the proposed SQL, required app interfaces, and unresolved identity checks. Confirm the schema agent's approved contract and which changes were actually applied before wiring or activating the app against them.
+
 Preserve existing history and Kajabi inputs; do not bulk-copy sandbox records into the shared truth database. PT-roster identity remains a read-only input to SME operations, separate from attendance and practical-result writes.
 
 **Why:** The user's original direction separated roster selection from workshop documentation and rejected wholesale sandbox transfers.
