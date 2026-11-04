@@ -46,8 +46,11 @@ async function loadWorkspace(q: Sql, user: AppUser, courseId: string) {
     where p.active
       and p.email is not null
       and exists (
+        -- kimeu_roster = sheet-maintained 01-PT Roster membership (keeps exec
+        -- founders and non-clinical staff out of the clinical roster).
         select 1 from providers pr
         where pr.person_id = p.person_id and pr.status = 'active'
+          and pr.kimeu_roster
       )
     order by p.full_name
   `;
