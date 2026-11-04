@@ -46,7 +46,7 @@ The Clinician Development Tool reads the Foundations, Fellowship Review, and Adv
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - API: Express 5
-- Source of truth: existing KIMEU Google Sheet. Do not introduce a separate app database.
+- Approved target source of truth: the existing shared KIMEU Supabase database, with no Google Sheets write-back mirror. Do not introduce a separate app database. The Supabase-only cutover is not active until permissions, verified TLS, remaining app paths, and real-record readback are checked; see `docs/supabase-cutover.md`.
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
@@ -78,7 +78,7 @@ Sign in, see today's sessions, open a session, mark clinician attendance, close 
 
 ## User preferences
 
-The SME app is intended to influence the KIMEU Progress Tracker, while keeping the Google Sheet as the shared source of truth.
+The SME app is intended to influence the KIMEU Progress Tracker. The user approved Supabase-only data flow, replacing the previous shared-Sheet direction. The separate Clinician Development Tool needs its own Supabase migration; do not assume this app's switch updates that project.
 
 When it fits the build flow, keep the visual brand and theme consistent with the Clinician Development App in the user's other project.
 
