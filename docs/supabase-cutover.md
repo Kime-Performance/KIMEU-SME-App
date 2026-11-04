@@ -36,6 +36,15 @@ https://supabase.com/docs/guides/database/connecting-to-postgres
   clinical directories against the shared person spine by work email, returning
   aggregate counts only. Confirm the authoritative roster and its coverage
   before replacing the provider-based eligibility join or granting roster access.
+- For the active Clinical directory, apply
+  `scripts/supabase/sme-clinical-roster-access.sql` as database owner. This
+  creates a server-only filtered view, uses exact primary or registered-alias
+  email matches, and replaces only the SME person-read policy with that clinical
+  eligibility rule. Its owner must be able to read the protected sources without
+  recursive RLS. No base HR/auth-table access is granted to the app.
+  Missing, inactive, duplicate, and ambiguous identities remain explicitly flagged;
+  the script does not create or repair them. Verify all roster states and the
+  source provenance before activating or porting the application roster queries.
 - Complete the remaining Sheet-dependent paths: staff authorization and
   administration, course catalog and roster directory, workshop enrollment and
   tracking, Foundations Assessment, and SME-assignment saves.

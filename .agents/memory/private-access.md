@@ -25,4 +25,4 @@ PT participants do not need authentication accounts merely to appear in the rost
 
 **Why:** The product grants workspace login to approved staff, who select PT participants for tracking; those are separate identities and permissions.
 
-**How to apply:** Keep roster eligibility independent of whether a PT has a Supabase Auth or Clerk account. Do not provision PT logins to work around missing roster links. Use the authoritative clinical roster and verified participant identifiers instead.
+**How to apply:** Keep roster eligibility independent of whether a PT has a Supabase Auth or Clerk account. Do not provision PT logins to work around missing roster links. Use the authoritative clinical roster and verified participant identifiers instead. Do not change financial-provider identities merely to populate the SME roster; clinical participation and financial-provider linkage are separate concerns.
