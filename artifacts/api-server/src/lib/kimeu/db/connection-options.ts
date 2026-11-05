@@ -33,6 +33,10 @@ export function truthDatabaseConnectionOptions(rawUrl: string, rawCa?: string) {
     options: {
       prepare: false as const,
       max: 1,
+      // postgres-js counts queued queries, not the active query. A value of
+      // one still permits overlapping wire requests; zero disables that.
+      // The truth pooler stalls on overlapping unnamed statements.
+      max_pipeline: 0,
       connect_timeout: 10,
       idle_timeout: 20,
       max_lifetime: 60,

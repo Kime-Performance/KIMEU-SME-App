@@ -45,7 +45,7 @@ export function useAttendanceQueue(sessionId: string, enabled: boolean) {
         client.invalidateQueries({ queryKey: getGetKimeuSessionQueryKey(sessionId) }),
         client.invalidateQueries({ queryKey: getGetKimeuTodayQueryKey() }),
       ]);
-      setMessage(queue.current.length ? 'Newer attendance taps are waiting to sync.' : 'Attendance confirmed by the connected sheet.');
+      setMessage(queue.current.length ? 'Newer attendance taps are waiting to sync.' : 'Attendance confirmed by the server.');
     } catch {
       setMessage('Attendance is pending on this device. Reconnect or retry; it has not been confirmed as saved.');
     } finally {

@@ -102,19 +102,28 @@ Coordinate an owner-approved test dataset before exercising live mutations.
 The separate Clinician Development Tool and external importer ownership still
 require their own verification.
 
-### Release verification is blocked
+### Read-pipeline compatibility and verification
 
-Sequential application-role reads succeed across workshop tracking, roster,
-staff assignments and assessment workspaces. Synthetic transaction tests and
-SQL planning checks pass for the core write statements. The signed-in browser
-journey has not passed: concurrent reads can stall, leaving bootstrap pending.
-Fresh read-only client probes also reproduced queued-read stalls. Testing
-smaller pipelines, a second connection and disabled automatic type discovery
-did not establish a fix. Do not infer release readiness from individual reads.
+The pending-read issue is fixed in the client configuration. Ordinary reads
+use `max_pipeline: 0`: the driver counts queued statements, so one still allows
+overlap with the active statement. Twelve concurrent protected reads and
+simultaneous API readiness requests completed successfully with zero.
 
-The next investigation needs pooler-side connection/query observations
-correlated with the app's concurrent staff/catalog/roster/session requests,
-without relaxing RLS or changing PT records. Client idle/connection-lifetime
-bounds alone did not resolve the observed stall. No real clinical save or
-cross-app completion update has been exercised, and this build is not
-recommended for staff rollout until the pending-read issue is resolved.
+Transactions need a separate, exclusively reserved single-connection client.
+They retain `max_pipeline: 1` because zero prevents the driver's BEGIN
+reservation callback from running. Transaction statements are awaited
+sequentially; ordinary reads never share that connection. Two concurrent
+read-only transactions completed successfully with these writer settings.
+The existing transaction-scoped advisory lock still coordinates actual saves
+across app instances.
+
+The approved-admin browser journey passed: Today, course roster selection,
+person-scoped practicals, Foundations Assessment and Settings loaded without
+the previous access-check stall. No clinical records or permissions were
+changed by these checks. Real save/readback and the separate Clinician
+Development Tool still need an owner-approved isolated test record before
+claiming end-to-end release verification.
+
+Calendar event matching now uses the canonical Supabase workshop catalog in
+postgres mode, rather than consulting Sheets. Calendar remains a read-only
+schedule source and never supplies actual attendance.

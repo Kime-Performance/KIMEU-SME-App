@@ -21,8 +21,8 @@ Column-scoped grants must cover columns used in filters and joins, not only retu
 
 **How to apply:** Check effective column privileges and role inheritance, then execute the actual read queries using the application's configured login. Owner-level reads or privilege-catalog checks alone do not establish that the application can load its roster.
 
-Sequential query success does not establish readiness for parallel workspace loading.
+Sequential query success does not establish readiness for parallel workspace loading. This truth-pooler connection needs non-overlapping ordinary reads.
 
-**Why:** App-role roster and operational reads succeeded individually, but concurrent reads stalled and left the signed-in access check pending. Privileges and TLS were not sufficient proof of a working browser journey.
+**Why:** App-role reads succeeded individually but overlapped unnamed statements stalled. Postgres-js counts queued statements in `max_pipeline`: one still permits overlap; zero stopped the stalls. However, zero also short-circuits the driver's BEGIN reservation callback and breaks transactions.
 
-**How to apply:** Verify concurrent staff, catalog, roster and session loading before declaring a cutover ready. Correlate client and pooler observations; do not presume that a permissions change or different pool size fixes a pending-request problem.
+**How to apply:** Keep ordinary reads non-pipelined and transaction work on a separate, exclusively reserved connection with the reservation callback enabled. Await transaction statements sequentially. Verify both concurrent read requests and transaction execution; a working dashboard alone does not prove saves work. The tuning option is runtime-supported despite being absent from the driver's public TypeScript options.

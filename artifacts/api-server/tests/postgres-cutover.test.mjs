@@ -18,6 +18,7 @@ await build({
       export {getSmeAssignments,saveSmeAssignment} from './src/lib/kimeu/sme-assignments';
       export {appendClinicianNote} from './src/lib/kimeu/db/notes';
       export {getReadiness} from './src/lib/kimeu/db/readiness';
+      export {getCalendarCatalog} from './src/lib/kimeu/calendar';
       export {setSql} from './src/lib/kimeu/db/client';`,
     resolveDir: new URL("../", import.meta.url).pathname, loader: "ts",
   },
@@ -35,6 +36,13 @@ await build({
 });
 process.env.KIMEU_DATA_SOURCE = "postgres";
 const api = await import(pathToFileURL(join(temp, "module.mjs")).href);
+test("calendar uses the canonical Supabase catalog without any Sheets access", async () => {
+  reset();
+  const catalog = await api.getCalendarCatalog();
+  assert.equal(catalog.find(c => c.id === "F-UE-G")?.name, "UE Late Stage");
+  assert.ok(catalog.some(c => c.id === "A-KB"));
+  assert.ok(catalog.every(c => c.id && c.name && c.stage));
+});
 const p1 = "00000000-0000-4000-8000-000000000001", p2 = "00000000-0000-4000-8000-000000000002";
 const blockId = "00000000-0000-4000-8000-000000000003";
 const admin = { email: "admin@kimeperformance.com", nameInSheets: "Fixture Admin", active: true, roles: ["Admin"], workshopIds: [] };
