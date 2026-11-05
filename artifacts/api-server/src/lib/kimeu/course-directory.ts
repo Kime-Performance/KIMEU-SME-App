@@ -1,5 +1,7 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import { KimeuError, normalizeEmail } from "./sheets";
+import { isPostgresMode } from "./db/env";
+import { readCourseDirectory as postgresDirectory } from "./db/directory";
 
 // Explicit read-only roster source, separate from the writable KIMEU tracking sheet.
 const SOURCE = "1CCBAQrjlACcWDPAS6Z2UIirnn-4tleSEuZhc6wPTufo";
@@ -7,6 +9,7 @@ type Directory = { refreshedAt: string; people: Array<{ email: string; name: str
 let cache: { until: number; value: Directory } | undefined;
 
 export async function readCourseDirectory(force = false): Promise<Directory> {
+  if (isPostgresMode()) return postgresDirectory();
   if (!force && cache && cache.until > Date.now()) return cache.value;
   const response = await new ReplitConnectors().proxy("google-sheet",
     `/v4/spreadsheets/${SOURCE}/values/${encodeURIComponent("'01-PT Roster'!A3:X")}`,

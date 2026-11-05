@@ -34,6 +34,8 @@ export function truthDatabaseConnectionOptions(rawUrl: string, rawCa?: string) {
       prepare: false as const,
       max: 1,
       connect_timeout: 10,
+      idle_timeout: 20,
+      max_lifetime: 60,
       ssl: { rejectUnauthorized: true, ...(ca ? { ca } : {}) },
     },
   };

@@ -73,7 +73,7 @@ export function SmeAssignmentsPanel() {
         setDrafts((all) => { const c = { ...all }; delete c[s.email]; return c; });
         const fresh = result.staff.find((x) => x.email === s.email);
         const ok = fresh && sameSet(smeRoles(fresh), d.roles) && sameSet(fresh.workshopIds, workshopIds);
-        setMessages((m) => ({ ...m, [s.email]: ok ? { tone: 'success', text: 'Saved and read back from the sheet.' } : { tone: 'error', text: 'Save returned, but the sheet does not match what was entered. Review below.' } }));
+        setMessages((m) => ({ ...m, [s.email]: ok ? { tone: 'success', text: 'Saved and confirmed by the server.' } : { tone: 'error', text: 'Save returned, but the stored record does not match what was entered. Review below.' } }));
       },
       onError: (err) => {
         const { status, message } = errorInfo(err);

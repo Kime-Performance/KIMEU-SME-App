@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { isPostgresMode } from "../lib/kimeu/db/env";
+import { appendClinicianNote } from "../lib/kimeu/db/notes";
 import { getUpcomingWorkshops } from "../lib/kimeu/calendar";
 import { getCourses, requireCourseWriter } from "../lib/kimeu/courses";
 import { getPracticals, savePractical, savePracticalSchedule } from "../lib/kimeu/practicals";
@@ -314,6 +316,11 @@ router.post("/kimeu/clinician-notes", async (req, res): Promise<void> => {
     );
   }
 
+  if (isPostgresMode()) {
+    const result = await appendClinicianNote(user, authorRoleFor(user, session.stage), body);
+    res.status(201).json(AppendKimeuClinicianNoteResponse.parse(result));
+    return;
+  }
   const readiness = getBasicReadiness();
   if (!readiness.configured) {
     throw new KimeuError(

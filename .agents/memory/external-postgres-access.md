@@ -20,3 +20,9 @@ Column-scoped grants must cover columns used in filters and joins, not only retu
 **Why:** An existing restricted role could read other operational records but a newly added roster eligibility predicate failed with permission denied because its column was outside the older grants.
 
 **How to apply:** Check effective column privileges and role inheritance, then execute the actual read queries using the application's configured login. Owner-level reads or privilege-catalog checks alone do not establish that the application can load its roster.
+
+Sequential query success does not establish readiness for parallel workspace loading.
+
+**Why:** App-role roster and operational reads succeeded individually, but concurrent reads stalled and left the signed-in access check pending. Privileges and TLS were not sufficient proof of a working browser journey.
+
+**How to apply:** Verify concurrent staff, catalog, roster and session loading before declaring a cutover ready. Correlate client and pooler observations; do not presume that a permissions change or different pool size fixes a pending-request problem.

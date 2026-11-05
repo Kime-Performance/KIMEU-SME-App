@@ -13,6 +13,7 @@ export const WRITE_ALLOWLIST: Record<string, ReadonlySet<string>> = {
     "last_updated_by", "last_updated",
   ]),
   "kimeu_app_users": new Set(["app_roles", "workshop_ids"]),
+  "kimeu_foundations_pt": new Set(["exam_result"]),
   "kimeu_rd_onboarding": new Set([
     "record_id", "pt_email", "workshop_id", "week", "session_date", "minutes",
     "attended", "rd_result", "signed_by", "signed_at", "notes", "last_updated_by", "last_updated",

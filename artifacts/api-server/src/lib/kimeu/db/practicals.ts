@@ -158,13 +158,14 @@ async function load(user: AppUser, workshopId: string, sql: Sql): Promise<Practi
       `) as unknown as RecordRow[])
     : ((await sql`
         select r.person_id, null::int as block_index,
-               r.pt_email, r.pt_name, coalesce(r.rd, '') as rd,
+               r.pt_email, r.pt_name, coalesce(nullif(r.rd, ''), fp.rd, '') as rd,
                r.session_date, r.attended,
                r.practical_date, r.practical_result,
                r.practical_scored_by as scored_by,
                r.k_star_test_performed as k_performed, r.k_star_stars_earned as k_stars,
                r.last_updated_by, r.last_updated
         from kimeu_workshop_records r
+        left join kimeu_foundations_pt fp on fp.person_id = r.person_id and fp.deleted_at is null
         where r.workshop_id = ${workshopId} and r.deleted_at is null
       `) as unknown as RecordRow[]);
 

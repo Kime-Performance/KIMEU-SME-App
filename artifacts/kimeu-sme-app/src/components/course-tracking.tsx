@@ -101,7 +101,7 @@ export function CourseTracking({ workshopId, selectedEmail, onRosterChange, onRo
   }
 
   function discard(kind?: Kind) {
-    if (!window.confirm(kind ? `Discard unsaved ${kind} changes?` : 'Discard all unsaved changes and reload from the sheet?')) return;
+    if (!window.confirm(kind ? `Discard unsaved ${kind} changes?` : 'Discard all unsaved changes and reload saved records?')) return;
     const next = kind ? { ...drafts, [kind]: {} } : EMPTY;
     setDrafts(next);
     if (!Object.keys(next.attendance).length) setBaseRevision(null);
@@ -124,7 +124,7 @@ export function CourseTracking({ workshopId, selectedEmail, onRosterChange, onRo
         const confirmed = marks.filter((m) => { const p = byEmail.get(m.email); return p && serverValue(p, kind) === m.checked; }).length;
         setDrafts((d) => ({ ...d, [kind]: {} }));
         setBaseRevision(null);
-        setMessage({ tone: confirmed === marks.length ? 'success' : 'error', text: `Attendance saved: ${confirmed} of ${marks.length} marks confirmed by the sheet.` });
+        setMessage({ tone: confirmed === marks.length ? 'success' : 'error', text: `Attendance saved: ${confirmed} of ${marks.length} marks confirmed by the server.` });
       },
       onError: (err) => {
         const { status, message: text } = errorInfo(err);
@@ -180,8 +180,8 @@ export function CourseTracking({ workshopId, selectedEmail, onRosterChange, onRo
     </div>
     <p className="ct-meta">Nothing saves automatically. A workshop session is opened only when attendance is saved.{data && <> Roster refreshed <b data-testid="text-roster-refreshed">{fmtTime(data.rosterRefreshedAt)}</b>.</>}</p>
     <p className="ct-explain">{workshopId.startsWith('F-')
-      ? 'Foundations workshop completion is calculated in the KIMEU sheet from attendance and RD practical Pass. Kajabi progress applies only to the separate Foundations assessment component.'
-      : 'Overall completion is calculated in the KIMEU sheet from attendance, RD practical results, and Director-uploaded pre-course progress. No separate completion approval is needed here.'}</p>
+      ? 'Foundations workshop completion is calculated from attendance and RD practical Pass. Kajabi progress applies only to the separate Foundations assessment component.'
+      : 'Overall completion is calculated from attendance, RD practical results, and Director-uploaded pre-course progress. No separate completion approval is needed here.'}</p>
     {message && <div className={`inline-message inline-message-${message.tone}`} role="status" data-testid="status-tracking-message">{message.text}
       {message.conflict && <button type="button" className="button-quiet ct-inline-btn" onClick={() => discard()} data-testid="button-discard-reload">Discard and reload</button>}</div>}
     {!validDate ? <div className="state-card state-error"><div className="state-icon"><CircleAlert size={18} /></div><div><h3>Choose a valid date</h3><p>Pick the workshop occurrence date to load the checklist.</p></div></div>

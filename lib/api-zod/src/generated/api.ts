@@ -489,7 +489,7 @@ export const HealthCheckResponse = zod.object({
  */
 export const GetKimeuBootstrapResponse = zod.object({
   "readiness": zod.object({
-  "trackingMode": zod.enum(['live', 'test', 'unconfigured']),
+  "trackingMode": zod.enum(['live', 'test', 'postgres', 'unconfigured']),
   "configured": zod.boolean(),
   "sheetId": zod.string().nullable(),
   "notePrivacyReady": zod.boolean(),

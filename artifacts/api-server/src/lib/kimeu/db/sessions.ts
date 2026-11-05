@@ -188,7 +188,9 @@ export async function getRoster(
         p.email as pt_email,
         coalesce(p.full_name, '') as full_name,
         b.attended_sme as attended,
-        b.complete as computed_status,
+        case when b.attended_sme is true and b.practical_result = 'Pass' then 'Complete'
+             when b.attended_sme is true or b.practical_result is not null then 'In Progress'
+             else 'Not Started' end as computed_status,
         b.practical_result as practical_status
       from kimeu_foundations_blocks b
       join person p on p.person_id = b.person_id
@@ -202,7 +204,7 @@ export async function getRoster(
     );
   }
 
-  if (/fellowship|enrichment/i.test(session.stage)) {
+  if (/fellowship|advanced|enrichment/i.test(session.stage)) {
     const rows = await sql<RosterRow[]>`
       select
         r.pt_email,

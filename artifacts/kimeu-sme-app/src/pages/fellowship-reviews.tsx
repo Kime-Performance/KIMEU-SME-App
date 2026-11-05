@@ -112,7 +112,7 @@ export function FellowshipReviewsPage() {
     pending.current[p.email] = { payload, requestId };
     const input: FellowshipReviewInput = { ...body, requestId };
     setSavingEmail(p.email);
-    setMessages((m) => ({ ...m, [p.email]: { tone: 'success', text: 'Saving and verifying against the sheet...' } }));
+    setMessages((m) => ({ ...m, [p.email]: { tone: 'success', text: 'Saving and verifying the stored result...' } }));
     save.mutate({ data: input }, {
       onSuccess: (ws: FellowshipReviewWorkspace) => {
         void client.cancelQueries({ queryKey });

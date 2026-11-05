@@ -3,6 +3,8 @@ import type { CourseTrackingInput } from "@workspace/api-zod";
 import type { AppUser } from "./access";
 import { readCourseDirectory } from "./course-directory";
 import { openSession } from "./sessions";
+import { isPostgresMode } from "./db/env";
+import * as postgresTracking from "./db/course-tracking";
 import { canLeadStage, canonicalRole } from "./site-access-policy";
 import { isRdOnboarding } from "./courses";
 import { K_STAR_WORKSHOP, K_STAR_PERFORMED, K_STAR_STARS, kStarColumns } from "./k-star";
@@ -109,10 +111,12 @@ async function load(user: AppUser, workshopId: string, sessionDate: string, forc
 }
 
 export async function getCourseTracking(user: AppUser, workshopId: string, sessionDate: string) {
+  if (isPostgresMode()) return postgresTracking.getCourseTracking(user, workshopId, sessionDate);
   return (await load(user, workshopId, sessionDate)).workspace;
 }
 
 export async function saveCourseTracking(user: AppUser, workshopId: string, input: CourseTrackingInput) {
+  if (isPostgresMode()) return postgresTracking.saveCourseTracking(user, workshopId, input);
   authorize(user, workshopId);
   // Defend internal callers as well as the generated HTTP request validator.
   if (input.kind !== "attendance") throw new KimeuError("Overall completion is calculated by the KIMEU sheet, not submitted from the SME app.", 400, "COMPLETION_SHEET_OWNED");

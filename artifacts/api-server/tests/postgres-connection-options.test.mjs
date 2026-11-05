@@ -22,6 +22,8 @@ test("verifies certificates by default and bounds connection establishment", () 
   assert.equal(result.options.prepare, false);
   assert.equal(result.options.max, 1);
   assert.equal(result.options.connect_timeout, 10);
+  assert.equal(result.options.idle_timeout, 20);
+  assert.equal(result.options.max_lifetime, 60);
   assert.equal(result.options.ssl.ca, undefined);
 });
 

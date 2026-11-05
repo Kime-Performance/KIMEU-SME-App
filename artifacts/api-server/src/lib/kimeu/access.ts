@@ -1,6 +1,9 @@
 import { clerkClient, getAuth } from "@clerk/express";
 import type { Request } from "express";
 import { canonicalRole, hasSiteRole, verifiedPrimaryEmail } from "./site-access-policy";
+import { isPostgresMode } from "./db/env";
+import { findActiveAppUser as postgresUser } from "./db/staff";
+import { getBasicReadiness as postgresBasic, getReadiness as postgresReadiness } from "./db/readiness";
 import {
   cell,
   getBasicReadiness,
@@ -74,6 +77,7 @@ function splitList(value: string): string[] {
 }
 
 export async function findActiveAppUser(email: string): Promise<AppUser | null> {
+  if (isPostgresMode()) return postgresUser(email);
   const readiness = getBasicReadiness();
   if (!readiness.configured) {
     throw new KimeuError(
@@ -167,6 +171,15 @@ export function requireWorkshopAccess(user: AppUser, workshopId: string): void {
 }
 
 export async function getBootstrapForRequest(req: Request) {
+  if (isPostgresMode()) {
+    const email = await signedInEmail(req);
+    if (!hasKimeuDomain(email)) return { readiness: postgresBasic(), user: null, access: "domain_denied" as const };
+    const user = await findActiveAppUser(email);
+    const readiness = await postgresReadiness();
+    if (!user) return { readiness, user: null, access: "inactive" as const };
+    if (!hasSiteRole(user.roles)) return { readiness, user: null, access: "role_denied" as const };
+    return { readiness, user, access: "allowed" as const };
+  }
   const email = await signedInEmail(req);
   if (!hasKimeuDomain(email)) {
     const readiness = await testCopyReadiness();

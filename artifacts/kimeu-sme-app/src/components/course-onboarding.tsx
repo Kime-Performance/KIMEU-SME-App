@@ -128,7 +128,7 @@ export function CourseOnboarding({ courseId }: { courseId: OnboardingCourseId })
         const unit = fresh?.units.find((u) => u.week === week);
         const confirmed = unit && unit.date === d.date && unit.attended === d.attended && asResult(unit.result) === d.result;
         setMessages((m) => ({ ...m, [p.email]: confirmed
-          ? { tone: 'success', text: `${attendanceOnly ? 'Attendance' : `Week ${week}`} saved and read back from the sheet${unit?.signedBy ? ` (signed by ${unit.signedBy})` : ''}.` }
+          ? { tone: 'success', text: `${attendanceOnly ? 'Attendance' : `Week ${week}`} saved and confirmed by the server${unit?.signedBy ? ` (signed by ${unit.signedBy})` : ''}.` }
           : { tone: 'error', text: `Save returned, but week ${week} did not read back as entered. Review the record below.` } }));
       },
       onError: (err) => {
@@ -159,7 +159,7 @@ export function CourseOnboarding({ courseId }: { courseId: OnboardingCourseId })
   return <section className="ct-root ob-root" aria-label={`${copy.title} sign-off`} data-testid="section-onboarding">
     <div className="section-title-row"><div><span className="section-kicker">{attendanceOnly ? 'REGIONAL DIRECTOR / ATTENDANCE ONLY' : `RD SIGN-OFF / ${required} ${required === 1 ? 'SESSION' : 'WEEKS'} REQUIRED`}</span><h2>{copy.title}</h2></div>
       <button type="button" className="button-quiet" onClick={() => query.refetch()} disabled={query.isFetching} data-testid="button-refresh-onboarding"><RefreshCw size={14} className={query.isFetching ? 'spin' : ''} /> Refresh</button></div>
-    <p className="ct-explain">{copy.lead} {attendanceOnly ? 'Choose the attendance date, check the PT’s attendance, then Save attendance. Nothing saves automatically.' : 'Nothing saves automatically. Status and completed weeks are calculated by the KIMEU sheet; there is no separate completion approval.'}</p>
+    <p className="ct-explain">{copy.lead} {attendanceOnly ? 'Choose the attendance date, check the PT’s attendance, then Save attendance. Nothing saves automatically.' : 'Nothing saves automatically. Status and completed weeks are calculated from saved sign-offs; there is no separate completion approval.'}</p>
     <div className="ct-toolbar"><label className="ct-field ct-search"><span>Search active roster</span>
       <span className="ct-search-box"><Search size={14} /><input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, location or email" data-testid="input-search-onboarding" /></span></label></div>
     {dirtyCount > 0 && <p className="ct-meta"><span className="ct-unsaved" data-testid="text-onboarding-unsaved">{dirtyCount} unsaved</span> Drafts stay here until you save or discard them.</p>}
@@ -183,7 +183,7 @@ export function CourseOnboarding({ courseId }: { courseId: OnboardingCourseId })
             return <li key={p.email} className={`ob-person${dirty ? ' ct-changed' : ''}`} data-testid={`row-onboarding-${id}`}>
               <div className="ob-head">
                 <span className="ct-who"><strong data-testid={`text-onboarding-name-${id}`}>{p.name}</strong><small>{[p.location || 'No location', p.email].join(' / ')}</small></span>
-                <span className="ob-status">{!attendanceOnly && <span className="count-chip" data-testid={`text-onboarding-weeks-${id}`}>{p.completedWeeks} / {required} {required === 1 ? 'session' : 'weeks'}</span>}<span className="ob-sheet" data-testid={`text-onboarding-status-${id}`}>{attendanceOnly ? (p.units[0]?.attended ? 'Attendance recorded' : 'Not recorded') : p.sheetStatus || 'No sheet status'}</span></span>
+                <span className="ob-status">{!attendanceOnly && <span className="count-chip" data-testid={`text-onboarding-weeks-${id}`}>{p.completedWeeks} / {required} {required === 1 ? 'session' : 'weeks'}</span>}<span className="ob-sheet" data-testid={`text-onboarding-status-${id}`}>{attendanceOnly ? (p.units[0]?.attended ? 'Attendance recorded' : 'Not recorded') : p.sheetStatus || 'No status yet'}</span></span>
               </div>
               {required > 1 && <div className="ob-weeks" role="tablist" aria-label="Week">
                 {Array.from({ length: required }, (_, i) => i + 1).map((w) => {

@@ -59,7 +59,9 @@ test("SME assignment read returns staff and courses from canonical tables", asyn
   assert.ok(sme);
   assert.deepEqual(sme.roles, ["SME Assist", "SME Lead"]);
   assert.deepEqual(sme.workshopIds, ["F-01", "F-02"]);
-  assert.equal(res.courses.length, 2);
+  assert.equal(res.courses.length, 4);
+  assert.ok(res.courses.some(c => c.workshopId === "F-11"));
+  assert.ok(res.courses.some(c => c.workshopId === "F-SURG-OBS"));
   assert.ok(res.revision);
 });
 

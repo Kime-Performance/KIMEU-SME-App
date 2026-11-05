@@ -87,7 +87,7 @@ export function FoundationsAssessmentPage() {
         const definite = status !== undefined && status >= 400 && status < 500;
         setMsg({ tone: 'error', text: definite
           ? `Not saved: ${errorText(err)} Your selection and draft are kept; nothing was resubmitted.`
-          : `Save not confirmed: ${errorText(err)} The sheet may or may not have been updated. Reload latest and check the current result before retrying. Your draft is kept; nothing was resubmitted.` });
+          : `Save not confirmed: ${errorText(err)} The saved record may or may not have been updated. Reload latest and check the current result before retrying. Your draft is kept; nothing was resubmitted.` });
       },
     });
   }
@@ -139,7 +139,7 @@ export function FoundationsAssessmentPage() {
               <h2 data-testid="text-fa-name">{person.name || person.email}</h2>
               <p className="fa-email" data-testid="text-fa-email">{person.email}</p>
               <p className="ct-meta">{person.location || 'No location'}</p>
-              <div className="fa-current">Current result in sheet <ResultTag result={person.result} /></div>
+              <div className="fa-current">Current saved result <ResultTag result={person.result} /></div>
               <div className="ob-result" role="radiogroup" aria-label="New result">
                 {(['Pass', 'Fail'] as FoundationsAssessmentInputResult[]).map((r) => <label key={r} className={`ob-pill${draft === r ? ' ob-pill-on' : ''}`}><input type="radio" name="fa-result" checked={draft === r} disabled={busy} onChange={() => pick(r)} data-testid={`radio-fa-${r.toLowerCase()}`} />{r}</label>)}
               </div>

@@ -707,7 +707,7 @@ components:
       properties:
         trackingMode:
           type: string
-          enum: [live, test, unconfigured]
+          enum: [live, test, postgres, unconfigured]
         configured:
           type: boolean
         sheetId:
