@@ -14,3 +14,9 @@ Validate canonical identity relationships before a cutover, not just whether ind
 **Why:** Supabase table access and verified TLS succeeded while the active provider records had no shared person links, leaving the application's eligible-PT join empty.
 
 **How to apply:** Diagnose linkage coverage with aggregate counts before enabling the new source. Repair identity relationships only through verified, unique identifiers with appropriate owner approval. Never populate an empty roster by fuzzy-matching names or dropping its eligibility and access filters.
+
+Column-scoped grants must cover columns used in filters and joins, not only returned columns.
+
+**Why:** An existing restricted role could read other operational records but a newly added roster eligibility predicate failed with permission denied because its column was outside the older grants.
+
+**How to apply:** Check effective column privileges and role inheritance, then execute the actual read queries using the application's configured login. Owner-level reads or privilege-catalog checks alone do not establish that the application can load its roster.
