@@ -26,3 +26,9 @@ PT participants do not need authentication accounts merely to appear in the rost
 **Why:** The product grants workspace login to approved staff, who select PT participants for tracking; those are separate identities and permissions.
 
 **How to apply:** Keep roster eligibility independent of whether a PT has a Supabase Auth or Clerk account. Do not provision PT logins to work around missing roster links. Use the authoritative clinical roster and verified participant identifiers instead. Do not change financial-provider identities merely to populate the SME roster; clinical participation and financial-provider linkage are separate concerns.
+
+RD sign-off permissions must survive the proposed shared-login/RBAC migration: practicals, Orientation, Evaluation Retention, Cadaver Lab, Surgical Observation, and Foundations Assessment.
+
+**Why:** When the supplied migration spec excluded RDs from these writes, the user explicitly chose “Keep RD sign-offs.”
+
+**How to apply:** Preserve explicit, appropriately scoped RD capabilities rather than following a role ranking that removes these actions. Retaining RD sign-offs does not grant SME attendance or administrator capabilities.
