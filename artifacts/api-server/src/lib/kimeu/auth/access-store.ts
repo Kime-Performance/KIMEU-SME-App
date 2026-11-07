@@ -7,7 +7,7 @@ export function createAccessStore(clientFactory = requestAuthClient): AccessStor
     async ownRoles(identity) {
       const { data, error } = await clientFactory(identity.accessToken)
         .from("user_access")
-        .select("kimeu_sme")
+        .select("email,kimeu_sme")
         .eq("auth_user_id", identity.authUserId);
       if (error) throw new Error("Account role lookup unavailable.");
       if (!Array.isArray(data)) throw new Error("Invalid account role response.");

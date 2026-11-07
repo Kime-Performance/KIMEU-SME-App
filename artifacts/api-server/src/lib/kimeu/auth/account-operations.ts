@@ -1,16 +1,16 @@
 import { requestAuthClient } from "./clients";
 
 export const RESET_RESPONSE = "If that account exists, we've emailed a reset link.";
+// Verified via the deployment service on 2026-11-07. No client redirect input.
+export const CANONICAL_APP_URL = "https://kimeu-sme-app.replit.app";
+export const AUTH_REDIRECTS = {
+  invite: `${CANONICAL_APP_URL}/auth/accept`,
+  recovery: `${CANONICAL_APP_URL}/auth/recovery`,
+} as const;
 
 /** Redirects are server-configured, never supplied by the person requesting mail. */
 function configuredRedirect(): string {
-  const raw = process.env.SUPABASE_AUTH_REDIRECT_URL;
-  if (!raw) throw new Error("The approved password-reset redirect is not configured.");
-  const url = new URL(raw);
-  if (url.protocol !== "https:" || url.username || url.password || url.hash) {
-    throw new Error("The approved authentication redirect must be an HTTPS URL.");
-  }
-  return url.toString();
+  return AUTH_REDIRECTS.recovery;
 }
 
 /** Route must rate-limit before calling; identical response for all accounts. */

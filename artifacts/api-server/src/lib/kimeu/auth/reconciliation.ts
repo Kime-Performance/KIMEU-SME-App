@@ -27,12 +27,13 @@ export function reconcileAccess(staff: StaffAccount[], access: AccessRow[]) {
     if (role && !effective.length) issues.push("NO_EFFECTIVE_CAPABILITY");
     if (account.active !== true) issues.push("STAFF_INACTIVE");
     if (row && !row.auth_user_id) issues.push("AUTH_ID_NOT_BOUND");
-    if (role && effective.length && !effective.includes(role)) issues.push("CAPABILITY_BELOW_SITE_ROLE");
     return {
       email: account.email, name: account.name_in_sheets, active: account.active,
       assignedRoles: assigned, workshopIds: account.workshop_ids,
       rawSiteRole: row?.kimeu_sme ?? null, siteRole: role,
       authUserId: row?.auth_user_id ?? null, effectiveRoles: effective, issues,
+      // A higher ceiling is intentional, not an access defect or promotion request.
+      ceilingExceedsAssignments: Boolean(role && effective.length && !effective.includes(role)),
     };
   });
   const active = accounts.filter(a => a.active === true);

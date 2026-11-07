@@ -3,11 +3,11 @@ name: Private SME and RD access
 description: Who may enter the KIMEU workspace and the user's intended sign-in method.
 ---
 
-The SME app is private to approved SMEs, Regional Directors, explicitly assigned Fellowship reviewers, and CEU Admins within their limited course-admin scope, with director/admin access retained. The user is comfortable using email and password. The app will have a place in Kajabi; anyone may see the cover page, but only approved staff may enter the app.
+The SME app admits approved staff (SMEs, RDs, Fellowship reviewers, limited CEU Admins and director/admins) and approved PTs with strictly self-only view access. The user is comfortable using email and password. The app will have a place in Kajabi; anyone may see the cover page, but workspace access requires approved authentication.
 
-**Why:** The user explicitly requested a private site, not an app open to every clinician or company email address. They later requested named Fellowship reviewers with their own secure access to record overall assessments.
+**Why:** The user requested a private site, later added Fellowship reviewers, and confirmed PT self-only admission in Oracle's final package on November 7, 2026.
 
-**How to apply:** Keep the cover page public. Require approved access before serving workspace data. A Kajabi membership, corporate-domain address, or newly created authentication account alone must not grant access. Fellowship Reviewer admission grants the overall-review workspace, not SME attendance or RD practical editing rights. CEU Admin is CEU/course administration only, not user management or clinical sign-offs. Preserve course-level permissions. Let the authentication provider handle passwords; Oracle automation handles invitations. Never put passwords in the roster or app-user sheet.
+**How to apply:** Keep the cover page public. Require approved access before serving workspace data. A Kajabi membership, corporate-domain address, or newly created authentication account alone must not grant access. Fellowship Reviewer admission grants reviews/Foundations Assessment, not SME attendance or RD practicals. CEU Admin grants course-tracking/CEU writes and reads, not user management or clinical sign-offs. Preserve course-level permissions. Let the authentication provider handle passwords; Oracle automation handles invitations. Never put passwords in the roster or app-user sheet.
 
 Do not treat a failure in a separate workshop/log sheet-health check as revocation of a freshly approved staff account. Keep an already verified workspace and its draft forms mounted during transient connection-refresh errors, but enforce fresh authorization on every server-side save and honor explicit access revocation.
 
@@ -43,4 +43,22 @@ The owner's November 7, 2026 Global Rule 3 amendment supersedes the prior Supaba
 
 **Why:** The owner explicitly amended the shared authentication boundary and resolved the RD-scope and CEU-vocabulary questions.
 
-**How to apply:** Do not request or introduce privileged Supabase credentials, app-side account binding, or invitations. Preserve anon-key enumeration-safe recovery. Do not reopen regional mapping as an RD blocker. Await Oracle's updated reconciliation package before enforcement cutover.
+**How to apply:** Do not request or introduce privileged Supabase credentials, app-side account binding, or invitations. Preserve anon-key enumeration-safe recovery. Do not reopen regional mapping as an RD blocker. Follow the subsequent owner-approved reconciliation and phased enforcement rules below.
+
+PT admission is confirmed: view-only, own-record object checks on every ID/list/export, person resolved server-side, never from query parameters, with zero business writes. An Admin ceiling with narrower staff assignments intentionally retains only those assigned capabilities; do not auto-promote.
+
+**Why:** The owner explicitly confirmed both decisions against Oracle's final reconciliation package on November 7, 2026.
+
+**How to apply:** Keep participant roster eligibility separate from login eligibility. Treat unknown or ambiguous immutable person linkage as pending setup. Do not flag a higher ceiling alone as a permissions defect.
+
+Auth enforcement and publishing remain gated on this order: Oracle invites, nightly sync binds, reconciliation re-run, then owner approval. Zero bindings before invites is expected, not a defect.
+
+**Why:** The owner explicitly authorized build/test preparation but withheld enforcement and publish approval until those phases complete.
+
+**How to apply:** Preserve the current working login while preparing the replacement. Never bind users, issue invitations, or activate the new provider to make pre-invite readiness checks pass.
+
+Oracle's judge-reviewed addendum keeps the existing restricted server DB path for business data and assignments. Identity uses the sync-owned roster email from the JWT/RLS own access row, not mutable Auth email, then the app-user's person identity. Ceilings constrain assignments by explicit matrix, never by rank or automatic downgrading; unmatched staff lose assignment-gated actions but retain valid role-gated surfaces.
+
+**Why:** The owner explicitly clarified the Auth-key boundary, identity chain, and distinction between assignment-gated and role-gated access.
+
+**How to apply:** Preserve SQL write allowlists and Admin-only audited assignment edits. Deny/log assignments outside the ceiling; CEU assignments require CEU/Admin ceilings. Blank roles are intentional No Access, not PT. Re-verify every bearer request and return 401 on getUser failure/revocation. RD org-wide applies to view and sign-off writes.

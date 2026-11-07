@@ -50,6 +50,8 @@ CMTyZKG3XEu5Ghl1LEnI3QmEKsqaCLv12BnVjbkSeZsMnevJPs1Ye6TjjJwdik5P
 o/bKiIz+Fq8=
 -----END CERTIFICATE-----
 """
+SUPABASE_URL = "https://mzuitumuqidunwkaaxtz.supabase.co"
+VITE_SUPABASE_URL = "https://mzuitumuqidunwkaaxtz.supabase.co"
 
 [nix]
 channel = "stable-25_05"

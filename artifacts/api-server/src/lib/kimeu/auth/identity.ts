@@ -11,9 +11,9 @@ export class AuthRejection extends Error {
 export type VerifiedIdentity = { authUserId: string; verifiedEmail: string; accessToken: string };
 export type AccessRow = { auth_user_id: string | null; email: string; kimeu_sme: string | null };
 export interface AccessStore {
-  ownRoles(identity: VerifiedIdentity): Promise<{ kimeu_sme: string | null }[]>;
+  ownRoles(identity: VerifiedIdentity): Promise<{ email: string; kimeu_sme: string | null }[]>;
 }
-export type Principal = { authUserId: string; siteRole: SiteRole };
+export type Principal = { authUserId: string; siteRole: SiteRole; rosterEmail: string };
 const pending = () => new AuthRejection(403, "ACCOUNT_PENDING", "Your account is pending setup. Contact your administrator.");
 const invalid = () => new AuthRejection(401, "SIGN_IN_REQUIRED", "Sign in to continue.");
 
@@ -28,7 +28,7 @@ export async function verifiedIdentity(
     // Supabase's Auth server validates this project's token; no local decoding.
     response = await clientFactory().auth.getUser(match[1]);
   } catch {
-    throw new AuthRejection(503, "IDENTITY_UNAVAILABLE", "Sign-in verification is temporarily unavailable.");
+    throw invalid();
   }
   const user = response.data.user;
   if (response.error || !user?.id) throw invalid();
@@ -56,8 +56,9 @@ export async function resolvePrincipal(
     throw pending();
   }
   const role = siteRole(rows[0].kimeu_sme);
-  if (!role) throw pending();
-  return { authUserId: identity.authUserId, siteRole: role };
+  const rosterEmail = rows[0].email?.trim().toLowerCase();
+  if (!role || !rosterEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(rosterEmail)) throw pending();
+  return { authUserId: identity.authUserId, siteRole: role, rosterEmail };
 }
 
 export function requireSupabaseProvider(): void {

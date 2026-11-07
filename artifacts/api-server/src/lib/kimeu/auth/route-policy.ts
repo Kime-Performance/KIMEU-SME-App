@@ -1,10 +1,11 @@
 import type { RequestHandler } from "express";
 import { AuthRejection, type Principal } from "./identity";
 import { permits, type Capability, type SiteRole } from "./policy";
+import { assertBusinessWrite } from "./object-scope";
 
-type Gate = { method: string; path: RegExp; capability: Capability; objectScope: boolean; assignment: boolean };
-const gate = (method: string, path: string, capability: Capability, objectScope = false, assignment = false): Gate =>
-  ({ method, path: new RegExp(`^${path}$`), capability, objectScope, assignment });
+type Gate = { method: string; path: RegExp; capability: Capability; objectScope: boolean; assignment: boolean; alternatives: readonly Capability[] };
+const gate = (method: string, path: string, capability: Capability, objectScope = false, assignment = false, alternatives: readonly Capability[] = []): Gate =>
+  ({ method, path: new RegExp(`^${path}$`), capability, objectScope, assignment, alternatives });
 
 // Paths are relative to /api. Unknown paths and methods ALWAYS fail closed.
 export const ROUTE_GATES: readonly Gate[] = [
@@ -24,9 +25,9 @@ export const ROUTE_GATES: readonly Gate[] = [
   gate("POST", "/kimeu/sessions", "attendance", false, true),
   gate("POST", "/kimeu/sessions/[^/]+/attendance", "attendance", true, true),
   gate("POST", "/kimeu/sessions/[^/]+/complete", "attendance", true, true),
-  gate("POST", "/kimeu/courses/[^/]+/tracking", "attendance", true, true),
-  gate("POST", "/kimeu/courses/[^/]+/practical-schedule", "practical", true, true),
-  gate("POST", "/kimeu/courses/[^/]+/practicals", "practical", true, true),
+  gate("POST", "/kimeu/courses/[^/]+/tracking", "attendance", true, true, ["course-admin"]),
+  gate("POST", "/kimeu/courses/[^/]+/practical-schedule", "practical", true),
+  gate("POST", "/kimeu/courses/[^/]+/practicals", "practical", true),
   gate("POST", "/kimeu/onboarding/[^/]+", "onboarding", true),
   gate("POST", "/kimeu/foundations-assessment", "assessment", true),
   gate("POST", "/kimeu/fellowship-reviews", "review", true),
@@ -50,7 +51,11 @@ export function denyByDefault(dependencies: {
       const rule = routeGate(req.method, req.path);
       if (!rule) throw new AuthRejection(403, "ROUTE_NOT_ALLOWED", "This route is not authorized.");
       const { principal, roles } = await dependencies.principal(req);
-      if (!permits(roles, rule.capability)) {
+      if (req.method !== "GET" && !rule.path.test("/auth/sign-out")) {
+        assertBusinessWrite(principal);
+      }
+      const applicableRoles = rule.assignment ? roles : [principal.siteRole];
+      if (![rule.capability, ...rule.alternatives].some(cap => permits(applicableRoles, cap))) {
         throw new AuthRejection(403, "ROLE_NOT_ALLOWED", "Your role does not allow this action.");
       }
       if (rule.objectScope || rule.assignment) await dependencies.enforceScope(req, principal, rule);

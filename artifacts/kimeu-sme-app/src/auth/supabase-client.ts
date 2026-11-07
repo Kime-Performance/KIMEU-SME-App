@@ -13,7 +13,9 @@ export function supabaseIdentity() {
   if (url !== "https://mzuitumuqidunwkaaxtz.supabase.co" || !key) {
     throw new Error("Supabase sign-in is not configured.");
   }
-  client = createClient(url, key);
+  client = createClient(url, key, {
+    auth: { flowType: "pkce", detectSessionInUrl: false },
+  });
   return client;
 }
 
