@@ -32,3 +32,9 @@ RD sign-off permissions must survive the proposed shared-login/RBAC migration: p
 **Why:** When the supplied migration spec excluded RDs from these writes, the user explicitly chose “Keep RD sign-offs.”
 
 **How to apply:** Preserve explicit, appropriately scoped RD capabilities rather than following a role ranking that removes these actions. Retaining RD sign-offs does not grant SME attendance or administrator capabilities.
+
+The intended shared identity provider is Supabase Auth, but enforcing the migration requires owner-reviewed account reconciliation before switching the working sign-in.
+
+**Why:** The user authorized implementation against Oracle's SME spec and explicitly distinguished completed shared prerequisites from an enforcement cutover that still requires reconciliation review.
+
+**How to apply:** Prepare and verify migration components without silently switching active authentication. Preserve existing access during preparation; do not treat database readiness or a passing unit suite as approval to enforce new staff roles.

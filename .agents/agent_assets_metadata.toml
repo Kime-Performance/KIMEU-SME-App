@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "GgMXPIovkVhZH2Eh4NAJJ"
+uri = "file://generated-artifacts/auth-review/sme-account-reconciliation.md"
+type = "text"
+title = "SME account reconciliation — owner review"
+description = "Read-only staff-role comparison and database role census. Review administrator capabilities, unsupported CEU Admin access, and first-login bindings before enforcement."
+logical_id = "93c01bf8-f865-4e06-b659-125e9df60f95"
+content_hash = "sha256:cd685305bbe836ece3de2a40a50305c97c7f03cecb374e581c3ee2bfe9e025ab"
+size = 2454
+mtime_ms = 1794071518610
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:850bbe4d-9b5b-4ac6-9439-7b845c4be73d/93c01bf8-f865-4e06-b659-125e9df60f95/d920b707-dc74-4c57-8826-ffb60b46ae4b"
+storage_version_token = "1794071648543458"
+content_type = "text/markdown"
