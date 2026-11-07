@@ -20,7 +20,6 @@ export const ROUTE_GATES: readonly Gate[] = [
   gate("GET", "/kimeu/fellowship-reviews", "read", true),
   gate("GET", "/kimeu/admin/sme-assignments", "admin"),
   gate("POST", "/kimeu/admin/sme-assignments", "admin"),
-  gate("POST", "/auth/invite", "admin"),
   gate("POST", "/auth/sign-out", "read"),
   gate("POST", "/kimeu/sessions", "attendance", false, true),
   gate("POST", "/kimeu/sessions/[^/]+/attendance", "attendance", true, true),

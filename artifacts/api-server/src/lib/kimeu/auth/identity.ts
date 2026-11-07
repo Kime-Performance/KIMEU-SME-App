@@ -7,11 +7,11 @@ export class AuthRejection extends Error {
   }
 }
 
-export type VerifiedIdentity = { authUserId: string; verifiedEmail: string };
+/** Request-local only: never serialize or log the session token. */
+export type VerifiedIdentity = { authUserId: string; verifiedEmail: string; accessToken: string };
 export type AccessRow = { auth_user_id: string | null; email: string; kimeu_sme: string | null };
 export interface AccessStore {
-  byAuthId(id: string): Promise<AccessRow[]>;
-  bindUnclaimed(id: string, verifiedEmail: string): Promise<AccessRow[]>;
+  ownRoles(identity: VerifiedIdentity): Promise<{ kimeu_sme: string | null }[]>;
 }
 export type Principal = { authUserId: string; siteRole: SiteRole };
 const pending = () => new AuthRejection(403, "ACCOUNT_PENDING", "Your account is pending setup. Contact your administrator.");
@@ -35,7 +35,7 @@ export async function verifiedIdentity(
   if (!user.email_confirmed_at || !user.email?.trim()) {
     throw new AuthRejection(403, "EMAIL_REQUIRED", "Please confirm your email first — check your inbox.");
   }
-  return { authUserId: user.id, verifiedEmail: user.email.trim().toLowerCase() };
+  return { authUserId: user.id, verifiedEmail: user.email.trim().toLowerCase(), accessToken: match[1] };
 }
 
 /** No role cache: revocation is observed on the very next authorized request. */
@@ -44,18 +44,14 @@ export async function resolvePrincipal(
   store: AccessStore,
   alert: (event: string) => void,
 ): Promise<Principal> {
-  // Existing binding wins even after a verified Auth email change.
-  let rows = await store.byAuthId(identity.authUserId);
-  if (!rows.length) {
-    try {
-      rows = await store.bindUnclaimed(identity.authUserId, identity.verifiedEmail);
-    } catch (error) {
-      if ((error as { code?: string }).code !== "23505") throw error;
-      // A concurrent login may have established the SAME binding.
-    }
-    if (!rows.length) rows = await store.byAuthId(identity.authUserId);
+  let rows;
+  try {
+    rows = await store.ownRoles(identity);
+  } catch {
+    throw new AuthRejection(503, "ROLE_UNAVAILABLE", "Account verification is temporarily unavailable.");
   }
-  if (rows.length !== 1 || rows[0].auth_user_id !== identity.authUserId) {
+  // The nightly roster sync owns binding. Zero rows never triggers an app write.
+  if (rows.length !== 1) {
     alert("AUTH_BINDING_UNRESOLVED");
     throw pending();
   }

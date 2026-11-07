@@ -1,10 +1,11 @@
 /**
  * Prepared Supabase cutover policy. Not mounted in the current Clerk app:
- * reconciliation and RD scope approval must precede enforcement.
+ * reconciliation approval must precede enforcement.
  */
-export const SITE_ROLES = ["PT", "Fellowship Reviewer", "RD", "SME Assist", "SME Lead", "Admin"] as const;
+export const SITE_ROLES = ["PT", "Fellowship Reviewer", "RD", "SME Assist", "SME Lead", "Admin", "CEU Admin"] as const;
+const CLINICAL_CEILING = ["PT", "Fellowship Reviewer", "RD", "SME Assist", "SME Lead", "Admin"] as const;
 export type SiteRole = typeof SITE_ROLES[number];
-export type Capability = "read" | "note" | "attendance" | "practical" | "onboarding" | "assessment" | "review" | "admin";
+export type Capability = "read" | "note" | "attendance" | "practical" | "onboarding" | "assessment" | "review" | "admin" | "course-admin";
 
 export function siteRole(value: unknown): SiteRole | null {
   if (typeof value !== "string") return null;
@@ -20,10 +21,13 @@ function assignedRole(value: string): SiteRole | null {
 /** Clamp each assignment to the site ceiling, never elevate the site role. */
 export function effectiveRoles(ceiling: SiteRole, assignments: readonly string[]): SiteRole[] {
   if (ceiling === "PT") return ["PT"];
-  const ceilingRank = SITE_ROLES.indexOf(ceiling);
+  // CEU administration is orthogonal, not a higher clinical/user-admin tier.
+  if (ceiling === "CEU Admin") return assignments.some(raw => assignedRole(raw) === "CEU Admin") ? ["CEU Admin"] : [];
+  const ceilingRank = CLINICAL_CEILING.indexOf(ceiling);
   return [...new Set(assignments.flatMap(raw => {
     const role = assignedRole(raw);
-    return role ? [SITE_ROLES[Math.min(ceilingRank, SITE_ROLES.indexOf(role))]!] : [];
+    if (role === "CEU Admin") return ceiling === "Admin" ? [role] : [];
+    return role ? [CLINICAL_CEILING[Math.min(ceilingRank, CLINICAL_CEILING.indexOf(role))]!] : [];
   }))];
 }
 
@@ -34,6 +38,7 @@ const capabilities: Record<SiteRole, readonly Capability[]> = {
   "SME Assist": ["read", "note", "attendance"],
   "SME Lead": ["read", "note", "attendance", "practical", "onboarding", "assessment"],
   Admin: ["read", "note", "attendance", "practical", "onboarding", "assessment", "review", "admin"],
+  "CEU Admin": ["course-admin"],
 };
 
 export function permits(roles: readonly SiteRole[], capability: Capability): boolean {
@@ -47,18 +52,15 @@ export function mayLead(roles: readonly SiteRole[], stage: string): boolean {
     : /fellowship|advanced|enrichment/i.test(stage) && roles.includes("SME Lead");
 }
 
-export type PersonScope = { personId: string; region: string | null };
+export type PersonScope = { personId: string };
 export function withinScope(
   site: SiteRole, actor: PersonScope | null, target: PersonScope | null,
 ): boolean {
   if (!target?.personId) return false;
-  if (site === "Admin") return true;
+  if (site === "CEU Admin") return false;
+  if (site === "Admin" || site === "RD") return true;
   if (!actor?.personId) return false;
   if (site === "PT") return actor.personId === target.personId;
-  if (site === "RD") {
-    const region = actor.region?.trim().toLowerCase();
-    return Boolean(region && region === target.region?.trim().toLowerCase());
-  }
   // Other staff still require the existing assignment/object checks.
   return true;
 }

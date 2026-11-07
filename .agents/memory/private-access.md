@@ -3,11 +3,11 @@ name: Private SME and RD access
 description: Who may enter the KIMEU workspace and the user's intended sign-in method.
 ---
 
-The SME app is private to approved SMEs, Regional Directors, and explicitly assigned Fellowship reviewers, with director/admin access retained. The user is comfortable using email and password. The app will have a place in Kajabi; anyone may see the cover page, but only approved staff may enter the app.
+The SME app is private to approved SMEs, Regional Directors, explicitly assigned Fellowship reviewers, and CEU Admins within their limited course-admin scope, with director/admin access retained. The user is comfortable using email and password. The app will have a place in Kajabi; anyone may see the cover page, but only approved staff may enter the app.
 
 **Why:** The user explicitly requested a private site, not an app open to every clinician or company email address. They later requested named Fellowship reviewers with their own secure access to record overall assessments.
 
-**How to apply:** Keep the cover page public. Require an active approved app-user record and an SME, RD, Fellowship Reviewer, or Admin role before serving workspace data. A Kajabi membership, corporate-domain address, or newly created authentication account alone must not grant access. Fellowship Reviewer admission grants the overall-review workspace, not SME attendance or RD practical editing rights. Preserve course-level permissions. Let the authentication provider handle passwords and invitations; never put passwords in the roster or app-user sheet.
+**How to apply:** Keep the cover page public. Require approved access before serving workspace data. A Kajabi membership, corporate-domain address, or newly created authentication account alone must not grant access. Fellowship Reviewer admission grants the overall-review workspace, not SME attendance or RD practical editing rights. CEU Admin is CEU/course administration only, not user management or clinical sign-offs. Preserve course-level permissions. Let the authentication provider handle passwords; Oracle automation handles invitations. Never put passwords in the roster or app-user sheet.
 
 Do not treat a failure in a separate workshop/log sheet-health check as revocation of a freshly approved staff account. Keep an already verified workspace and its draft forms mounted during transient connection-refresh errors, but enforce fresh authorization on every server-side save and honor explicit access revocation.
 
@@ -38,3 +38,9 @@ The intended shared identity provider is Supabase Auth, but enforcing the migrat
 **Why:** The user authorized implementation against Oracle's SME spec and explicitly distinguished completed shared prerequisites from an enforcement cutover that still requires reconciliation review.
 
 **How to apply:** Prepare and verify migration components without silently switching active authentication. Preserve existing access during preparation; do not treat database readiness or a passing unit suite as approval to enforce new staff roles.
+
+The owner's November 7, 2026 Global Rule 3 amendment supersedes the prior Supabase auth checklist: anon key only; own-session-JWT own-row role reads; never write user_access or bind identities in this app; nightly roster sync binds; Oracle issues invites; unbound accounts show pending setup. RD scope is organization-wide, not regional. CEU Admin is supported for CEU/course administration only.
+
+**Why:** The owner explicitly amended the shared authentication boundary and resolved the RD-scope and CEU-vocabulary questions.
+
+**How to apply:** Do not request or introduce privileged Supabase credentials, app-side account binding, or invitations. Preserve anon-key enumeration-safe recovery. Do not reopen regional mapping as an RD blocker. Await Oracle's updated reconciliation package before enforcement cutover.

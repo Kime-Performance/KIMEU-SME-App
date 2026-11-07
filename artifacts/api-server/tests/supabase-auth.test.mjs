@@ -11,7 +11,7 @@ async function load(entry) {
     plugins: [{ name: "no-auth-network", setup(builder) {
       builder.onResolve({ filter: /^\.\/clients$/ }, () => ({ path: "clients", namespace: "fixture" }));
       builder.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({
-        contents: "export function requestAuthClient(){throw new Error('No network permitted in unit tests')} export function authAdministration(){throw new Error('No admin network permitted in unit tests')}",
+        contents: "export function requestAuthClient(){throw new Error('No network permitted in unit tests')}",
       }));
     } }],
   });
@@ -22,6 +22,7 @@ const identity = await load("identity");
 const routes = await load("route-policy");
 const { reconcileAccess } = await load("reconciliation");
 const operations = await load("account-operations");
+const { createAccessStore } = await load("access-store");
 
 for (const raw of [null, "", " ", "Unknown", "PT, Admin", "Foundations SME", "PT|Admin"]) {
   test(`invalid site role fails closed: ${JSON.stringify(raw)}`, () => assert.equal(policy.siteRole(raw), null));
@@ -55,14 +56,27 @@ test("stage leadership preserves existing rules", () => {
   assert.equal(policy.mayLead(["SME Lead"], "Foundations"), false);
   assert.equal(policy.mayLead(["SME Assist"], "Foundations"), true);
 });
-test("PT own-person and RD same-region scope use stable IDs and fail on missing mappings", () => {
+test("PT is self-only and RD scope is org-wide without a region prerequisite", () => {
   const actor = { personId: "actor", region: " West " };
   assert.equal(policy.withinScope("PT", actor, actor), true);
   assert.equal(policy.withinScope("PT", actor, { personId: "other", region: "West" }), false);
   assert.equal(policy.withinScope("RD", actor, { personId: "other", region: "west" }), true);
-  assert.equal(policy.withinScope("RD", actor, { personId: "other", region: "East" }), false);
-  assert.equal(policy.withinScope("RD", { ...actor, region: null }, actor), false);
+  assert.equal(policy.withinScope("RD", actor, { personId: "other", region: "East" }), true);
+  assert.equal(policy.withinScope("RD", null, actor), true);
   assert.equal(policy.withinScope("PT", null, actor), false);
+  assert.equal(policy.withinScope("RD", null, null), false);
+});
+test("CEU Admin is supported but never gains clinical or user-management rights", () => {
+  assert.equal(policy.siteRole(" ceu ADMIN "), "CEU Admin");
+  const roles = policy.effectiveRoles("CEU Admin", ["CEU Admin", "Admin", "RD"]);
+  assert.deepEqual(roles, ["CEU Admin"]);
+  assert.equal(policy.permits(roles, "course-admin"), true);
+  for (const cap of ["read", "note", "attendance", "practical", "onboarding", "assessment", "review", "admin"]) {
+    assert.equal(policy.permits(roles, cap), false);
+  }
+  assert.equal(policy.withinScope("CEU Admin", null, { personId: "other" }), false);
+  assert.equal(policy.mayLead(roles, "Foundations"), false);
+  assert.equal(routes.routeGate("POST", "/auth/invite"), undefined);
 });
 test("unknown routes, unknown methods and dev-readiness have no gate", () => {
   for (const [method, path] of [["GET", "/new-route"], ["DELETE", "/kimeu/courses"], ["GET", "/kimeu/dev-readiness"]]) {
@@ -135,40 +149,53 @@ test("unconfirmed email rejected before any binding", async () => {
 test("Auth outage is explicit and never grants access", async () => {
   await assert.rejects(identity.verifiedIdentity("Bearer token", () => { throw new Error("network"); }), e => e.status === 503);
 });
-const actor = { authUserId: "actor", verifiedEmail: "verified@example.test" };
+const actor = { authUserId: "actor", verifiedEmail: "verified@example.test", accessToken: "session-jwt" };
 const row = { auth_user_id: "actor", email: "old@example.test", kimeu_sme: "RD" };
 test("already bound user resolves by auth ID after Auth email changes", async () => {
   const result = await identity.resolvePrincipal(actor, {
-    byAuthId: async id => { assert.equal(id, "actor"); return [row]; },
-    bindUnclaimed: async () => { throw new Error("Must not rebind"); },
+    ownRoles: async identity => { assert.equal(identity.authUserId, "actor"); return [row]; },
   }, () => {});
   assert.deepEqual(result, { authUserId: "actor", siteRole: "RD" });
 });
-test("first login binds once through atomic store operation", async () => {
-  let bindings = 0;
-  const result = await identity.resolvePrincipal(actor, {
-    byAuthId: async () => [],
-    bindUnclaimed: async (id, email) => { bindings++; assert.equal(email, actor.verifiedEmail); return [{ ...row, auth_user_id: id }]; },
-  }, () => {});
-  assert.equal(bindings, 1); assert.equal(result.siteRole, "RD");
-});
-test("unknown or differently bound email denied and alerted, never rebound", async () => {
+test("unbound account fails pending setup without any write or email fallback", async () => {
   let alerts = 0;
   await assert.rejects(identity.resolvePrincipal(actor, {
-    byAuthId: async () => [], bindUnclaimed: async () => [],
-  }, () => { alerts++; }), e => e.status === 403);
+    ownRoles: async () => [],
+  }, () => { alerts++; }), e => e.status === 403 && e.code === "ACCOUNT_PENDING");
   assert.equal(alerts, 1);
 });
-test("concurrent same-identity binding safely rereads winner", async () => {
-  let reads = 0;
-  assert.equal((await identity.resolvePrincipal(actor, {
-    byAuthId: async () => ++reads === 1 ? [] : [row],
-    bindUnclaimed: async () => { throw Object.assign(new Error("race"), { code: "23505" }); },
-  }, () => {})).siteRole, "RD");
+test("role read uses only own-row SELECT with the verified user's session JWT", async () => {
+  const calls = [];
+  const store = createAccessStore(token => {
+    calls.push(["jwt", token]);
+    return { from: table => {
+      calls.push(["from", table]);
+      return { select: columns => {
+        calls.push(["select", columns]);
+        return { eq: async (column, id) => {
+          calls.push(["eq", column, id]);
+          return { data: [{ kimeu_sme: "RD" }], error: null };
+        } };
+      } };
+    } };
+  });
+  assert.equal((await identity.resolvePrincipal(actor, store, () => {})).siteRole, "RD");
+  assert.deepEqual(calls, [
+    ["jwt", "session-jwt"], ["from", "user_access"],
+    ["select", "kimeu_sme"], ["eq", "auth_user_id", "actor"],
+  ]);
+});
+test("role lookup errors and ambiguous own rows fail closed", async () => {
+  await assert.rejects(identity.resolvePrincipal(actor, {
+    ownRoles: async () => { throw new Error("network"); },
+  }, () => {}), e => e.code === "ROLE_UNAVAILABLE");
+  await assert.rejects(identity.resolvePrincipal(actor, {
+    ownRoles: async () => [row, row],
+  }, () => {}), e => e.code === "ACCOUNT_PENDING");
 });
 test("role blanking revokes on next request, no role cache", async () => {
   let role = "RD";
-  const store = { byAuthId: async () => [{ ...row, kimeu_sme: role }], bindUnclaimed: async () => [] };
+  const store = { ownRoles: async () => [{ ...row, kimeu_sme: role }] };
   await identity.resolvePrincipal(actor, store, () => {});
   role = "";
   await assert.rejects(identity.resolvePrincipal(actor, store, () => {}), e => e.status === 403);
@@ -195,41 +222,9 @@ test("reconciliation flags missing identities and missing administrator retentio
   assert.ok(report.accounts[0].issues.includes("MISSING_STAFF_EMAIL"));
   assert.equal(JSON.stringify(staff), before);
 });
-test("only effective Admin can issue invitations", async () => {
-  for (const role of policy.SITE_ROLES.filter(r => r !== "Admin")) {
-    await assert.rejects(operations.inviteApprovedUser(
-      { authUserId: "actor", siteRole: role }, [role], "approved@example.test",
-      { accessMatches: async () => { throw new Error("Must not look up"); } },
-    ), e => e.status === 403);
-  }
-  await assert.rejects(operations.inviteApprovedUser(
-    { authUserId: "actor", siteRole: "Admin" }, ["Fellowship Reviewer"], "approved@example.test",
-    { accessMatches: async () => { throw new Error("Must not look up"); } },
-  ), e => e.status === 403);
-});
-test("admin invite requires exactly one access row", async () => {
-  for (const count of [0, 2]) {
-    await assert.rejects(operations.inviteApprovedUser(
-      { authUserId: "actor", siteRole: "Admin" }, ["Admin"], "approved@example.test",
-      { accessMatches: async () => count },
-    ), e => e.code === "INVITE_NOT_APPROVED");
-  }
-});
-test("invite uses only admin API with configured redirect", async () => {
-  let sent = 0;
-  await operations.inviteApprovedUser(
-    { authUserId: "actor", siteRole: "Admin" }, ["Admin"], " Approved@Example.test ",
-    {
-      accessMatches: async email => { assert.equal(email, "approved@example.test"); return 1; },
-      redirect: () => "https://example.test/accept",
-      admin: () => ({ inviteUserByEmail: async (email, options) => {
-        sent++; assert.equal(email, "approved@example.test");
-        assert.equal(options.redirectTo, "https://example.test/accept");
-        return { error: null };
-      } }),
-    },
-  );
-  assert.equal(sent, 1);
+test("app exposes no invitation operation; Oracle owns invitations", () => {
+  assert.equal(operations.inviteApprovedUser, undefined);
+  assert.equal(routes.routeGate("POST", "/auth/invite"), undefined);
 });
 test("password-reset response is identical on provider success, rejection, and outage", async () => {
   for (const state of ["known", "unknown", "outage"]) {
