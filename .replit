@@ -53,6 +53,10 @@ o/bKiIz+Fq8=
 SUPABASE_URL = "https://mzuitumuqidunwkaaxtz.supabase.co"
 VITE_SUPABASE_URL = "https://mzuitumuqidunwkaaxtz.supabase.co"
 
+[userenv.development]
+AUTH_PROVIDER = "supabase"
+VITE_AUTH_PROVIDER = "supabase"
+
 [nix]
 channel = "stable-25_05"
 packages = ["freetype", "gumbo", "harfbuzz", "jbig2dec", "libjpeg_turbo", "mupdf", "openjpeg", "swig", "xcbuild"]

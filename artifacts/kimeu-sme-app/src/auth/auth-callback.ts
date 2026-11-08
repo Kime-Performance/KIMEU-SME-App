@@ -1,11 +1,26 @@
 import { supabaseIdentity } from "./supabase-client";
 
 /**
- * Prepared handlers for /auth/accept and /auth/recovery, not mounted yet.
+ * Handlers for /auth/accept and /auth/recovery in the Supabase route branch.
  * Oracle should use type-specific token_hash email links for cross-device
  * invitations/recovery. PKCE code links require the original browser verifier.
  * No implicit token-fragment flow or open redirect is accepted.
  */
+export function passwordCallbackOrigin(development: boolean, browserOrigin: string): string {
+  const canonical = "https://kimeu-sme-app.replit.app";
+  if (!development) return canonical;
+  try {
+    const origin = new URL(browserOrigin);
+    if (origin.protocol === "https:" && !origin.port &&
+      origin.hostname.endsWith(".replit.dev") && origin.origin === browserOrigin) {
+      return origin.origin;
+    }
+  } catch {
+    // Invalid development origins never broaden the production allowlist.
+  }
+  return canonical;
+}
+
 export async function preparePasswordCallback(
   href: string,
   dependencies: {
@@ -21,7 +36,11 @@ export async function preparePasswordCallback(
   // when its parameters are invalid. Caller must use history.replaceState.
   dependencies.clearUrl();
   dependencies.clearUserState();
-  if (url.origin !== "https://kimeu-sme-app.replit.app" || !expectedType || url.hash) {
+  const allowedOrigin = passwordCallbackOrigin(
+    import.meta.env?.DEV === true,
+    typeof window === "undefined" ? "" : window.location.origin,
+  );
+  if (url.origin !== allowedOrigin || !expectedType || url.hash) {
     throw new Error("This account link is invalid. Request a new link.");
   }
   const code = url.searchParams.get("code");

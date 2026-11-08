@@ -10,7 +10,23 @@ export const AUTH_REDIRECTS = {
 
 /** Redirects are server-configured, never supplied by the person requesting mail. */
 function configuredRedirect(): string {
-  return AUTH_REDIRECTS.recovery;
+  return recoveryRedirectForEnvironment({
+    nodeEnv: process.env.NODE_ENV,
+    previewHost: process.env.REPLIT_DEV_DOMAIN,
+  });
+}
+
+/** Only the runtime-owned preview host may override recovery in development. */
+export function recoveryRedirectForEnvironment(environment: {
+  nodeEnv?: string;
+  previewHost?: string;
+}): string {
+  if (environment.nodeEnv !== "development") return AUTH_REDIRECTS.recovery;
+  const host = environment.previewHost;
+  if (!host || !/^[a-z0-9][a-z0-9.-]*\.replit\.dev$/i.test(host)) {
+    throw new Error("The test recovery callback is not configured.");
+  }
+  return `https://${host.toLowerCase()}/auth/recovery`;
 }
 
 /** Route must rate-limit before calling; identical response for all accounts. */

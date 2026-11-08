@@ -51,11 +51,11 @@ PT admission is confirmed: view-only, own-record object checks on every ID/list/
 
 **How to apply:** Keep participant roster eligibility separate from login eligibility. Treat unknown or ambiguous immutable person linkage as pending setup. Do not flag a higher ceiling alone as a permissions defect.
 
-Auth enforcement and publishing remain gated on this order: Oracle invites, nightly sync binds, reconciliation re-run, then owner approval. Zero bindings before invites is expected, not a defect.
+The owner-approved rollout starts with existing account-holders, then a SME Lead / CEU Admin invitation cluster, then PTs. Enable Supabase in development first; the owner checks real-account access before production activation.
 
-**Why:** The owner explicitly authorized build/test preparation but withheld enforcement and publish approval until those phases complete.
+**Why:** On November 8, 2026, the owner confirmed Oracle's reconciliation/binding approval and authorized this controlled rollout rather than inviting everyone before the first release.
 
-**How to apply:** Preserve the current working login while preparing the replacement. Never bind users, issue invitations, or activate the new provider to make pre-invite readiness checks pass.
+**How to apply:** Oracle still owns invitations and binding. Keep Clerk code/settings/history for deliberate operator rollback until the owner declares rollout complete; never automatically fall back after Supabase denies access. Preserve identity history and progression records. PT invitation does not grant write permission; flag requests for PT saves against the read-only rule.
 
 Oracle's judge-reviewed addendum keeps the existing restricted server DB path for business data and assignments. Identity uses the sync-owned roster email from the JWT/RLS own access row, not mutable Auth email, then the app-user's person identity. Ceilings constrain assignments by explicit matrix, never by rank or automatic downgrading; unmatched staff lose assignment-gated actions but retain valid role-gated surfaces.
 

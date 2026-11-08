@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { build } from "esbuild";
 
-const result = await build({
+const buildOptions = {
   entryPoints: ["../kimeu-sme-app/src/auth/auth-callback.ts"],
   absWorkingDir: new URL("..", import.meta.url).pathname,
   bundle: true, platform: "node", format: "esm", write: false,
@@ -12,10 +12,29 @@ const result = await build({
       contents: "export function supabaseIdentity(){throw new Error('No network permitted')}",
     }));
   } }],
-});
-const { preparePasswordCallback } = await import(
+};
+const result = await build(buildOptions);
+const { preparePasswordCallback, passwordCallbackOrigin } = await import(
   `data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString("base64")}`
 );
+const developmentResult = await build({
+  ...buildOptions, define: { "import.meta.env": JSON.stringify({ DEV: true }) },
+});
+const { preparePasswordCallback: prepareDevelopmentCallback } = await import(
+  `data:text/javascript;base64,${Buffer.from(developmentResult.outputFiles[0].text).toString("base64")}`
+);
+
+test("only development accepts its own secure preview origin; production remains canonical", () => {
+  const preview = "https://controlled-test.replit.dev";
+  const canonical = "https://kimeu-sme-app.replit.app";
+  assert.equal(passwordCallbackOrigin(true, preview), preview);
+  assert.equal(passwordCallbackOrigin(false, preview), canonical);
+  for (const origin of ["http://controlled-test.replit.dev", "https://controlled-test.replit.dev:8080",
+    "https://controlled-test.replit.dev.attacker.test", "https://attacker.test",
+    `${preview}/auth/recovery`, "invalid"]) {
+    assert.equal(passwordCallbackOrigin(true, origin), canonical);
+  }
+});
 
 function fixture(options = {}) {
   const events = [];
@@ -41,6 +60,27 @@ function fixture(options = {}) {
     },
   };
 }
+
+test("development callback exchanges only a link on this browser's exact preview origin", async () => {
+  const previousWindow = globalThis.window;
+  globalThis.window = { location: { origin: "https://controlled-test.replit.dev" } };
+  try {
+    const f = fixture();
+    const finish = await prepareDevelopmentCallback(
+      "https://controlled-test.replit.dev/auth/recovery?token_hash=opaque&type=recovery", f.dependencies,
+    );
+    await finish("test-only-password");
+    assert.ok(f.events.includes("update-password"));
+    const other = fixture();
+    await assert.rejects(prepareDevelopmentCallback(
+      "https://other-test.replit.dev/auth/recovery?code=opaque", other.dependencies,
+    ), /invalid/);
+    assert.deepEqual(other.events, ["clear-url", "clear-user-state"]);
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
 
 for (const [path, type] of [["accept", "invite"], ["recovery", "recovery"]]) {
   test(`${type} callback clears sensitive URL, exchanges token, and updates password once`, async () => {

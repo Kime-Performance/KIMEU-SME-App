@@ -1,4 +1,23 @@
-# Supabase Auth: integrated behind an inactive cutover
+# Supabase Auth: controlled test rollout
+
+## Owner rollout approval — November 8, 2026
+
+Oracle reports identities bound and reconciliation complete: 46 grantees,
+5 existing account-holders and 41 staged for cluster invitations. This is the
+owner's reported state, not an app-side invitation or binding operation.
+
+1. Supabase is enabled in **development only** for owner real-account checks:
+   sign-in, Admin surfaces, recovery and an authorized save/read-back.
+2. After those checks pass, coordinate the production provider settings and
+   republish with Supabase. Existing account-holders are the initial cohort.
+3. Oracle invites the SME Lead / CEU Admin cluster; verify those permissions.
+4. Oracle invites PTs; verify own-record access and that business writes remain
+   denied. "PT saves" does not override the approved read-only PT policy.
+
+Retain Clerk's code, settings, keys and identity history until the owner
+declares rollout complete. It is an operator-controlled rollback, never a
+second login path or automatic fallback after Supabase rejects a request.
+Do not delete, migrate or rebind historical identities/progression records.
 
 ## Governing owner ruling — November 7, 2026
 
@@ -96,6 +115,18 @@ Exact planned callbacks:
 - Invite/account setup: `https://kimeu-sme-app.replit.app/auth/accept`
 - Recovery: `https://kimeu-sme-app.replit.app/auth/recovery`
 
+For the controlled preview recovery test, Oracle must also allowlist the exact
+current preview callback:
+`https://850bbe4d-9b5b-4ac6-9439-7b845c4be73d-00-1se23ok7ff3pl.spock.replit.dev/auth/recovery`
+
+Development reset delivery derives its origin exclusively from the managed
+`REPLIT_DEV_DOMAIN`, never from request headers/body/query parameters. In a Vite
+development build, callbacks must match this browser's exact HTTPS preview
+origin. Production callbacks remain restricted to the canonical published
+origin even if a preview host is present in the server environment. If the
+preview URL changes, Oracle must update the exact allowlist entry; do not add
+wildcards or weaken callback-origin validation.
+
 Use the canonical root as the logical `SUPABASE_AUTH_REDIRECT_URL`. No fifth
 connection env is required: callback destinations are derived in code from
 this verified root. Oracle must allowlist the exact callback URLs before use.
@@ -134,12 +165,13 @@ access-token URL fragments are deliberately not accepted.
   recalculated from the scoped roster, inaccessible session details return 404,
   and group/private staff notes are withheld from PT responses.
 
-## Not activated
+## Activation state
 
-Clerk remains the active business login. The server business boundary and
-frontend replacement are wired behind explicit, inactive provider controls.
-No clinical data, roles,
-bindings, grants, or active login configuration were changed.
+Development has both `AUTH_PROVIDER=supabase` and
+`VITE_AUTH_PROVIDER=supabase`; its workflows were restarted and its sign-in
+screen and unauthenticated denials were checked. Production provider controls
+remain unset and unchanged, so the currently published app remains on Clerk.
+No clinical data, identity bindings, roles or grants were modified.
 
 ### Integrated staged behavior
 
@@ -149,7 +181,8 @@ bindings, grants, or active login configuration were changed.
   Actor resolution is memoized only within a request, never across requests.
 - Frontend `VITE_AUTH_PROVIDER=supabase` selects the Supabase bridge and screens.
   Missing flags preserve Clerk. Other nonempty values fail closed.
-  Do not change either flag until the owner's enforcement gate is satisfied.
+  Set both controls together for each approved environment. Production
+  activation remains conditional on the owner's development checks.
 - Supabase mode uses the sync-owned roster email for app-user linkage. The
   bootstrap exposes permitted assignments and the separate site-role ceiling,
   never the internal authorization context or JWT.
@@ -205,9 +238,8 @@ Approved URL: `https://mzuitumuqidunwkaaxtz.supabase.co`.
 Both anon-key Secrets have been confirmed present; their values are never read
 or printed by the agent.
 No keys are requested in chat. Use secure Secrets configuration.
-Recovery needs Oracle's exact redirect allowlist confirmation before its
-route is activated. AUTH_PROVIDER is a cutover
-control, not a credential.
+Recovery testing needs Oracle's exact redirect allowlist and compatible email
+template confirmation. `AUTH_PROVIDER` is a cutover control, not a credential.
 
 ## Verification and remaining release gates
 
@@ -223,21 +255,23 @@ These UI checks do not substitute for real-provider validation.
 
 Remaining:
 
-1. Oracle confirms exact redirect allowlisting and compatible email templates,
-   then performs owner-authorized invitations and nightly identity binding.
-2. Re-run reconciliation and obtain explicit owner cutover approval. Zero
-   bindings before invites remains expected, not a reason for app-side binding.
-3. Confirm production availability of all four connection settings. Stage a
-   coordinated server/frontend provider change only after approval. Do not
-   enable just one flag or use failures to fall back to the other provider.
-4. Verify real-provider sign-in/recovery, revoked sessions, own-row RLS,
-   participant isolation, RD sign-offs, CEU restrictions and approved fixture
-   saves. No test has established those against newly invited Supabase accounts.
-5. In the approved activation change, remove the unused Clerk provider, proxy,
-   dependencies and settings rather than keeping a dual-provider fallback.
+1. Oracle confirms exact preview/production redirect allowlisting and compatible
+   email templates. No live recovery mail has been sent by the agent.
+2. Owner checks their real account in Preview: sign-in, expected Admin surfaces,
+   recovery, authorized save, refresh/read-back, and sign-out. Automated tests
+   and anonymous probes do not establish these live-account outcomes.
+3. After owner confirmation, set the two production controls together, confirm
+   connection settings and publish. Do not enable just one provider control.
+4. Follow the owner-approved invitation phases above. Verify real-provider
+   revoked sessions, own-row RLS, participant isolation, RD sign-offs and CEU
+   restrictions as corresponding accounts become available.
+5. Keep Clerk available for deliberate rollback until the owner declares the
+   rollout complete. Rollback sets both controls to `clerk` in the affected
+   environment and restarts/rebuilds that environment; production additionally
+   requires republishing. Do not expose an end-user provider chooser.
 6. Confirm staff have submitted pending attendance drafts before changing
-   providers, inspect the production bundle/configuration, and publish only
-   after the reviewed cutover and critical-flow checks pass.
+   providers. Clerk and Supabase user-ID draft namespaces differ; do not
+   auto-merge them by email or delete pending attendance.
 
 Never delete or truncate `public.kimeu_sessions` for authentication: those are
 workshop records, not login sessions.

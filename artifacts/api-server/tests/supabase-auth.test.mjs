@@ -318,6 +318,17 @@ test("recovery uses exactly the canonical published app callback, not user-suppl
   assert.equal(target, "https://kimeu-sme-app.replit.app/auth/recovery");
   assert.equal(operations.AUTH_REDIRECTS.invite, "https://kimeu-sme-app.replit.app/auth/accept");
 });
+test("test recovery uses only the runtime-owned preview host and production ignores it", () => {
+  const env = { nodeEnv: "development", previewHost: "controlled-test.replit.dev" };
+  assert.equal(operations.recoveryRedirectForEnvironment(env),
+    "https://controlled-test.replit.dev/auth/recovery");
+  assert.equal(operations.recoveryRedirectForEnvironment({ ...env, nodeEnv: "production" }),
+    operations.AUTH_REDIRECTS.recovery);
+  for (const previewHost of [undefined, "attacker.test", "test.replit.dev.attacker.test",
+    "test.replit.dev/path", "test.replit.dev:8080", "user@test.replit.dev"]) {
+    assert.throws(() => operations.recoveryRedirectForEnvironment({ nodeEnv: "development", previewHost }));
+  }
+});
 test("explicit matrix drops forbidden assignments and logs instead of downgrading", () => {
   const logs = [];
   assert.deepEqual(policy.effectiveRoles("RD", ["Admin", "SME Assist", "RD"], raw => logs.push(raw)), ["RD"]);

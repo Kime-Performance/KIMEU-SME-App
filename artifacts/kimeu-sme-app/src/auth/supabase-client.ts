@@ -1,8 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Prepared client adapter. Not imported by the current Clerk application.
- * Activation and removal of Clerk happen together AFTER reconciliation review.
+ * Client adapter selected only by the explicit Supabase provider branch.
+ * Clerk is retained for owner-controlled rollback during the phased rollout.
  * Only public VITE_* values are accepted; service-role keys never belong here.
  */
 let client: ReturnType<typeof createClient> | undefined;
@@ -36,7 +36,7 @@ export async function signInWithCompanyPassword(email: string, password: string)
 }
 
 export async function signOutOfCompanyApp(clearUserState: () => void) {
-  // Clear React Query and user-scoped drafts immediately, even on network failure.
+  // Clear user-scoped in-memory state immediately, even on network failure.
   clearUserState();
   const { error } = await supabaseIdentity().auth.signOut({ scope: "local" });
   if (error) throw new Error("Sign-out could not be completed. Please try again.");
