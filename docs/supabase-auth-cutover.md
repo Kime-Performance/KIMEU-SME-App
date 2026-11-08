@@ -132,9 +132,28 @@ access-token URL fragments are deliberately not accepted.
 
 ## Not activated
 
-Clerk remains the active login. These candidate modules are unmounted.
-Changing AUTH_PROVIDER alone does not integrate them. No clinical data, roles,
+Clerk remains the active business login. The business authorization modules and
+frontend replacement are not mounted. Changing AUTH_PROVIDER alone does not
+integrate them. No clinical data, roles,
 bindings, grants, or active login configuration were changed.
+
+### Connected own-account endpoints
+
+- `GET /api/auth/supabase/session` now runs the verified bearer → own RLS access
+  row → restricted SQL staff chain on every call. It returns only the caller's
+  sync-owned email, ceiling, permitted assignments, person ID and workshop IDs.
+  It does not grant access to any existing business route or replace Clerk.
+- `POST /api/auth/supabase/recovery` has a generated request/response contract,
+  enumeration-safe 202 acknowledgement and bounded per-process source/account/
+  global budgets. Delivery is disabled while `AUTH_PROVIDER` is not `supabase`;
+  merely adding keys does not send account emails. These local budgets supplement
+  Supabase limits, not a distributed rate limit across autoscale instances.
+- These isolated endpoints run before Clerk, so Supabase bearer tokens are not
+  passed to the wrong identity provider. Both responses are private/no-store.
+  Auth rejection errors preserve their 401/403/503 statuses in the app handler.
+- HTTP integration tests inject provider/SQL dependencies, send no real email
+  and perform no clinical writes. They do not establish real-account login,
+  callback or PT business-route isolation.
 
 The earlier generated cross-account report is historical and predates this
 owner ruling. In particular its unsupported-CEU and region-blocker statements
@@ -151,6 +170,8 @@ Proceed with these four Supabase connection settings:
 - `VITE_SUPABASE_ANON_KEY` (the same anon key)
 
 Approved URL: `https://mzuitumuqidunwkaaxtz.supabase.co`.
+Both anon-key Secrets have been confirmed present; their values are never read
+or printed by the agent.
 No keys are requested in chat. Use secure Secrets configuration.
 Recovery needs Oracle's exact redirect allowlist confirmation before its
 route is activated. AUTH_PROVIDER is a cutover
@@ -161,9 +182,9 @@ control, not a credential.
 1. Wire the now-confirmed roster-email → app-user → person chain throughout
    handlers. Do not substitute request email/name/query identity. Staff ceiling
    outcomes, PT admission, CEU support and RD scope are resolved.
-2. Configure the anon-only connection settings securely.
-3. Add reset/sign-out endpoint contracts and generated helpers where needed;
-   rate-limit public recovery and mount the deny-by-default business gate.
+2. Confirm production availability of the securely configured anon-only settings.
+3. Connect frontend recovery to the now-mounted endpoint, add sign-out endpoint
+   contracts/helpers where needed, and mount the deny-by-default business gate.
    Keep health status-only and remove development-readiness exposure.
 4. Integrate immutable actor resolution, assignment checks and scoped list,
    detail and write handlers. PT access is self-only, with no business writes.

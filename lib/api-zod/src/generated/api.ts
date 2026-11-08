@@ -8,6 +8,35 @@
 import * as zod from 'zod';
 
 
+/**
+ * Verifies the caller's bearer token and resolves only their own access and assignments. Does not activate Supabase for business routes.
+ */
+export const GetSupabaseSessionResponse = zod.object({
+  "provider": zod.enum(['supabase']),
+  "email": zod.string().email(),
+  "siteRole": zod.enum(['Admin', 'SME Lead', 'SME Assist', 'RD', 'Fellowship Reviewer', 'CEU Admin', 'PT']),
+  "roles": zod.array(zod.enum(['Admin', 'SME Lead', 'SME Assist', 'RD', 'Fellowship Reviewer', 'CEU Admin', 'PT'])),
+  "personId": zod.string().nullable(),
+  "workshopIds": zod.array(zod.string())
+})
+
+
+/**
+ * Enumeration-safe recovery. Delivery remains disabled until the approved authentication cutover.
+ */
+export const requestSupabaseRecoveryBodyEmailMax = 254;
+
+
+
+export const RequestSupabaseRecoveryBody = zod.object({
+  "email": zod.string().max(requestSupabaseRecoveryBodyEmailMax)
+})
+
+export const RequestSupabaseRecoveryResponse = zod.object({
+  "message": zod.string()
+})
+
+
 export const GetKimeuFoundationsAssessmentResponse = zod.object({
   "people": zod.array(zod.object({
   "email": zod.string(),

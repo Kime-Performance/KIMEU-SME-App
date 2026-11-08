@@ -6,6 +6,8 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { KimeuError } from "./lib/kimeu/sheets";
+import { AuthRejection } from "./lib/kimeu/auth/identity";
+import supabaseAuthRouter from "./routes/supabase-auth";
 import {
   CLERK_PROXY_PATH,
   clerkProxyMiddleware,
@@ -33,6 +35,12 @@ app.use(
     },
   }),
 );
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+// Own-account Supabase probes must verify their bearer with Supabase, not
+// first pass it to Clerk. This router does not authenticate business routes.
+app.use("/api", supabaseAuthRouter);
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(
   clerkMiddleware((req) => ({
@@ -42,9 +50,6 @@ app.use(
     ),
   })),
 );
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Staff records, notes, access decisions and attendance must not be retained by
 // browsers or shared intermediary caches on the publicly reachable deployment.
@@ -55,7 +60,7 @@ app.use("/api/kimeu", (_req, res, next) => {
 });
 app.use("/api", router);
 app.use(((error, req, res, _next) => {
-  if (error instanceof KimeuError) {
+  if (error instanceof KimeuError || error instanceof AuthRejection) {
     req.log.warn(
       { code: error.code, status: error.status },
       "KIMEU request rejected",

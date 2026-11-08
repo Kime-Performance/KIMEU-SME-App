@@ -37,6 +37,8 @@ import type {
   OnboardingInput,
   OnboardingWorkspace,
   OpenSessionInput,
+  PasswordRecoveryAcknowledgement,
+  PasswordRecoveryInput,
   PracticalScheduleInput,
   PracticalSignoff,
   PracticalWorkspace,
@@ -44,6 +46,7 @@ import type {
   SessionSummary,
   SmeAssignmentInput,
   SmeAssignments,
+  SupabaseSession,
   TodayResponse,
   UnmarkedAttendance,
   UpcomingSchedule
@@ -75,6 +78,165 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetSupabaseSessionUrl = () => {
+
+
+
+
+  return `/api/auth/supabase/session`
+}
+
+/**
+ * Verifies the caller's bearer token and resolves only their own access and assignments. Does not activate Supabase for business routes.
+ */
+export const getSupabaseSession = async ( options?: Parameters<typeof customFetch>[1]): Promise<SupabaseSession> => {
+
+  return customFetch<SupabaseSession>(getGetSupabaseSessionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSupabaseSessionQueryKey = () => {
+    return [
+    `/api/auth/supabase/session`
+    ] as const;
+    }
+
+
+export const getGetSupabaseSessionQueryOptions = <TData = Awaited<ReturnType<typeof getSupabaseSession>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSupabaseSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSupabaseSessionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSupabaseSession>>> = ({ signal }) => getSupabaseSession({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSupabaseSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSupabaseSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getSupabaseSession>>>
+export type GetSupabaseSessionQueryError = ErrorType<void>
+
+
+
+export function useGetSupabaseSession<TData = Awaited<ReturnType<typeof getSupabaseSession>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSupabaseSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSupabaseSessionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRequestSupabaseRecoveryUrl = () => {
+
+
+
+
+  return `/api/auth/supabase/recovery`
+}
+
+/**
+ * Enumeration-safe recovery. Delivery remains disabled until the approved authentication cutover.
+ */
+export const requestSupabaseRecovery = async (passwordRecoveryInput: PasswordRecoveryInput, options?: Parameters<typeof customFetch>[1]): Promise<PasswordRecoveryAcknowledgement> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PasswordRecoveryAcknowledgement>(getRequestSupabaseRecoveryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(passwordRecoveryInput)
+  }
+);}
+
+
+
+
+
+export const getRequestSupabaseRecoveryMutationKey = () => ['requestSupabaseRecovery'] as const;
+
+export const getRequestSupabaseRecoveryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestSupabaseRecovery>>, TError,RequestSupabaseRecoveryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestSupabaseRecovery>>, TError,RequestSupabaseRecoveryMutationVariables, TContext> => {
+
+const mutationKey = getRequestSupabaseRecoveryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestSupabaseRecovery>>, RequestSupabaseRecoveryMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestSupabaseRecovery(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestSupabaseRecoveryMutationResult = NonNullable<Awaited<ReturnType<typeof requestSupabaseRecovery>>>
+    export type RequestSupabaseRecoveryMutationBody = BodyType<PasswordRecoveryInput>
+    export type RequestSupabaseRecoveryMutationError = ErrorType<unknown>
+    export type RequestSupabaseRecoveryMutationVariables = {data: BodyType<PasswordRecoveryInput>}
+
+    export const useRequestSupabaseRecovery = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestSupabaseRecovery>>, TError,RequestSupabaseRecoveryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestSupabaseRecovery>>,
+        TError,
+        RequestSupabaseRecoveryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestSupabaseRecoveryMutationOptions(options));
+    }
 
 export const getGetKimeuFoundationsAssessmentUrl = () => {
 
