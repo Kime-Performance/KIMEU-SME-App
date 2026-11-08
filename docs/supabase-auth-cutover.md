@@ -1,4 +1,4 @@
-# Supabase Auth: prepared components, not an active cutover
+# Supabase Auth: integrated behind an inactive cutover
 
 ## Governing owner ruling — November 7, 2026
 
@@ -118,24 +118,56 @@ access-token URL fragments are deliberately not accepted.
 - RD sign-offs use org-wide object scope for both reads and writes. Attendance/
   course-tracking assignment checks remain separate from role-gated sign-offs.
 - Enumeration-safe password-reset operation; no invitation operation.
-- Frontend anon-client/password-sign-in/sign-out/bearer adapters, not yet
-  imported by the active application.
+- Frontend anon-client/password-sign-in/sign-out/bearer adapters are connected
+  to a deterministic staged provider branch. Clerk remains the default.
 - Prepared invite/recovery callback handlers with URL-secret clearing,
   type-specific OTP or PKCE exchange, provider-validated password update,
-  session-change protection, and no role/binding mutation. These are functions,
-  not yet mounted screens.
+  session-change protection, and no role/binding mutation. The invite and
+  recovery screens are mounted in the staged Supabase route branch.
 - PT object-scope building blocks use an injected server-side immutable person
   resolver, fail closed for missing/ambiguous linkage, and share ownership
   filtering for lists and exports. The PT business-write ban also runs before
   capability checks, even if an assignment resolver accidentally returns Admin.
-  Handlers must still integrate these checks and sanitize nested session data.
+  The actual PostgreSQL readers now constrain participants by the actor's
+  app-user person ID: attendance tracking, practicals, onboarding, assessment,
+  Fellowship reviews, session rosters and today's sessions. Session counters are
+  recalculated from the scoped roster, inaccessible session details return 404,
+  and group/private staff notes are withheld from PT responses.
 
 ## Not activated
 
-Clerk remains the active business login. The business authorization modules and
-frontend replacement are not mounted. Changing AUTH_PROVIDER alone does not
-integrate them. No clinical data, roles,
+Clerk remains the active business login. The server business boundary and
+frontend replacement are wired behind explicit, inactive provider controls.
+No clinical data, roles,
 bindings, grants, or active login configuration were changed.
+
+### Integrated staged behavior
+
+- Server `AUTH_PROVIDER=supabase` selects fresh verified bearer authentication
+  on business requests and skips Clerk middleware; it never retries with Clerk.
+  The boundary denies unknown routes/methods and PT writes before handlers run.
+  Actor resolution is memoized only within a request, never across requests.
+- Frontend `VITE_AUTH_PROVIDER=supabase` selects the Supabase bridge and screens.
+  Missing flags preserve Clerk. Other nonempty values fail closed.
+  Do not change either flag until the owner's enforcement gate is satisfied.
+- Supabase mode uses the sync-owned roster email for app-user linkage. The
+  bootstrap exposes permitted assignments and the separate site-role ceiling,
+  never the internal authorization context or JWT.
+- Read-only PTs can reach their own attendance, practicals, onboarding,
+  assessment and review surfaces, with no write controls. Record identity is
+  resolved on the server, not from a search or query parameter.
+- Staff reads are organization-wide. Role-gated RD/assessment actions do not
+  require an RD assignment or regional link. Attendance/note assignment gates
+  still require allowed assignments and authoritative workshop membership.
+- CEU Admin assignments can use course-tracking attendance only for assigned
+  workshops; they do not grant session creation, practicals, assessment or staff
+  administration. Staff assignment edits retain the Admin gate and audit path;
+  conflicting assignments remain denied/logged by the ceiling resolver.
+- Password sign-in, reset requests, invite/recovery password setup, sign-out,
+  password changes, pending-setup and revoked-session screens are wired.
+  React Query is canceled/cleared when identity changes; drafts stay keyed by
+  authenticated user ID. Exact 401/403 closes access even with cached data,
+  while transient operational failures do not pretend to revoke staff access.
 
 ### Connected own-account endpoints
 
@@ -177,28 +209,35 @@ Recovery needs Oracle's exact redirect allowlist confirmation before its
 route is activated. AUTH_PROVIDER is a cutover
 control, not a credential.
 
-## Remaining activation work
+## Verification and remaining release gates
 
-1. Wire the now-confirmed roster-email → app-user → person chain throughout
-   handlers. Do not substitute request email/name/query identity. Staff ceiling
-   outcomes, PT admission, CEU support and RD scope are resolved.
-2. Confirm production availability of the securely configured anon-only settings.
-3. Connect frontend recovery to the now-mounted endpoint, add sign-out endpoint
-   contracts/helpers where needed, and mount the deny-by-default business gate.
-   Keep health status-only and remove development-readiness exposure.
-4. Integrate immutable actor resolution, assignment checks and scoped list,
-   detail and write handlers. PT access is self-only, with no business writes.
-5. Wire actual login/recovery/transport/cache behavior and course-admin surfaces
-   per the reviewed package. Do not invent CEU access to staff or clinical data.
-6. Stage the Clerk replacement, then activate only after the mandatory invite,
-   sync, reconciliation and approval sequence. Remove Clerk provider, middleware,
-   proxy, dependencies and configuration in that activation change.
-   No dual-provider fallback; disabled auth fails closed.
-7. Verify real-provider sessions, isolation, pending setup, role revocation,
-   preserved RD sign-offs, CEU restrictions and password recovery. Unit mocks
-   do not establish a working live-provider flow.
-8. Inspect the built app for obsolete auth/privileged credentials and publish
-   only after reviewed cutover and critical-flow checks pass.
+Automated checks cover the explicit matrix, the actual route boundary,
+PostgreSQL reader scopes, privacy projection, provider choice, recovery HTTP
+contracts and callback handling. SQL/Auth dependencies in those tests are fake:
+they perform no live clinical writes, account creation or email delivery.
+
+An isolated browser harness renders the real staged auth screens/bridge with a
+fake SDK and API, without switching either provider flag. Its output is ignored
+under `generated-artifacts`; it is not an application feature or deployable route.
+These UI checks do not substitute for real-provider validation.
+
+Remaining:
+
+1. Oracle confirms exact redirect allowlisting and compatible email templates,
+   then performs owner-authorized invitations and nightly identity binding.
+2. Re-run reconciliation and obtain explicit owner cutover approval. Zero
+   bindings before invites remains expected, not a reason for app-side binding.
+3. Confirm production availability of all four connection settings. Stage a
+   coordinated server/frontend provider change only after approval. Do not
+   enable just one flag or use failures to fall back to the other provider.
+4. Verify real-provider sign-in/recovery, revoked sessions, own-row RLS,
+   participant isolation, RD sign-offs, CEU restrictions and approved fixture
+   saves. No test has established those against newly invited Supabase accounts.
+5. In the approved activation change, remove the unused Clerk provider, proxy,
+   dependencies and settings rather than keeping a dual-provider fallback.
+6. Confirm staff have submitted pending attendance drafts before changing
+   providers, inspect the production bundle/configuration, and publish only
+   after the reviewed cutover and critical-flow checks pass.
 
 Never delete or truncate `public.kimeu_sessions` for authentication: those are
 workshop records, not login sessions.

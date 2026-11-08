@@ -425,6 +425,7 @@ export interface SetupReadiness {
 }
 
 export interface AppUser {
+  siteRole?: SupabaseSiteRole;
   email: string;
   nameInSheets: string;
   roles: string[];

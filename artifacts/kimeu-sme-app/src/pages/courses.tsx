@@ -1,3 +1,4 @@
+import { validSiteRole } from '@/auth/provider';
 import type { ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, BookOpen, CircleAlert, ClipboardCheck, FileText, Presentation, RefreshCw, UsersRound } from 'lucide-react';
 import { Link, useParams } from 'wouter';
@@ -69,8 +70,10 @@ export function CourseDetailPage() {
   const assigned = roles.includes('Admin') || (bootstrap?.user?.workshopIds ?? []).includes(course.workshopId);
   const rdWorkspace = roles.includes('Admin') || roles.includes('RD');
   const rdOnly = isOnboardingCourse(course.workshopId);
-  const showTracking = !rdOnly && assigned;
-  const showRdWorkspace = rdOnly && rdWorkspace;
+  // Supabase: any valid site-role ceiling gets READ workspaces; server flags control writes.
+  const siteRead = validSiteRole(bootstrap?.user) !== null;
+  const showTracking = !rdOnly && (siteRead || assigned);
+  const showRdWorkspace = rdOnly && (siteRead || rdWorkspace);
   return <div className="animate-rise" key={course.workshopId}>
     {back}
     <div className="page-heading"><div><div className="eyebrow">{stageLabel(course.stage, course.workshopId)} / {course.workshopId}</div><h1 data-testid="text-course-name">{course.name}</h1><p>{course.topic || 'No topic listed in the catalog.'}</p></div></div>

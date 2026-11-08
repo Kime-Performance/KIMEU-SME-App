@@ -6,6 +6,7 @@ import { effectiveRoles, type SiteRole } from "./policy";
 export type StaffIdentity = {
   person_id: string | null; active: boolean | null;
   app_roles: string | null; workshop_ids: string | null;
+  name_in_sheets?: string | null;
 };
 export interface StaffStore {
   byRosterEmail(email: string): Promise<StaffIdentity[]>;
@@ -13,6 +14,7 @@ export interface StaffStore {
 export type RequestActor = {
   principal: Principal; roles: SiteRole[]; personId: string | null;
   workshopIds: string[];
+  displayName?: string;
 };
 const split = (value: string | null) => [...new Set((value ?? "").split(",").map(v => v.trim()).filter(Boolean))];
 
@@ -50,5 +52,6 @@ export async function resolveRequestActor(
   if (principal.siteRole === "PT" && !personId) {
     throw new AuthRejection(403, "ACCOUNT_PENDING", "Your account is pending setup. Contact your administrator.");
   }
-  return { principal, roles, personId, workshopIds: split(staff?.workshop_ids ?? null) };
+  return { principal, roles, personId, workshopIds: split(staff?.workshop_ids ?? null),
+    displayName: staff?.name_in_sheets?.trim() || principal.rosterEmail };
 }

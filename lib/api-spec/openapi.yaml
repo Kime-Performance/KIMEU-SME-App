@@ -785,6 +785,8 @@ components:
     AppUser:
       type: object
       properties:
+        siteRole:
+          $ref: "#/components/schemas/SupabaseSiteRole"
         email:
           type: string
         nameInSheets:

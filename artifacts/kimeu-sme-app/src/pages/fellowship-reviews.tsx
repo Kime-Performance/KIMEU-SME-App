@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { matchesParticipantSearch } from '@/lib/participant-search';
 import { useQueryClient } from '@tanstack/react-query';
 import { CircleAlert, GraduationCap, History, Lock, RefreshCw, Search, UserCheck } from 'lucide-react';
-import { getGetKimeuFellowshipReviewsQueryKey, useGetKimeuFellowshipReviews, useSaveKimeuFellowshipReview } from '@workspace/api-client-react';
+import { getGetKimeuBootstrapQueryKey, getGetKimeuFellowshipReviewsQueryKey, useGetKimeuBootstrap, useGetKimeuFellowshipReviews, useSaveKimeuFellowshipReview } from '@workspace/api-client-react';
+import { fellowshipAccess } from '@/auth/provider';
 import type { FellowshipReviewEntry, FellowshipReviewInput, FellowshipReviewPerson, FellowshipReviewWorkspace } from '@workspace/api-client-react';
 import './fellowship-reviews.css';
 
@@ -46,6 +47,8 @@ export function FellowshipReviewsPage() {
   const queryKey = getGetKimeuFellowshipReviewsQueryKey();
   const query = useGetKimeuFellowshipReviews({ query: { queryKey, staleTime: 30_000, refetchInterval: 60_000, refetchOnWindowFocus: true, retry: (n, err) => errorInfo(err).status !== 403 && n < 2 } });
   const save = useSaveKimeuFellowshipReview();
+  const { data: bootstrap } = useGetKimeuBootstrap({ query: { queryKey: getGetKimeuBootstrapQueryKey() } });
+  const canWrite = fellowshipAccess(bootstrap?.user).write;
   const data = query.data;
   const today = data?.today ?? '';
   const [search, setSearch] = useState('');
@@ -186,7 +189,7 @@ export function FellowshipReviewsPage() {
       </aside>
       <div className="fr-main">
         {!person || !d ? <div className="state-card"><div className="state-icon"><GraduationCap size={18} /></div><div><h3>Choose a clinician</h3><p>Select a clinician to record an overall Fellowship Exam result and see every earlier attempt.</p></div></div> : <>
-          <section className={`fr-card${dirty ? ' fr-card-dirty' : ''}`} data-testid="form-fellowship-review">
+          {canWrite ? <section className={`fr-card${dirty ? ' fr-card-dirty' : ''}`} data-testid="form-fellowship-review">
             <div className="panel-heading"><div className="panel-icon"><GraduationCap size={18} /></div><div><span className="section-kicker">NEW ATTEMPT / FELLOWSHIP EXAM</span><h2 data-testid="text-fellowship-name">{person.name}</h2></div></div>
             <p className="ct-meta">{[person.location || 'No location', person.email].join(' / ')}. There is no automatic pass threshold; the result is your decision.</p>
             <div className="fr-form">
@@ -211,7 +214,7 @@ export function FellowshipReviewsPage() {
               {dirty && <button type="button" className="button-quiet" onClick={() => discard(person.email)} disabled={busy} data-testid="button-discard-fellowship">Discard</button>}
               <button type="button" className="button-primary" onClick={() => submit(person)} disabled={!dirty || busy || save.isPending} data-testid="button-save-fellowship">{busy ? 'Saving...' : 'Record attempt'}</button>
             </div>
-          </section>
+          </section> : <section className="fr-card" data-testid="status-fellowship-readonly"><div className="ct-readonly"><Lock size={13} /> Read-only. Fellowship results are recorded by Fellowship reviewers and administrators.</div></section>}
           <section className="fr-card" data-testid="list-fellowship-history">
             <div className="section-title-row"><div><span className="section-kicker">PRIOR ATTEMPTS</span><h2>Review history</h2></div><span className="count-chip">{history.length} {history.length === 1 ? 'attempt' : 'attempts'}</span></div>
             {!history.length ? <div className="state-card"><div className="state-icon"><History size={18} /></div><div><h3>No Fellowship reviews yet</h3><p>This will be the clinician's first recorded attempt.</p></div></div>

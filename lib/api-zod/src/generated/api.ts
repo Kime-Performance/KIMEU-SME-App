@@ -526,6 +526,7 @@ export const GetKimeuBootstrapResponse = zod.object({
   "missing": zod.array(zod.string())
 }),
   "user": zod.union([zod.object({
+  "siteRole": zod.enum(['Admin', 'SME Lead', 'SME Assist', 'RD', 'Fellowship Reviewer', 'CEU Admin', 'PT']).optional(),
   "email": zod.string(),
   "nameInSheets": zod.string(),
   "roles": zod.array(zod.string()),

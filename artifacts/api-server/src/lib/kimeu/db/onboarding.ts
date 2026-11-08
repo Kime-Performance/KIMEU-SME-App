@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { OnboardingInput } from "@workspace/api-zod";
 import { requireRole, type AppUser } from "../access";
 import { isAssignedRd } from "../practical-rules";
+import { ownPersonId, maySignOff } from "../auth/data-scope";
 import { onboardingWeeks, validateOnboardingUnit } from "../onboarding-rules";
 import { isRdAttendanceOnly } from "../courses";
 import { KimeuError, normalizeEmail, todayInAppTimeZone } from "../sheets";
@@ -35,6 +36,7 @@ type OnboardingRow = {
 async function loadWorkspace(q: Sql, user: AppUser, courseId: string) {
   if (!user.active) throw new KimeuError("Your staff access is inactive.", 403, "APP_USER_INACTIVE");
   requireRole(user, "RD");
+  const personId = ownPersonId(user);
   const requiredWeeks = onboardingWeeks(courseId);
   // Roster directory: active clinical PTs from the person spine (aliases resolve
   // to person.email upstream) with the assigned RD from kimeu_foundations_pt.
@@ -44,6 +46,7 @@ async function loadWorkspace(q: Sql, user: AppUser, courseId: string) {
     left join kimeu_foundations_pt fp
       on fp.person_id = p.person_id and fp.deleted_at is null
     where p.active
+      and (${personId}::uuid is null or p.person_id = ${personId}::uuid)
       and p.email is not null
       and exists (
         -- kimeu_roster = sheet-maintained 01-PT Roster membership (keeps exec
@@ -61,11 +64,12 @@ async function loadWorkspace(q: Sql, user: AppUser, courseId: string) {
            notes, completed_weeks, course_status
     from kimeu_rd_onboarding
     where workshop_id = ${courseId} and deleted_at is null
+      and (${personId}::uuid is null or person_id = ${personId}::uuid)
     order by week
   `;
   const people = roster.flatMap(row => {
     const assigned = row.assigned_rd ?? "";
-    if (!user.roles.includes("Admin") && !isAssignedRd(assigned, user.nameInSheets, user.email)) return [];
+    if (!user.authorization && !user.roles.includes("Admin") && !isAssignedRd(assigned, user.nameInSheets, user.email)) return [];
     const person = { personId: row.person_id, email: normalizeEmail(row.email), name: row.name, location: "" };
     const own = rows.filter(r => normalizeEmail(r.pt_email ?? "") === person.email);
     if (new Set(own.map(r => r.week)).size !== own.length) {
@@ -80,7 +84,7 @@ async function loadWorkspace(q: Sql, user: AppUser, courseId: string) {
         date: record?.session_date ?? "",
         attended: record?.attended === true,
         result: record?.rd_result ?? "",
-        notes: record && mayReadNotes ? record.notes ?? "" : "",
+        notes: record && mayReadNotes && !personId ? record.notes ?? "" : "",
         signedBy: record?.signed_by ?? "",
         signedAt: record?.signed_at ?? "",
       };
@@ -97,7 +101,7 @@ async function loadWorkspace(q: Sql, user: AppUser, courseId: string) {
       units,
     }];
   });
-  return { courseId, requiredWeeks, canSignOff: true, people };
+  return { courseId, requiredWeeks, canSignOff: maySignOff(user, "onboarding"), people };
 }
 
 export async function getOnboarding(user: AppUser, courseId: string) {

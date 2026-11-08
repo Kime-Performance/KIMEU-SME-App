@@ -107,6 +107,10 @@ export async function saveSmeAssignment(user: AppUser, input: SmeAssignmentInput
     await appendAudit(sql, user, { email, workshopId: "Staff access",
       reviewId: `SME assignment:${randomUUID()}`, note: {
         previousRoles: person.roles, roles, previousWorkshopIds: person.workshopIds, workshopIds: ids,
+        ...(user.authorization ? {
+          actorSiteRole: user.authorization.actor.principal.siteRole,
+          actorAssignments: user.authorization.actor.roles,
+        } : {}),
       } });
     const result = await load(sql, user);
     const saved = result.staff.find(p => p.email === email);

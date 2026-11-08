@@ -8,6 +8,7 @@ import { logger } from "./lib/logger";
 import { KimeuError } from "./lib/kimeu/sheets";
 import { AuthRejection } from "./lib/kimeu/auth/identity";
 import supabaseAuthRouter from "./routes/supabase-auth";
+import { businessBoundary } from "./lib/kimeu/auth/business-boundary";
 import {
   CLERK_PROXY_PATH,
   clerkProxyMiddleware,
@@ -41,15 +42,18 @@ app.use(express.urlencoded({ extended: true }));
 // Own-account Supabase probes must verify their bearer with Supabase, not
 // first pass it to Clerk. This router does not authenticate business routes.
 app.use("/api", supabaseAuthRouter);
-app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
-app.use(
-  clerkMiddleware((req) => ({
-    publishableKey: publishableKeyFromHost(
-      getClerkProxyHost(req) ?? "",
-      process.env.CLERK_PUBLISHABLE_KEY,
-    ),
-  })),
-);
+// Deterministic staged selection. Supabase requests never fall back to Clerk.
+if (process.env.AUTH_PROVIDER !== "supabase") {
+  app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+  app.use(
+    clerkMiddleware((req) => ({
+      publishableKey: publishableKeyFromHost(
+        getClerkProxyHost(req) ?? "",
+        process.env.CLERK_PUBLISHABLE_KEY,
+      ),
+    })),
+  );
+}
 
 // Staff records, notes, access decisions and attendance must not be retained by
 // browsers or shared intermediary caches on the publicly reachable deployment.
@@ -58,7 +62,7 @@ app.use("/api/kimeu", (_req, res, next) => {
   res.setHeader("Pragma", "no-cache");
   next();
 });
-app.use("/api", router);
+app.use("/api", businessBoundary, router);
 app.use(((error, req, res, _next) => {
   if (error instanceof KimeuError || error instanceof AuthRejection) {
     req.log.warn(

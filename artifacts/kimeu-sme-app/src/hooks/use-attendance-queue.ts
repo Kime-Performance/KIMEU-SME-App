@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useClerk } from '@clerk/react';
+import { useAppAuth } from '@/auth/auth-context';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetKimeuSessionQueryKey,
@@ -11,10 +11,10 @@ type PendingMark = { clinicianEmail: string; attended: 'Yes' | 'No'; revision: s
 
 /** Only attendance taps are stored offline; notes are never stored here. */
 export function useAttendanceQueue(sessionId: string, enabled: boolean) {
-  const { user } = useClerk();
+  const { userId } = useAppAuth();
   const client = useQueryClient();
   const mutation = useSaveKimeuAttendance();
-  const key = user ? `kimeu-attendance:${user.id}:${sessionId}` : null;
+  const key = userId ? `kimeu-attendance:${userId}:${sessionId}` : null;
   const queue = useRef<PendingMark[]>([]);
   const busy = useRef(false);
   const [pendingCount, setPendingCount] = useState(0);

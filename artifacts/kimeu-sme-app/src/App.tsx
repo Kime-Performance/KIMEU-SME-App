@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { ClerkProvider, Show, SignIn, SignUp, useClerk } from '@clerk/react';
+import { ClerkProvider, SignIn, SignUp, useClerk } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
@@ -24,6 +24,9 @@ import { CoursesPage, CourseDetailPage } from './pages/courses';
 import { FellowshipReviewsPage } from './pages/fellowship-reviews';
 import { FoundationsAssessmentPage } from './pages/foundations-assessment';
 import { useCourseCatalog } from './lib/courses';
+import { SESSION_WRITER_ASSIGNMENTS, authProviderSelection, fellowshipAccess, isAuthRejection, isReadOnlyPt, isSiteAdmin } from './auth/provider';
+import { ClerkAuthBridge, SupabaseAuthBridge, useAppAuth } from './auth/auth-context';
+import { SupabaseCallbackPage, SupabaseGate, SupabasePasswordPage, SupabaseRecoveryRequestPage, SupabaseSignInPage } from './pages/supabase-auth';
 import { SmeAssignmentsPanel } from './components/sme-assignments';
 
 const queryClient = new QueryClient({
@@ -37,7 +40,8 @@ function stripBase(path: string) {
   return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path;
 }
 
-if (!clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
+const activeProvider = authProviderSelection.ok ? authProviderSelection.provider : null;
+if (activeProvider === 'clerk' && !clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env file');
 
 const clerkAppearance = {
   theme: shadcn,
@@ -120,7 +124,7 @@ function SignUpPage() {
 function HomePage() {
   return (
     <main className="welcome-page paper-grain">
-      <Show when="signed-in"><Redirect to="/today" /></Show>
+      <SignedInRedirect />
       <header className="welcome-nav"><BrandLockup /><Link href="/sign-in" className="nav-signin" data-testid="link-sign-in">Sign in <ArrowRight size={16} /></Link></header>
       <section className="welcome-hero">
         <div className="hero-copy animate-rise">
@@ -152,6 +156,20 @@ function HomePage() {
   );
 }
 
+function SignedInRedirect() {
+  const { status } = useAppAuth();
+  return status === 'signed-in' ? <Redirect to="/today" /> : null;
+}
+
+/** Provider-neutral authenticated route gate. */
+function Protected({ children }: { children: ReactNode }) {
+  const auth = useAppAuth();
+  if (auth.provider === 'supabase') return <SupabaseGate>{children}</SupabaseGate>;
+  if (auth.status === 'signed-out') return <Redirect to="/sign-in" />;
+  if (auth.status !== 'signed-in') return null;
+  return <>{children}</>;
+}
+
 function BrandMark({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
   return <img className="brand-wordmark" src={`${basePath}/brand/${tone === 'dark' ? 'kimeu-wordmark-reversed' : 'kimeu-wordmark'}.png`} alt="KIMEU" />;
 }
@@ -161,17 +179,18 @@ function BrandLockup({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
 
 function Shell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
-  const { data: bootstrap, isLoading, isError, refetch } = useGetKimeuBootstrap({
+  const { data: bootstrap, isLoading, isError, error: bootstrapError, refetch } = useGetKimeuBootstrap({
     query: { queryKey: getGetKimeuBootstrapQueryKey(), refetchInterval: 30_000, refetchOnWindowFocus: true },
   });
-  const { signOut } = useClerk();
+  const { signOut } = useAppAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-  const admin = bootstrap?.user?.roles?.some((role) => role.toLowerCase() === 'admin') ?? false;
-  const reviewer = admin || (bootstrap?.user?.roles.includes('Fellowship Reviewer') ?? false);
+  const admin = isSiteAdmin(bootstrap?.user);
+  const reviewer = admin || fellowshipAccess(bootstrap?.user).read;
   const links = [{ href: '/today', label: 'Today', icon: CalendarDays }, ...(reviewer ? [{ href: '/fellowship-reviews', label: 'Fellowship Reviews', icon: NotebookPen }] : []), ...(admin ? [{ href: '/settings', label: 'Settings', icon: Settings2 }] : [])];
   if (isLoading) return <main className="auth-wall" role="status"><p>Checking your KIMEU access…</p></main>;
+  if (isError && isAuthRejection(bootstrapError)) return <main className="auth-wall"><div className="auth-intro"><BrandMark /><span>PRIVATE KIMEU WORKSPACE</span><h1>Workspace closed.</h1><p>Your sign-in is no longer accepted for this workspace. Sign in again or contact the KIMEU Director.</p><button type="button" className="button-primary" onClick={() => void signOut()} data-testid="button-rejected-workspace-sign-out">Sign out</button></div></main>;
   if (!bootstrap) return <main className="auth-wall"><ErrorState title="Access could not be verified" detail="The workspace stays locked until your access is confirmed." retry={() => refetch()} /></main>;
-  if (bootstrap.access !== 'allowed') return <main className="auth-wall"><div className="auth-intro"><BrandMark /><span>PRIVATE KIMEU WORKSPACE</span><h1>Approved access required.</h1><p>This workspace is available only to active, approved SMEs, Regional Directors, Fellowship reviewers, and administrators. Contact the KIMEU Director about your access.</p><AccessBanner bootstrap={bootstrap} /><button type="button" className="button-primary" onClick={() => signOut({ redirectUrl: basePath || '/' })} data-testid="button-denied-sign-out">Sign out</button></div></main>;
+  if (bootstrap.access !== 'allowed') return <main className="auth-wall"><div className="auth-intro"><BrandMark /><span>PRIVATE KIMEU WORKSPACE</span><h1>Approved access required.</h1><p>This workspace is available only to active, approved SMEs, Regional Directors, Fellowship reviewers, and administrators. Contact the KIMEU Director about your access.</p><AccessBanner bootstrap={bootstrap} /><button type="button" className="button-primary" onClick={() => void signOut()} data-testid="button-denied-sign-out">Sign out</button></div></main>;
   return (
     <div className="app-shell">
       <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
@@ -190,7 +209,7 @@ function Shell({ children }: { children: ReactNode }) {
       <main className="main-area">
         <header className="topbar">
           <button type="button" className="mobile-menu" aria-label="Open menu" onClick={() => setMenuOpen(true)} data-testid="button-open-menu"><Menu size={21} /></button>
-          <div className="crumb"><span>KIMEU</span><span className="crumb-slash">/</span>{location.startsWith('/courses') ? <CourseCrumb location={location} /> : <b>{location === '/today' ? 'Today' : location === '/fellowship-reviews' ? 'Fellowship Reviews' : location === '/foundations-assessment' ? 'Foundations Assessment' : location.startsWith('/session') ? 'Session' : 'Settings'}</b>}</div>
+          <div className="crumb"><span>KIMEU</span><span className="crumb-slash">/</span>{location.startsWith('/courses') ? <CourseCrumb location={location} /> : <b>{location === '/today' ? 'Today' : location === '/fellowship-reviews' ? 'Fellowship Reviews' : location === '/foundations-assessment' ? 'Foundations Assessment' : location.startsWith('/session') ? 'Session' : location === '/auth/password' ? 'Password' : 'Settings'}</b>}</div>
           <SyncStatus />
         </header>
         {isError && <div className="access-banner" role="alert" data-testid="status-access-refresh-error"><CircleAlert size={18} /><div><strong>Access refresh unavailable</strong><span>Your last verified workspace and unsaved forms are kept open. Every save still checks current staff access on the server.</span></div><button type="button" className="button-quiet" onClick={() => refetch()}>Retry</button></div>}
@@ -211,9 +230,8 @@ function CourseCrumb({ location }: { location: string }) {
 }
 
 function SessionUser() {
-  const { user, signOut, openUserProfile } = useClerk();
-  const name = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in';
-  return <div className="session-user"><div className="user-initial">{name.slice(0, 1).toUpperCase()}</div><div className="user-copy"><strong>{name}</strong><span>Workshop access</span></div><button type="button" onClick={() => openUserProfile()} aria-label="Account and password settings" title="Account and password settings" className="logout-button" data-testid="button-account-security"><ShieldCheck size={16} /></button><button type="button" onClick={() => signOut({ redirectUrl: basePath || '/' })} aria-label="Sign out" className="logout-button" data-testid="button-sign-out"><LogOut size={16} /></button></div>;
+  const { displayName: name, signOut, openAccount } = useAppAuth();
+  return <div className="session-user"><div className="user-initial">{name.slice(0, 1).toUpperCase()}</div><div className="user-copy"><strong>{name}</strong><span>Workshop access</span></div><button type="button" onClick={() => openAccount()} aria-label="Account and password settings" title="Account and password settings" className="logout-button" data-testid="button-account-security"><ShieldCheck size={16} /></button><button type="button" onClick={() => void signOut()} aria-label="Sign out" className="logout-button" data-testid="button-sign-out"><LogOut size={16} /></button></div>;
 }
 
 function SyncStatus() {
@@ -248,6 +266,7 @@ function TodayPage() {
   const [workshopId, setWorkshopId] = useState('');
   const [sessionDate, setSessionDate] = useState(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()));
   const canWrite = Boolean(bootstrap?.readiness.configured && bootstrap.readiness.writeEnabled && bootstrap.access === 'allowed');
+  const ptReadOnly = isReadOnlyPt(bootstrap?.user?.roles, bootstrap?.user);
   const sessions = data?.sessions ?? [];
   const pending = sessions.filter((session) => session.unmarkedCount > 0 && session.sessionStatus !== 'Complete');
   const dayLabel = data?.date ? formatDate(data.date, { weekday: 'long', month: 'long', day: 'numeric' }) : 'Workshop overview';
@@ -266,7 +285,8 @@ function TodayPage() {
   }
   return <div className="animate-rise">
     <PageHeading eyebrow={dayLabel.toUpperCase()} title="Today" detail="A clear view of the work in front of you." action={<button type="button" className="button-quiet" onClick={() => refetch()} disabled={isFetching} data-testid="button-refresh-today"><RefreshCw size={16} className={isFetching ? 'spin' : ''} /> Refresh</button>} />
-    {bootstrap?.user?.roles.some((role) => ['Admin', 'Foundations SME', 'Elite SME'].includes(role)) && <form className="note-form settings-card" onSubmit={(event) => {
+    {ptReadOnly && <div className="pt-readonly-note" role="status" data-testid="status-pt-readonly"><LockKeyhole size={15} /> Read-only view. Session records are kept by your SMEs and Regional Directors.</div>}
+    {!ptReadOnly && bootstrap?.user?.roles.some((role) => SESSION_WRITER_ASSIGNMENTS.includes(role)) && <form className="note-form settings-card" onSubmit={(event) => {
       event.preventDefault();
       openSession.mutate({ data: { workshopId, sessionDate } }, { onSuccess: (detail) => {
         client.invalidateQueries({ queryKey: getGetKimeuTodayQueryKey() });
@@ -288,7 +308,7 @@ function TodayPage() {
       <div className="section-title-row"><div><span className="section-kicker">YOUR WORKSHOP DAY</span><h2>Session list</h2></div>{data && <span className="count-chip">{sessions.length} {sessions.length === 1 ? 'session' : 'sessions'}</span>}</div>
       {isLoading ? <div className="session-list">{[0, 1].map((item) => <div className="session-skeleton" key={item}><div className="skeleton skeleton-line w-32" /><div className="skeleton skeleton-line w-56" /><div className="skeleton skeleton-line w-40" /></div>)}</div> : isError ? <ErrorState title="Today’s sessions could not load" detail="Check the connection and try again. No session records have been substituted." retry={() => refetch()} /> : !bootstrap?.readiness.configured ? <EmptyState icon={<CloudOff />} title="Sheet connection required" detail="The configured workshop sheet is not ready. Once an administrator connects it, today's sessions will appear here." /> : !sessions.length ? <EmptyState icon={<CalendarDays />} title="No sessions returned for today" detail="There are no session records for this date in the connected workshop sheet." /> : (
         <div className="session-list">
-          {sessions.map((session) => <SessionCard key={session.sessionId} session={session} pending={pending.some((item) => item.sessionId === session.sessionId)} onOpen={() => launch(session)} opening={openSession.isPending && openSession.variables?.data.workshopId === session.workshopId} disabled={!canWrite && session.sessionStatus === 'Scheduled'} />)}
+          {sessions.map((session) => <SessionCard key={session.sessionId} session={session} pending={pending.some((item) => item.sessionId === session.sessionId)} onOpen={() => launch(session)} opening={openSession.isPending && openSession.variables?.data.workshopId === session.workshopId} disabled={(ptReadOnly || !canWrite) && session.sessionStatus === 'Scheduled'} readOnly={ptReadOnly} />)}
         </div>
       )}
     </section>
@@ -299,14 +319,14 @@ function TodayPage() {
   </div>;
 }
 
-function SessionCard({ session, pending, onOpen, opening, disabled }: { session: SessionSummary; pending: boolean; onOpen: () => void; opening: boolean; disabled: boolean }) {
+function SessionCard({ session, pending, onOpen, opening, disabled, readOnly = false }: { session: SessionSummary; pending: boolean; onOpen: () => void; opening: boolean; disabled: boolean; readOnly?: boolean }) {
   const complete = session.sessionStatus === 'Complete';
   return <article className="session-card" data-testid={`card-session-${session.sessionId}`}>
     <div className="card-time"><span className={`status-dot status-${session.sessionStatus.toLowerCase()}`} /><strong>{session.startTime || 'Time not listed'}</strong><span>{formatDate(session.sessionDate, { month: 'short', day: 'numeric' })}</span></div>
     <div className="card-main"><div className="card-title-row"><h3>{session.workshopName}</h3><StatusTag status={session.sessionStatus} /></div><div className="card-meta">{session.stage && <span>{session.stage}</span>}{session.location && <span><MapPin size={13} />{session.location}</span>}{session.leadSme && <span><UsersRound size={13} />{session.leadSme}</span>}</div>
       <div className="card-progress"><div className="progress-track"><span style={{ width: `${session.rosterCount ? Math.round((session.presentCount / session.rosterCount) * 100) : 0}%` }} /></div><span>{session.presentCount} present</span><span className="progress-sep">/</span><span>{session.rosterCount} expected</span>{pending && <span className="needs-mark">{session.unmarkedCount} unmarked</span>}</div>
     </div>
-    <button type="button" className={`card-action ${complete ? 'card-action-done' : ''}`} onClick={onOpen} disabled={opening || disabled} data-testid={`button-open-session-${session.sessionId}`}>{opening ? 'Opening…' : complete ? 'View record' : session.sessionStatus === 'Scheduled' ? 'Open session' : 'Take attendance'}<ArrowRight size={16} /></button>
+    <button type="button" className={`card-action ${complete ? 'card-action-done' : ''}`} onClick={onOpen} disabled={opening || disabled} data-testid={`button-open-session-${session.sessionId}`}>{opening ? 'Opening…' : complete ? 'View record' : readOnly ? (session.sessionStatus === 'Scheduled' ? 'Not started' : 'View session') : session.sessionStatus === 'Scheduled' ? 'Open session' : 'Take attendance'}<ArrowRight size={16} /></button>
   </article>;
 }
 
@@ -335,7 +355,8 @@ function SessionPage() {
   const [visibility, setVisibility] = useState<ClinicianNoteInput['visibility']>('All');
   const [noteMessage, setNoteMessage] = useState('');
   const canWrite = Boolean(bootstrap?.readiness.configured && bootstrap.readiness.writeEnabled && bootstrap.access === 'allowed');
-  const canRecord = canWrite && Boolean(bootstrap?.user?.roles.some((role) => ['Admin', 'Foundations SME', 'Elite SME'].includes(role))) && data?.session.sessionStatus === 'Live';
+  const ptReadOnly = isReadOnlyPt(bootstrap?.user?.roles, bootstrap?.user);
+  const canRecord = !ptReadOnly && canWrite && Boolean(bootstrap?.user?.roles.some((role) => SESSION_WRITER_ASSIGNMENTS.includes(role))) && data?.session.sessionStatus === 'Live';
   const attendanceQueue = useAttendanceQueue(sessionId, canRecord);
   const privacyReady = Boolean(bootstrap?.readiness.notePrivacyReady);
   const session = data?.session;
@@ -402,12 +423,13 @@ function SessionPage() {
             <div className="roster-person"><div className="person-avatar">{person.name.trim().slice(0, 1).toUpperCase()}</div><div><strong>{person.name}</strong><small>{person.clinicianEmail}</small></div></div>
             <div className="roster-source"><span>{person.sourceTab}</span></div>
             <div className="roster-computed"><span className={`attendance-label ${person.attended ? `att-${person.attended.toLowerCase()}` : 'att-pending'}`}>{person.computedStatus || (person.attended || 'Unmarked')}</span>{person.practicalStatus && <small>{person.practicalStatus}</small>}</div>
-             <div className="attendance-actions"><button type="button" onClick={() => markAttendance(person.clinicianEmail, 'Yes')} disabled={!canRecord || saveBusy} className={`mark-button mark-yes ${person.attended === 'Yes' ? 'mark-selected' : ''}`} aria-label={`Mark ${person.name} present`} data-testid={`button-mark-present-${person.clinicianEmail}`}><Check size={15} /><span>Present</span></button><button type="button" onClick={() => markAttendance(person.clinicianEmail, 'No')} disabled={!canRecord || saveBusy} className={`mark-button mark-no ${person.attended === 'No' ? 'mark-selected' : ''}`} aria-label={`Mark ${person.name} absent`} data-testid={`button-mark-absent-${person.clinicianEmail}`}><X size={15} /><span>Absent</span></button></div>
+             {ptReadOnly ? <div className="attendance-actions" /> : <div className="attendance-actions"><button type="button" onClick={() => markAttendance(person.clinicianEmail, 'Yes')} disabled={!canRecord || saveBusy} className={`mark-button mark-yes ${person.attended === 'Yes' ? 'mark-selected' : ''}`} aria-label={`Mark ${person.name} present`} data-testid={`button-mark-present-${person.clinicianEmail}`}><Check size={15} /><span>Present</span></button><button type="button" onClick={() => markAttendance(person.clinicianEmail, 'No')} disabled={!canRecord || saveBusy} className={`mark-button mark-no ${person.attended === 'No' ? 'mark-selected' : ''}`} aria-label={`Mark ${person.name} absent`} data-testid={`button-mark-absent-${person.clinicianEmail}`}><X size={15} /><span>Absent</span></button></div>}
           </div>)}
         </div>}
-        {!canWrite && <div className="soft-warning"><LockKeyhole size={16} /> Attendance updates are disabled until the sheet is configured and writing is enabled.</div>}
+        {ptReadOnly && <div className="soft-warning" data-testid="status-session-pt-readonly"><LockKeyhole size={16} /> Read-only view. Attendance, notes and session close are recorded by SMEs.</div>}
+        {!ptReadOnly && !canWrite && <div className="soft-warning"><LockKeyhole size={16} /> Attendance updates are disabled until the sheet is configured and writing is enabled.</div>}
       </section>
-      <div className="session-work-grid">
+      {!ptReadOnly && <div className="session-work-grid">
         <section className="note-panel">
           <div className="panel-heading"><div className="panel-icon"><NotebookPen size={19} /></div><div><span className="section-kicker">APPEND-ONLY RECORD</span><h2>Clinician note</h2></div></div>
           {!privacyReady ? <div className="privacy-block"><LockKeyhole size={19} /><div><strong>Notes are disabled for privacy</strong><p>The connected sheet is missing the required Visibility header. An administrator must resolve note privacy readiness before notes can be added.</p></div></div> : <form className="note-form" onSubmit={saveClinicianNote}>
@@ -432,15 +454,15 @@ function SessionPage() {
           </form>}
           {!canWrite && !isComplete && <div className="soft-warning"><LockKeyhole size={15} /> Session completion is disabled until setup and write access are ready.</div>}
         </section>
-      </div>
+      </div>}
     </div>
   </Shell>;
 }
 
 function SettingsPage() {
   const { data, isLoading, isError, refetch, isFetching } = useGetKimeuBootstrap();
-  const { signOut, user, openUserProfile } = useClerk();
-  const isAdmin = data?.user?.roles?.some((role) => role.toLowerCase() === 'admin') ?? false;
+  const { signOut, passwordEnabled, openAccount } = useAppAuth();
+  const isAdmin = isSiteAdmin(data?.user);
   if (isLoading) return <Shell><div className="settings-skeleton"><div className="skeleton skeleton-line w-56" /><div className="skeleton skeleton-line w-full" /><div className="skeleton skeleton-line w-40" /></div></Shell>;
   return <Shell><div className="animate-rise">
     <PageHeading eyebrow="WORKSPACE CONFIGURATION" title="Settings" detail="Connection readiness and access context for this workspace." action={<button type="button" className="button-quiet" onClick={() => refetch()} disabled={isFetching} data-testid="button-refresh-settings"><RefreshCw size={15} className={isFetching ? 'spin' : ''} /> Refresh</button>} />
@@ -458,9 +480,9 @@ function SettingsPage() {
       {isAdmin && <SmeAssignmentsPanel />}
       <section className="settings-card account-card"><div className="settings-card-head"><div className="panel-icon panel-icon-warm"><ShieldCheck size={19} /></div><div><span className="section-kicker">CURRENT ACCESS</span><h2>Account status</h2></div></div>
         {data.user ? <div className="account-details"><div><span>Account</span><strong data-testid="text-account-email">{data.user.email}</strong></div><div><span>Name in sheets</span><strong>{data.user.nameInSheets || 'Not provided'}</strong></div><div><span>Access</span><strong className={data.user.active ? 'text-ready' : 'text-blocked'}>{data.user.active ? 'Active' : 'Inactive'}</strong></div><div><span>Roles</span><strong>{data.user.roles.length ? data.user.roles.join(', ') : 'None returned'}</strong></div><div className="account-wide"><span>Assigned workshops</span><strong>{data.user.workshopIds.length ? data.user.workshopIds.join(', ') : 'None returned'}</strong></div></div> : <div className="empty-inline"><UsersRound size={19} /><span>No KIMEU user record was returned for this account.</span></div>}
-        <p>{user?.passwordEnabled ? 'Your account has a password. Manage it securely under Security in your account settings.' : 'No password is set on your account yet. Open your account settings, choose Security, and add a password. Password options depend on the enabled sign-in methods.'}</p>
-        <button type="button" onClick={() => openUserProfile()} className="button-primary" data-testid="button-settings-password"><ShieldCheck size={15} /> {user?.passwordEnabled ? 'Manage password' : 'Set up password'}</button>
-        <button type="button" onClick={() => signOut({ redirectUrl: basePath || '/' })} className="button-quiet signout-settings" data-testid="button-settings-sign-out"><LogOut size={15} /> Sign out</button>
+        <p>{passwordEnabled ? 'Your account has a password. Manage it securely under Security in your account settings.' : 'No password is set on your account yet. Open your account settings, choose Security, and add a password. Password options depend on the enabled sign-in methods.'}</p>
+        <button type="button" onClick={() => openAccount()} className="button-primary" data-testid="button-settings-password"><ShieldCheck size={15} /> {passwordEnabled ? 'Manage password' : 'Set up password'}</button>
+        <button type="button" onClick={() => void signOut()} className="button-quiet signout-settings" data-testid="button-settings-sign-out"><LogOut size={15} /> Sign out</button>
       </section>
     </>}
   </div></Shell>;
@@ -488,10 +510,32 @@ function formatDate(date: string, options: Intl.DateTimeFormatOptions) {
   return Number.isNaN(parsed.getTime()) ? date : new Intl.DateTimeFormat('en', options).format(parsed);
 }
 
-function AppRoutes() {
+function ProtectedRoutes() {
+  const auth = useAppAuth();
+  const supabase = auth.provider === 'supabase';
+  return <Switch>
+    <Route path="/" component={HomePage} />
+    {supabase ? <Route path="/sign-in" component={SupabaseSignInPage} /> : <Route path="/sign-in/*?" component={SignInPage} />}
+    {supabase ? <Route path="/sign-up/*?">{() => <Redirect to="/sign-in" />}</Route> : <Route path="/sign-up/*?" component={SignUpPage} />}
+    {supabase && <Route path="/auth/recovery-request" component={SupabaseRecoveryRequestPage} />}
+    {supabase && <Route path="/auth/accept">{() => <SupabaseCallbackPage kind="invite" />}</Route>}
+    {supabase && <Route path="/auth/recovery">{() => <SupabaseCallbackPage kind="recovery" />}</Route>}
+    {supabase && <Route path="/auth/password">{() => <Protected><Shell><SupabasePasswordPage /></Shell></Protected>}</Route>}
+    <Route path="/today">{() => <Protected><Shell><TodayPage /></Shell></Protected>}</Route>
+    <Route path="/courses">{() => <Protected><Shell><CoursesPage /></Shell></Protected>}</Route>
+    <Route path="/fellowship-reviews">{() => <Protected><Shell><FellowshipReviewsPage /></Shell></Protected>}</Route>
+    <Route path="/foundations-assessment">{() => <Protected><Shell><FoundationsAssessmentPage /></Shell></Protected>}</Route>
+    <Route path="/courses/:workshopId">{() => <Protected><Shell><CourseDetailPage /></Shell></Protected>}</Route>
+    <Route path="/session/:sessionId">{() => <Protected><SessionPage /></Protected>}</Route>
+    <Route path="/settings">{() => <Protected><SettingsPage /></Protected>}</Route>
+    <Route component={NotFound} />
+  </Switch>;
+}
+
+function ClerkAppRoutes() {
   const [, setLocation] = useLocation();
   return <ClerkProvider
-    publishableKey={clerkPubKey}
+    publishableKey={clerkPubKey!}
     proxyUrl={clerkProxyUrl}
     appearance={clerkAppearance}
     signInUrl={`${basePath}/sign-in`}
@@ -505,21 +549,25 @@ function AppRoutes() {
   >
     <QueryClientProvider client={queryClient}>
       <ClerkQueryClientCacheInvalidator />
-      <Switch>
-        <Route path="/" component={HomePage} />
-        <Route path="/sign-in/*?" component={SignInPage} />
-        <Route path="/sign-up/*?" component={SignUpPage} />
-         <Route path="/today">{() => <><Show when="signed-in"><Shell><TodayPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
-         <Route path="/courses">{() => <><Show when="signed-in"><Shell><CoursesPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
-         <Route path="/fellowship-reviews">{() => <><Show when="signed-in"><Shell><FellowshipReviewsPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
-         <Route path="/foundations-assessment">{() => <><Show when="signed-in"><Shell><FoundationsAssessmentPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
-         <Route path="/courses/:workshopId">{() => <><Show when="signed-in"><Shell><CourseDetailPage /></Shell></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
-         <Route path="/session/:sessionId">{() => <><Show when="signed-in"><SessionPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
-         <Route path="/settings">{() => <><Show when="signed-in"><SettingsPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>}</Route>
-        <Route component={NotFound} />
-      </Switch>
+      <ClerkAuthBridge redirectUrl={basePath || '/'}><ProtectedRoutes /></ClerkAuthBridge>
     </QueryClientProvider>
   </ClerkProvider>;
+}
+
+function SupabaseAppRoutes() {
+  return <QueryClientProvider client={queryClient}>
+    <SupabaseAuthBridge><ProtectedRoutes /></SupabaseAuthBridge>
+  </QueryClientProvider>;
+}
+
+function InvalidProviderScreen() {
+  return <main className="auth-wall" role="alert" data-testid="status-invalid-auth-provider"><div className="auth-intro"><BrandMark /><span>PRIVATE KIMEU WORKSPACE</span><h1>Sign-in is misconfigured.</h1><p>The configured sign-in provider is not recognised, so the workspace stays locked. Contact the KIMEU administrator.</p></div></main>;
+}
+
+function AppRoutes() {
+  if (activeProvider === 'clerk') return <ClerkAppRoutes />;
+  if (activeProvider === 'supabase') return <SupabaseAppRoutes />;
+  return <InvalidProviderScreen />;
 }
 
 function App() {

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { CourseTrackingInput } from "@workspace/api-zod";
 import type { AppUser } from "../access";
+import { ownPersonId, unrestrictedCourseRead } from "../auth/data-scope";
 import type { Sql } from "./client";
 import { withKimeuLock, withRead } from "./transaction";
 import { readRoster } from "./directory";
@@ -16,6 +17,7 @@ type RecordRow = {
   attended: boolean | null; practical_result: string | null; percent: string | number | null; status: string | null;
 };
 function authorize(user: AppUser, workshopId: string) {
+  if (user.active && unrestrictedCourseRead(user)) return;
   if (!user.active || (!user.roles.includes("Admin") && !user.workshopIds.includes(workshopId))) {
     throw new KimeuError("This workshop is not assigned to your account.", 403, "WORKSHOP_NOT_ASSIGNED");
   }
@@ -30,7 +32,8 @@ async function load(sql: Sql, user: AppUser, workshopId: string, date: string) {
   if (!foundation && !/fellowship|advanced|enrichment/i.test(course.stage)) {
     throw new KimeuError("This workshop has no supported tracking pathway.", 409, "UNSUPPORTED_STAGE");
   }
-  const roster = await readRoster(sql);
+  const personId = ownPersonId(user);
+  const roster = await readRoster(sql, personId);
   const sessions = await sql<{ session_id: string; session_status: string | null }[]>`
     select session_id, session_status from kimeu_sessions
     where session_id = ${sessionIdFor(workshopId, date)} and deleted_at is null
@@ -44,6 +47,7 @@ async function load(sql: Sql, user: AppUser, workshopId: string, date: string) {
       from kimeu_foundations_blocks b
       left join kimeu_foundations_pt fp on fp.person_id = b.person_id and fp.deleted_at is null
       where b.workshop_id = ${workshopId} and b.deleted_at is null
+        and (${personId}::uuid is null or b.person_id = ${personId}::uuid)
       order by b.person_id, b.block_index desc
     `
     : await sql<RecordRow[]>`
@@ -52,6 +56,7 @@ async function load(sql: Sql, user: AppUser, workshopId: string, date: string) {
         kajabi_progress_pct as percent, workshop_status as status
       from kimeu_workshop_records
       where workshop_id = ${workshopId} and session_date = ${date}::date and deleted_at is null
+        and (${personId}::uuid is null or person_id = ${personId}::uuid)
     `;
   const byPerson = new Map<string, RecordRow>();
   for (const record of records) {
@@ -77,7 +82,8 @@ async function load(sql: Sql, user: AppUser, workshopId: string, date: string) {
     people.map(p => [p.personId, p.record?.key, p.record?.session_date, p.record?.attended]), sessionStatus]);
   const workspace = {
     sessionDate: date, revision,
-    canSaveAttendance: canLeadStage(user.roles, course.stage) &&
+    canSaveAttendance: !personId && (canLeadStage(user.roles, course.stage) ||
+      (!!user.authorization && user.roles.includes("CEU Admin"))) &&
       !["Complete", "Cancelled"].includes(sessionStatus) && date <= todayInAppTimeZone(),
     rosterRefreshedAt: new Date().toISOString(),
     people: people.map(({ personId: _id, assignedRd: _rd, record: _record, ...p }) => p),
@@ -92,7 +98,8 @@ export async function getCourseTracking(user: AppUser, workshopId: string, date:
 export async function saveCourseTracking(user: AppUser, workshopId: string, input: CourseTrackingInput) {
   authorize(user, workshopId);
   if (input.kind !== "attendance") throw new KimeuError("Completion is calculated, not manually approved.", 400, "COMPLETION_DATABASE_OWNED");
-  if (!user.roles.map(canonicalRole).some(r => ["Admin", "SME Assist", "SME Lead"].includes(r))) {
+  if (!user.roles.map(canonicalRole).some(r => ["Admin", "SME Assist", "SME Lead",
+      ...(user.authorization ? ["CEU Admin"] : [])].includes(r))) {
     throw new KimeuError("Only an assigned SME or administrator can record attendance.", 403, "ROLE_NOT_ALLOWED");
   }
   if (!user.nameInSheets.trim()) throw new KimeuError("Your staff display name is required.", 409, "AUTHOR_REQUIRED");

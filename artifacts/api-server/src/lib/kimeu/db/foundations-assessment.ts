@@ -6,21 +6,24 @@ import { withKimeuLock, withRead } from "./transaction";
 import { readRoster } from "./directory";
 import { appendAudit } from "./audit";
 import { isAssignedRd } from "../practical-rules";
+import { ownPersonId } from "../auth/data-scope";
 import { KimeuError, normalizeEmail } from "../sheets";
 
 const hash = (v: unknown) => createHash("sha256").update(JSON.stringify(v)).digest("hex");
 async function load(sql: Sql, user: AppUser) {
   if (!user.active) throw new KimeuError("Your staff access is inactive.", 403, "APP_USER_INACTIVE");
   requireRole(user, "RD");
-  const roster = await readRoster(sql);
+  const personId = ownPersonId(user);
+  const roster = await readRoster(sql, personId);
   const rows = await sql<{ person_id: string; exam_result: string | null; rd: string | null }[]>`
     select person_id, exam_result, rd from kimeu_foundations_pt where deleted_at is null
+      and (${personId}::uuid is null or person_id = ${personId}::uuid)
   `;
   const people = roster.flatMap(p => {
     const matches = rows.filter(r => r.person_id === p.personId);
     if (matches.length > 1) throw new KimeuError("Duplicate Foundations identities require review.", 409, "ASSESSMENT_DUPLICATE");
     const row = matches[0];
-    if (!row || (!user.roles.includes("Admin") && !isAssignedRd(row.rd ?? "", user.nameInSheets, user.email))) return [];
+    if (!row || (!user.authorization && !user.roles.includes("Admin") && !isAssignedRd(row.rd ?? "", user.nameInSheets, user.email))) return [];
     return [{ personId: p.personId, email: p.email, name: p.name, location: p.location,
       result: row.exam_result ?? "", rawResult: row.exam_result,
       revision: hash([p.personId, p.email, row.rd, row.exam_result]) }];

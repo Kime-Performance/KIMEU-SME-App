@@ -41,7 +41,7 @@ export async function getCourses(user: AppUser) {
     const sme = user.roles.map(canonicalRole).some(r => r === "SME Assist" || r === "SME Lead");
     const rdOnly = (id: string) => ["F-11", "F-12", "EN-CAD", "F-SURG-OBS"].includes(id);
     const courses = (await readCatalog(sql)).filter(c =>
-      admin || sme || (user.roles.includes("RD") && rdOnly(c.workshopId)) ||
+      !!user.authorization || admin || sme || (user.roles.includes("RD") && rdOnly(c.workshopId)) ||
       (!rdOnly(c.workshopId) && user.workshopIds.includes(c.workshopId)),
     ).map(c => ({ ...c, stage: ["EN-CAD", "F-SURG-OBS"].includes(c.workshopId) ? "Foundations" : c.stage }));
     return { courses };
