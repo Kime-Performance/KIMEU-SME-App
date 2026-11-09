@@ -7,8 +7,7 @@ This section takes precedence over conflicting historical notes below.
 - One live authentication provider only. Retain old auth code for rollback by
   redeploy; never accept both providers or fall back on a rejected session.
 - No service-role key. Auth flows use the anon/publishable key and the user's
-  own session. Oracle is separately preparing and testing role-aware RLS on
-  business tables; delivery and compatibility are not yet verified here.
+  own session. Oracle has delivered the RLS handoff described below.
 - Account reconciliation is read-only. The app must not edit accounts,
   `user_access`, or site roles. Admin-only, audited SME workshop assignments
   remain supported app-domain data, not account/role grants.
@@ -16,7 +15,7 @@ This section takes precedence over conflicting historical notes below.
   **Keep existing SME sign-offs**, resolving the Community Outreach wording
   for this app. Preserve practicals, Orientation, Evaluation Retention, Cadaver
   Lab, Surgical Observation and Foundations Assessment with their existing
-  approved organization-wide scope. Oracle's forthcoming RLS policies must
+  approved organization-wide scope. Oracle's RLS policies must
   support these capabilities; do not remove or relocate them.
 - IDPs, if exposed, remain private to the clinician and assigned director;
   an Admin role does not grant blanket IDP access.
@@ -25,6 +24,33 @@ This section takes precedence over conflicting historical notes below.
   root, `/auth/accept` and `/auth/recovery`. This is reported work in progress,
   not verified recovery success. Request a fresh SME recovery email after
   configuration is confirmed and validate the new-password form.
+
+## RLS delivery and SME compatibility — November 9, 2026
+
+Oracle reports the SELECT policies, authenticated read grants and identity
+helpers are live, with 19 simulated-user checks passing. This is Oracle's
+reported database verification, not a real-user JWT test run by this app.
+The pending-policy-delivery release blocker is removed.
+
+The delivered integration contract explicitly preserves existing server SQL
+reads and least-privilege writes. Source review confirms this app uses that
+path, retains parameterized person-scoped reads and SQL write allowlists, and
+resolves staff from the sync-owned roster identity. No client-side business
+read migration or new client write path is required.
+
+Keep server authorization and PT own-record filtering: the new client-read
+policies recognize non-PT grants across either app column, whereas this app
+must still enforce its own `kimeu_sme` ceiling and assignments. These policies
+are not a reason to relax SME-specific admission or PT restrictions.
+
+RD sign-offs and Admin-only audited workshop assignments remain unchanged.
+Notes writes remain on the existing `sme_app` connection. No service-role key,
+account provisioning or identity rebinding is introduced.
+
+Release checks still outstanding: fresh recovery link reaches the SME
+new-password form, real-account sign-in and permissions are validated, and an
+authorized save persists after refresh. Do not treat policy delivery or the
+reported simulated tests as completion of those live-account checks.
 
 ## Owner rollout approval — November 8, 2026
 
