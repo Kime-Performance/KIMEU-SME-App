@@ -67,4 +67,10 @@ The November 9, 2026 owner reconciliation preserves org-wide RD viewing, anon-ke
 
 **Why:** The owner supplied reconciled rulings to resolve conflicts in Oracle's shared checklist.
 
-**How to apply:** Oracle will supply and test role-aware business-table RLS separately; do not invent those policies or treat their delivery as complete. The same package says regional sign-offs belong in Community Outreach, which conflicts with this app's explicitly retained RD practical/onboarding/assessment actions. Clarify that SME-specific boundary before removing those actions or changing their scope. Preserve IDP privacy if applicable: clinician plus assigned director only, never blanket Admin access.
+**How to apply:** Oracle will supply and test role-aware business-table RLS separately; do not invent those policies or treat their delivery as complete. Preserve IDP privacy if applicable: clinician plus assigned director only, never blanket Admin access.
+
+Keep existing SME RD sign-offs, including practicals, Orientation, Evaluation Retention, Cadaver Lab, Surgical Observation and Foundations Assessment, with the previously approved organization-wide scope.
+
+**Why:** On November 9, 2026, after being shown the conflict with the Community Outreach wording, the owner explicitly selected “Keep existing SME sign-offs.”
+
+**How to apply:** Do not remove or relocate these SME features or silently add regional restrictions. Oracle's forthcoming RLS policies must preserve these existing approved capabilities.

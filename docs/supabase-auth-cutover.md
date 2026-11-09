@@ -12,10 +12,12 @@ This section takes precedence over conflicting historical notes below.
 - Account reconciliation is read-only. The app must not edit accounts,
   `user_access`, or site roles. Admin-only, audited SME workshop assignments
   remain supported app-domain data, not account/role grants.
-- RD viewing remains organization-wide. The supplied ruling also says regional
-  sign-offs belong in Community Outreach. That conflicts with previously
-  approved SME practical, onboarding and assessment sign-offs; obtain explicit
-  SME clarification before removing these features or changing their scope.
+- RD viewing remains organization-wide. The owner subsequently confirmed
+  **Keep existing SME sign-offs**, resolving the Community Outreach wording
+  for this app. Preserve practicals, Orientation, Evaluation Retention, Cadaver
+  Lab, Surgical Observation and Foundations Assessment with their existing
+  approved organization-wide scope. Oracle's forthcoming RLS policies must
+  support these capabilities; do not remove or relocate them.
 - IDPs, if exposed, remain private to the clinician and assigned director;
   an Admin role does not grant blanket IDP access.
 - Oracle reports the recovery redirect failure was caused by an allowlist
