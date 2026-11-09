@@ -1,5 +1,29 @@
 # Supabase Auth: controlled test rollout
 
+## Latest owner reconciliation — November 9, 2026
+
+This section takes precedence over conflicting historical notes below.
+
+- One live authentication provider only. Retain old auth code for rollback by
+  redeploy; never accept both providers or fall back on a rejected session.
+- No service-role key. Auth flows use the anon/publishable key and the user's
+  own session. Oracle is separately preparing and testing role-aware RLS on
+  business tables; delivery and compatibility are not yet verified here.
+- Account reconciliation is read-only. The app must not edit accounts,
+  `user_access`, or site roles. Admin-only, audited SME workshop assignments
+  remain supported app-domain data, not account/role grants.
+- RD viewing remains organization-wide. The supplied ruling also says regional
+  sign-offs belong in Community Outreach. That conflicts with previously
+  approved SME practical, onboarding and assessment sign-offs; obtain explicit
+  SME clarification before removing these features or changing their scope.
+- IDPs, if exposed, remain private to the clinician and assigned director;
+  an Admin role does not grant blanket IDP access.
+- Oracle reports the recovery redirect failure was caused by an allowlist
+  containing only the security portal callback. The owner is adding this app's
+  root, `/auth/accept` and `/auth/recovery`. This is reported work in progress,
+  not verified recovery success. Request a fresh SME recovery email after
+  configuration is confirmed and validate the new-password form.
+
 ## Owner rollout approval — November 8, 2026
 
 Oracle reports identities bound and reconciliation complete: 46 grantees,

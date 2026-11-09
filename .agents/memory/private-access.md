@@ -61,4 +61,10 @@ Oracle's judge-reviewed addendum keeps the existing restricted server DB path fo
 
 **Why:** The owner explicitly clarified the Auth-key boundary, identity chain, and distinction between assignment-gated and role-gated access.
 
-**How to apply:** Preserve SQL write allowlists and Admin-only audited assignment edits. Deny/log assignments outside the ceiling; CEU assignments require CEU/Admin ceilings. Blank roles are intentional No Access, not PT. Re-verify every bearer request and return 401 on getUser failure/revocation. RD org-wide applies to view and sign-off writes.
+**How to apply:** Preserve SQL write allowlists and Admin-only audited assignment edits. Deny/log assignments outside the ceiling; CEU assignments require CEU/Admin ceilings. Blank roles are intentional No Access, not PT. Re-verify every bearer request and return 401 on getUser failure/revocation. RD sign-off scope is subject to the later clarification below.
+
+The November 9, 2026 owner reconciliation preserves org-wide RD viewing, anon-key-only Auth, one live provider, rollback by redeploy with old auth code retained, read-only account reconciliation, and Admin-only audited workshop assignments. Account/role editing remains Oracle-owned, distinct from workshop assignment editing.
+
+**Why:** The owner supplied reconciled rulings to resolve conflicts in Oracle's shared checklist.
+
+**How to apply:** Oracle will supply and test role-aware business-table RLS separately; do not invent those policies or treat their delivery as complete. The same package says regional sign-offs belong in Community Outreach, which conflicts with this app's explicitly retained RD practical/onboarding/assessment actions. Clarify that SME-specific boundary before removing those actions or changing their scope. Preserve IDP privacy if applicable: clinician plus assigned director only, never blanket Admin access.
