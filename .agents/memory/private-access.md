@@ -61,4 +61,22 @@ Oracle's judge-reviewed addendum keeps the existing restricted server DB path fo
 
 **Why:** The owner explicitly clarified the Auth-key boundary, identity chain, and distinction between assignment-gated and role-gated access.
 
-**How to apply:** Preserve SQL write allowlists and Admin-only audited assignment edits. Deny/log assignments outside the ceiling; CEU assignments require CEU/Admin ceilings. Blank roles are intentional No Access, not PT. Re-verify every bearer request and return 401 on getUser failure/revocation. RD org-wide applies to view and sign-off writes.
+**How to apply:** Preserve SQL write allowlists and Admin-only audited assignment edits. Deny/log assignments outside the ceiling; CEU assignments require CEU/Admin ceilings. Blank roles are intentional No Access, not PT. Re-verify every bearer request and return 401 on getUser failure/revocation. RD sign-off scope is subject to the later clarification below.
+
+The November 9, 2026 owner reconciliation preserves org-wide RD viewing, anon-key-only Auth, one live provider, rollback by redeploy with old auth code retained, read-only account reconciliation, and Admin-only audited workshop assignments. Account/role editing remains Oracle-owned, distinct from workshop assignment editing.
+
+**Why:** The owner supplied reconciled rulings to resolve conflicts in Oracle's shared checklist.
+
+**How to apply:** Oracle owns role-aware business-table RLS; do not invent replacement policies. Preserve IDP privacy if applicable: clinician plus assigned director only, never blanket Admin access.
+
+Keep existing SME RD sign-offs, including practicals, Orientation, Evaluation Retention, Cadaver Lab, Surgical Observation and Foundations Assessment, with the previously approved organization-wide scope.
+
+**Why:** On November 9, 2026, after being shown the conflict with the Community Outreach wording, the owner explicitly selected “Keep existing SME sign-offs.”
+
+**How to apply:** Do not remove or relocate these SME features or silently add regional restrictions. Oracle's RLS policies must preserve these existing approved capabilities.
+
+Keep existing server SQL reads and least-privilege writes when integrating Oracle's authenticated client-read policies; browser business-data reads are optional, not a migration requirement.
+
+**Why:** Oracle's November 9, 2026 RLS handoff explicitly preserves existing server connections and all write paths. The client policies recognize non-PT roles across both apps, which is broader than this app's own role ceiling.
+
+**How to apply:** Retain server-side SME role/assignment enforcement and PT own-record restrictions; do not replace them with cross-app client-read eligibility. Notes writes stay on the restricted SME connection. Never introduce client writes or a service-role key.
