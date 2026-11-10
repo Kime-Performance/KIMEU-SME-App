@@ -40,22 +40,22 @@ function authorize(user: AppUser) {
 async function loadWorkspace(q: Sql, user: AppUser) {
   authorize(user);
   const personId = ownPersonId(user);
-  // Active clinical PTs come from the person spine; person_email_alias feeds
-  // person.email upstream, and providers gates to active clinicians.
-  // kimeu_roster = sheet-maintained 01-PT Roster membership (keeps exec
-  // founders and non-clinical staff out of the clinical roster).
+  // Active clinical PTs come from v_kimeu_sme_roster (resolved, linked
+  // identities only). identity_state = 'linked' filters out missing, inactive,
+  // and ambiguous rows; those rows are kept in the view for diagnostics only.
   const roster = await q<RosterRow[]>`
-    select p.person_id, p.email, p.full_name as name
-    from person p
-    where p.active
-      and (${personId}::uuid is null or p.person_id = ${personId}::uuid)
-      and p.email is not null
-      and exists (
-        select 1 from providers pr
-        where pr.person_id = p.person_id and pr.status = 'active'
-          and pr.kimeu_roster
-      )
-    order by p.full_name
+    select l.person_id, l.email, l.name
+    from (
+      select distinct on (v.person_id)
+             v.person_id,
+             coalesce(nullif(v.canonical_email, ''), v.roster_email) as email,
+             v.full_name as name
+      from v_kimeu_sme_roster v
+      where v.identity_state = 'linked'
+        and (${personId}::uuid is null or v.person_id = ${personId}::uuid)
+      order by v.person_id, v.canonical_email
+    ) l
+    order by l.name
   `;
   const reviewRows = await q<ReviewRow[]>`
     select review_id, pt_email, pt_name,

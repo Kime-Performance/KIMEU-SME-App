@@ -31,13 +31,9 @@ const { getFellowshipReviews, saveFellowshipReview, setSql } = await import(path
 
 // --- Stateful fake of the canonical tables --------------------------------
 const db = {
-  persons: [
-    { person_id: "p1", email: "pt@fixture.test", full_name: "Fixture PT", active: true },
-    { person_id: "p2", email: "former@fixture.test", full_name: "Former PT", active: true },
-  ],
-  providers: [
-    { person_id: "p1", status: "active" },
-    { person_id: "p2", status: "terminated" },
+  roster: [
+    { person_id: "p1", roster_email: "pt@fixture.test", canonical_email: "pt@fixture.test", full_name: "Fixture PT", identity_state: "linked" },
+    { person_id: "p2", roster_email: "former@fixture.test", canonical_email: "former@fixture.test", full_name: "Former PT", identity_state: "inactive_person" },
   ],
   workshops: [
     { workshop_id: "FW-TEST", workshop_name: "Fixture Fellowship", stage: "Fellowship", deleted_at: null },
@@ -81,10 +77,10 @@ async function sql(strings, ...values) {
       .filter(w => !w.deleted_at && w.stage.toLowerCase() === "fellowship")
       .map(w => ({ workshop_id: w.workshop_id, name: w.workshop_name }));
   }
-  if (/from person p/i.test(text)) {
-    return db.persons
-      .filter(p => p.active && p.email && db.providers.some(pr => pr.person_id === p.person_id && pr.status === "active"))
-      .map(p => ({ person_id: p.person_id, email: p.email, name: p.full_name }));
+  if (/from v_kimeu_sme_roster/i.test(text)) {
+    return db.roster
+      .filter(r => r.identity_state === "linked")
+      .map(r => ({ person_id: r.person_id, email: r.canonical_email || r.roster_email, name: r.full_name }));
   }
   throw new Error(`Unmocked query: ${text}`);
 }

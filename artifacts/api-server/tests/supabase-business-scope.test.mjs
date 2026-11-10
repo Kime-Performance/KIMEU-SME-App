@@ -64,7 +64,7 @@ async function sql(strings, ...values) {
     stage: "Foundations", session_date: date, session_status: "Live",
     session_notes: "OTHER-PRIVATE-GROUP-NOTE", changes_for_next_session: "OTHER-PRIVATE-GROUP-PLAN",
   }];
-  if (/from person p/i.test(text)) return scoped(text, values);
+  if (/from person p|from v_kimeu_sme_roster v/i.test(text)) return scoped(text, values);
   if (/from kimeu_foundations_blocks/i.test(text)) return scoped(text, values).map(p => ({
     ...p, key: p.person_id, block_index: 1, pt_email: p.email, pt_name: p.name,
     session_date: date, attended: true, practical_result: "Pass", practical_date: date,
@@ -120,6 +120,7 @@ test("PT actual tracking query narrows roster and records and disables attendanc
 });
 
 test("PT actual practical, assessment, onboarding and review readers expose only own records", async () => {
+  calls.length = 0;
   const practical = await api.getPracticals(user(), "FW-UE");
   assert.equal(practical.records.length, 1);
   assert.equal(practical.canSignOff, false);
@@ -133,6 +134,13 @@ test("PT actual practical, assessment, onboarding and review readers expose only
   assert.equal(reviews.people.length, 1);
   assert.equal(reviews.reviews.length, 1);
   for (const result of [practical, assessment, onboarding, reviews]) assertPrivate(result);
+  const rosterCalls = calls.filter(c => /from v_kimeu_sme_roster v/i.test(c.text));
+  assert.equal(rosterCalls.length, 2, "onboarding and reviews must use the linked roster view");
+  for (const query of rosterCalls) {
+    assert.match(query.text, /identity_state\s*=\s*'linked'/);
+    assert.match(query.text, /v\.person_id\s*=\s*\?::uuid/);
+    assert.ok(query.values.includes(ownId), "the roster query must bind the verified person");
+  }
 });
 
 test("PT session detail filters nested roster, recalculates counts, redacts group notes", async () => {

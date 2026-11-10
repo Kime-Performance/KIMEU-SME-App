@@ -30,15 +30,10 @@ const { getOnboarding, saveOnboarding, setSql } = await import(pathToFileURL(joi
 
 // --- Stateful fake of the canonical tables --------------------------------
 const db = {
-  persons: [
-    { person_id: "p1", email: "pt1@fixture.test", full_name: "Assigned PT", active: true },
-    { person_id: "p2", email: "pt2@fixture.test", full_name: "Other PT", active: true },
-    { person_id: "p3", email: "former@fixture.test", full_name: "Former PT", active: true },
-  ],
-  providers: [
-    { person_id: "p1", status: "active" },
-    { person_id: "p2", status: "active" },
-    { person_id: "p3", status: "terminated" },
+  roster: [
+    { person_id: "p1", roster_email: "pt1@fixture.test", canonical_email: "pt1@fixture.test", full_name: "Assigned PT", identity_state: "linked" },
+    { person_id: "p2", roster_email: "pt2@fixture.test", canonical_email: "pt2@fixture.test", full_name: "Other PT", identity_state: "linked" },
+    { person_id: "p3", roster_email: "former@fixture.test", canonical_email: "former@fixture.test", full_name: "Former PT", identity_state: "inactive_person" },
   ],
   foundations: [
     { person_id: "p1", rd: "rd@fixture.test" },
@@ -73,11 +68,15 @@ async function sql(strings, ...values) {
     if (/where record_id/i.test(text)) return db.onboarding.filter(r => r.record_id === values[0]);
     return db.onboarding.filter(r => r.workshop_id === values[0]).sort((a, b) => a.week - b.week);
   }
-  if (/from person p/i.test(text)) {
-    return db.persons
-      .filter(p => p.active && p.email && db.providers.some(pr => pr.person_id === p.person_id && pr.status === "active"))
-      .map(p => ({ person_id: p.person_id, email: p.email, name: p.full_name,
-        assigned_rd: db.foundations.find(f => f.person_id === p.person_id)?.rd ?? null }));
+  if (/from v_kimeu_sme_roster/i.test(text)) {
+    return db.roster
+      .filter(r => r.identity_state === "linked")
+      .map(r => ({
+        person_id: r.person_id,
+        email: r.canonical_email || r.roster_email,
+        name: r.full_name,
+        assigned_rd: db.foundations.find(f => f.person_id === r.person_id)?.rd ?? null,
+      }));
   }
   throw new Error(`Unmocked query: ${text}`);
 }
