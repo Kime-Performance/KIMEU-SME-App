@@ -1,6 +1,6 @@
 import { BookOpen, ClipboardCheck, RefreshCw } from 'lucide-react';
 import { getGetKimeuBootstrapQueryKey, useGetKimeuBootstrap } from '@workspace/api-client-react';
-import { canAssessFoundations } from '@/pages/foundations-assessment';
+import { foundationsAccess } from '@/auth/provider';
 import { Link } from 'wouter';
 import { coursePath, groupCourses, useCourseCatalog } from '@/lib/courses';
 
@@ -10,7 +10,7 @@ export function CourseNav({ location, onNavigate }: { location: string; onNaviga
   const inSection = location === '/courses' || location.startsWith('/courses/') || location === '/foundations-assessment';
   const groups = groupCourses(data?.courses ?? []);
   const { data: bootstrap } = useGetKimeuBootstrap({ query: { queryKey: getGetKimeuBootstrapQueryKey() } });
-  const showFa = canAssessFoundations(bootstrap?.user?.roles);
+  const showFa = foundationsAccess(bootstrap?.user).read;
   const faOn = location === '/foundations-assessment';
   const faLink = showFa ? <Link href="/foundations-assessment" className={`course-sub-link fa-nav-link ${faOn ? 'course-sub-active' : ''}`} title="Foundations Assessment — select a PT and record Pass or Fail" aria-current={faOn ? 'page' : undefined} onClick={onNavigate} data-testid="link-nav-foundations-assessment"><ClipboardCheck size={14} aria-hidden="true" /><span>Foundations Assessment</span></Link> : null;
   const hasFoundations = groups.some((g) => g.label === 'Foundations');

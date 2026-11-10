@@ -7,6 +7,7 @@ import {
 } from '@workspace/api-client-react';
 import type { FoundationsAssessmentInputResult, FoundationsAssessmentPerson, FoundationsAssessmentWorkspace } from '@workspace/api-client-react';
 import { matchesParticipantSearch } from '@/lib/participant-search';
+import { foundationsAccess } from '@/auth/provider';
 
 type Msg = { tone: 'success' | 'error'; text: string };
 
@@ -24,7 +25,9 @@ const norm = (e: string) => e.trim().toLowerCase();
 
 export function FoundationsAssessmentPage() {
   const { data: bootstrap } = useGetKimeuBootstrap({ query: { queryKey: getGetKimeuBootstrapQueryKey() } });
-  const allowed = canAssessFoundations(bootstrap?.user?.roles);
+  const access = foundationsAccess(bootstrap?.user);
+  const allowed = access.read;
+  const canWrite = access.write;
   const client = useQueryClient();
   const queryKey = getGetKimeuFoundationsAssessmentQueryKey();
   const query = useGetKimeuFoundationsAssessment({ query: { queryKey, enabled: allowed, refetchInterval: 60_000, refetchOnWindowFocus: true } });
@@ -87,7 +90,7 @@ export function FoundationsAssessmentPage() {
         const definite = status !== undefined && status >= 400 && status < 500;
         setMsg({ tone: 'error', text: definite
           ? `Not saved: ${errorText(err)} Your selection and draft are kept; nothing was resubmitted.`
-          : `Save not confirmed: ${errorText(err)} The sheet may or may not have been updated. Reload latest and check the current result before retrying. Your draft is kept; nothing was resubmitted.` });
+          : `Save not confirmed: ${errorText(err)} The saved record may or may not have been updated. Reload latest and check the current result before retrying. Your draft is kept; nothing was resubmitted.` });
       },
     });
   }
@@ -110,7 +113,7 @@ export function FoundationsAssessmentPage() {
     {allowed && <button type="button" className="button-quiet" onClick={() => query.refetch()} disabled={query.isFetching || busy} data-testid="button-refresh-fa"><RefreshCw size={16} className={query.isFetching ? 'spin' : ''} /> Refresh</button>}</div>;
 
   if (!bootstrap) return <div className="animate-rise">{heading}</div>;
-  if (!allowed) return <div className="animate-rise">{heading}<div className="state-card" data-testid="status-fa-denied"><div className="state-icon"><Lock size={18} /></div><div><h3>Regional Directors only</h3><p>Foundations Assessment results can only be viewed and recorded by Regional Directors and administrators.</p></div></div></div>;
+  if (!allowed) return <div className="animate-rise">{heading}<div className="state-card" data-testid="status-fa-denied"><div className="state-icon"><Lock size={18} /></div><div><h3>Access restricted</h3><p>Foundations Assessment results are not available for this account.</p></div></div></div>;
 
   return <div className="animate-rise fa-root">
     {heading}
@@ -139,7 +142,8 @@ export function FoundationsAssessmentPage() {
               <h2 data-testid="text-fa-name">{person.name || person.email}</h2>
               <p className="fa-email" data-testid="text-fa-email">{person.email}</p>
               <p className="ct-meta">{person.location || 'No location'}</p>
-              <div className="fa-current">Current result in sheet <ResultTag result={person.result} /></div>
+              <div className="fa-current">Current saved result <ResultTag result={person.result} /></div>
+              {!canWrite ? <div className="ct-readonly" data-testid="status-fa-readonly"><Lock size={13} /> Read-only. Results are recorded by Regional Directors, SME Leads, Fellowship reviewers and administrators.</div> : <>
               <div className="ob-result" role="radiogroup" aria-label="New result">
                 {(['Pass', 'Fail'] as FoundationsAssessmentInputResult[]).map((r) => <label key={r} className={`ob-pill${draft === r ? ' ob-pill-on' : ''}`}><input type="radio" name="fa-result" checked={draft === r} disabled={busy} onChange={() => pick(r)} data-testid={`radio-fa-${r.toLowerCase()}`} />{r}</label>)}
               </div>
@@ -149,6 +153,7 @@ export function FoundationsAssessmentPage() {
                 {dirty && <button type="button" className="button-quiet" onClick={discard} disabled={busy} data-testid="button-fa-discard">Discard</button>}
                 <button type="button" className="button-primary" onClick={submit} disabled={!dirty || busy} data-testid="button-fa-save">{busy ? 'Saving...' : draft ? `Save ${draft}` : 'Save result'}</button>
               </div>
+              </>}
             </>}
         </section>
       </div>}

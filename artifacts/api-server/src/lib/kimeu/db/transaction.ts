@@ -1,4 +1,4 @@
-import { getSql, type Sql } from "./client";
+import { getSql, getTransactionSql, type Sql } from "./client";
 import { KimeuError } from "../sheets";
 
 // Stable 32-bit key for KIMEU writer serialization.
@@ -12,7 +12,7 @@ const ADVISORY_LOCK_KEY = 22474487185;
  */
 export async function withKimeuLock<T>(fn: (sql: Sql) => Promise<T>): Promise<T> {
   try {
-    const result = getSql().begin(async (tx) => {
+    const result = getTransactionSql().begin(async (tx) => {
       await tx`select pg_advisory_xact_lock(${ADVISORY_LOCK_KEY})`;
       return await fn(tx as unknown as Sql);
     }) as Promise<T>;

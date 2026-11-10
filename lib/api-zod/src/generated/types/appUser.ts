@@ -5,8 +5,10 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SupabaseSiteRole } from './supabaseSiteRole';
 
 export interface AppUser {
+  siteRole?: SupabaseSiteRole;
   email: string;
   nameInSheets: string;
   roles: string[];

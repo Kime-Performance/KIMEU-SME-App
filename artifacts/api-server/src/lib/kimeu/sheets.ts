@@ -1,5 +1,7 @@
 import { ReplitConnectors, type ProxyOptions } from "@replit/connectors-sdk";
 import { resolveSheetConfiguration } from "./sheet-configuration";
+import { isPostgresMode } from "./db/env";
+import { getBasicReadiness as postgresReadiness, getReadiness as testPostgresReadiness } from "./db/readiness";
 
 export { MASTER_SHEET_ID } from "./sheet-configuration";
 export const NOTE_VISIBILITY_HEADER = "Visibility";
@@ -124,6 +126,7 @@ function configuration() {
 }
 
 export function getBasicReadiness() {
+  if (isPostgresMode()) return postgresReadiness();
   const config = configuration();
   return {
     configured: config.configured,
@@ -652,6 +655,7 @@ export function invalidateTab(name: string): void {
 }
 
 export async function testCopyReadiness() {
+  if (isPostgresMode()) return testPostgresReadiness();
   const basic = getBasicReadiness();
   let notePrivacyReady = false;
   const missing = [...basic.missing];

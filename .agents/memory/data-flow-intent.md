@@ -3,19 +3,23 @@ name: Roster and workshop data directions
 description: User-defined source systems and one-way data flow for SME operations.
 ---
 
-The KIME Master Database's Roster tab is the continuing source of PTs available for selection in the SME app. This direction is read-only: roster sheet to app.
+The approved direction is Supabase-only SME application data, replacing the prior Master Sheet read/write handoff. Do not build a Sheets write-back mirror or silently fall back to Sheets after the cutover.
 
-The SME opens a workshop subpage to record live attendance and write notes visible to the KIMEU director. RDs record practical results. These input records flow from the app into the KIMEU Master Database for consistent Foundations and Fellowship pathway tracking.
+**Why:** The user explicitly selected “Switch to Supabase only” after being told that the separate Clinician Development Tool would also need its own Supabase connection.
 
-The user explicitly approved enabling live tracking instead of keeping saves isolated in a test copy. Preserve existing history and Kajabi inputs; do not bulk-copy sandbox records into the Master.
+**How to apply:** Use the existing shared truth database, not a new app database. Verify permissions, row security, certificate identity, all remaining application paths, and completion calculations before activating the cutover. Treat the separate Clinician Tool migration as a real dependency, not an automatic result of connecting this app.
 
-**Why:** The user observed that a saved weekly sign-off did not reach the Master or Clinician Development Tool and chose “Enable live tracking.”
+The user has a separate agent that sets up the shared Supabase schema; coordinate proposed schema and access changes with that agent.
 
-**How to apply:** Keep the app-to-Master data flow live once verified. Treat individual RD requirement completion separately from overall Foundations completion; a finished weekly requirement does not waive other pathway prerequisites.
+**Why:** The user proposed having their schema agent review the roster setup script before applying changes to the shared database.
 
-**Why:** The user specified two one-way connections, with the shared sheets supporting the KIMEU Progress Tracker.
+**How to apply:** Hand off verified findings, the proposed SQL, required app interfaces, and unresolved identity checks. Confirm the schema agent's approved contract and which changes were actually applied before wiring or activating the app against them.
 
-**How to apply:** Keep the roster source separate from the workshop-record destination, even if both ultimately reside in the same spreadsheet. Do not write roster changes back from this app. Distinguish individual PT completion from closing a workshop session.
+Preserve existing history and Kajabi inputs; do not bulk-copy sandbox records into the shared truth database. PT-roster identity remains a read-only input to SME operations, separate from attendance and practical-result writes.
+
+**Why:** The user's original direction separated roster selection from workshop documentation and rejected wholesale sandbox transfers.
+
+**How to apply:** Do not change roster identity or employment information from this app. Distinguish individual RD requirement completion from overall pathway completion and from closing a workshop session.
 
 Regional Directors also work in this app and sign off post-workshop practicals. Each workshop subpage needs RD sign-off and notes when the PT has not passed.
 
@@ -31,18 +35,12 @@ Foundations workshop completion requires attendance and RD practical Pass, witho
 
 Workshop subpages use one shared PT selector/search. Attendance and RD practicals are specific to that selected person, not separate filtered lists of people. Keep an explicit Submit/Save action for attendance. There is no separate full-completion checklist or approval in the SME app.
 
-**Why:** The user clarified: “I should go into a workshop, select a PT or search for one and then the attendance and RD practical are specific to that person.” The SME app checks individual requirements; the sheet interprets completion.
+**Why:** The user clarified: “I should go into a workshop, select a PT or search for one and then the attendance and RD practical are specific to that person.” The SME app checks individual requirements; the shared truth system interprets completion.
 
 **How to apply:** Selecting or searching for a PT controls both attendance and RD practicals by their email identity. Do not show an unrelated PT's practical record. Warn before discarding unsaved changes when switching people. Do not silently save checkbox taps or add a full-completion approval.
 
-The Clinician Development Tool reads the Foundations, Fellowship, and Advanced Workshop tabs, not Summary. The user needs the SME app's inputs to reach the sheet accurately so the Clinician tool can read them.
-
-**Why:** The user explicitly corrected the assumption that Summary was the downstream integration source.
-
-**How to apply:** Verify saves against the actual pathway source records and their existing calculated fields. Do not require a new Summary integration or describe added Summary columns as a necessary handoff to the Clinician Development Tool.
-
-Foundations Assessment has its own SME-app subpage after the Foundations workshops, with PT-roster identity selection and RD Pass/Fail. Its shared downstream contract is the existing Exam Result field in the Foundations Tracker; do not rename that header. The gold assessment display belongs in the separate Clinician Development Tool.
+Foundations Assessment has its own SME-app subpage after the Foundations workshops, with PT-roster identity selection and RD Pass/Fail. Its legacy Sheets mapping was the existing Exam Result field in the Foundations Tracker, without renaming that header. The gold assessment display belongs in the separate Clinician Development Tool.
 
 **Why:** The user supplied the Clinician Tool's mapping, then explicitly requested a separate left-side RD assessment subpage in this app.
 
-**How to apply:** Keep assessment entry distinct from individual workshop practicals and overall pathway completion. Use the shared PT-email identity, not display names, for integration with the other app.
+**How to apply:** Keep assessment entry distinct from individual workshop practicals and overall pathway completion. Preserve the shared assessment-result meaning when moving to Supabase and use verified PT identity, not display names, for integration with the other app.

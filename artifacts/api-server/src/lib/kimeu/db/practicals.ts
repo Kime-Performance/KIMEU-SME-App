@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { AppUser } from "../access";
+import { ownPersonId, maySignOff } from "../auth/data-scope";
 import type { PracticalSignoff, PracticalScheduleInput } from "@workspace/api-zod";
 import {
   formatSheetDate,
@@ -48,10 +49,11 @@ const BLOCKS = "kimeu_foundations_blocks";
 const NOTES = "kimeu_clinician_notes";
 
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
-const privileged = (user: AppUser) => user.roles.includes("Admin") || user.roles.includes("RD");
+const privileged = (user: AppUser) => maySignOff(user, "practical");
 
 // Permission checks also live here so internal callers cannot bypass the route.
 function assignedCourse(user: AppUser, workshopId: string) {
+  if (user.active && user.authorization && (user.authorization.method === "GET" || !user.authorization.assignment)) return;
   if (!user.active || (!user.roles.includes("Admin") && !user.workshopIds.includes(workshopId))) {
     throw new KimeuError("This workshop is not assigned to your account.", 403, "WORKSHOP_NOT_ASSIGNED");
   }
@@ -126,6 +128,7 @@ const lowerEmail = (value: unknown): string => text(value).toLowerCase();
 
 async function load(user: AppUser, workshopId: string, sql: Sql): Promise<PracticalWorkspace> {
   assignedCourse(user, workshopId);
+  const personId = ownPersonId(user);
   const workshops = (await sql`
     select workshop_id, stage
     from kimeu_workshops
@@ -154,18 +157,21 @@ async function load(user: AppUser, workshopId: string, sql: Sql): Promise<Practi
         join person p on p.person_id = b.person_id
         left join kimeu_foundations_pt fp on fp.person_id = b.person_id and fp.deleted_at is null
         where b.workshop_id = ${workshopId} and b.deleted_at is null
+          and (${personId}::uuid is null or b.person_id = ${personId}::uuid)
         order by b.person_id, b.block_index desc
       `) as unknown as RecordRow[])
     : ((await sql`
         select r.person_id, null::int as block_index,
-               r.pt_email, r.pt_name, coalesce(r.rd, '') as rd,
+               r.pt_email, r.pt_name, coalesce(nullif(r.rd, ''), fp.rd, '') as rd,
                r.session_date, r.attended,
                r.practical_date, r.practical_result,
                r.practical_scored_by as scored_by,
                r.k_star_test_performed as k_performed, r.k_star_stars_earned as k_stars,
                r.last_updated_by, r.last_updated
         from kimeu_workshop_records r
+        left join kimeu_foundations_pt fp on fp.person_id = r.person_id and fp.deleted_at is null
         where r.workshop_id = ${workshopId} and r.deleted_at is null
+          and (${personId}::uuid is null or r.person_id = ${personId}::uuid)
       `) as unknown as RecordRow[]);
 
   const noteRows = (await sql`
@@ -173,6 +179,7 @@ async function load(user: AppUser, workshopId: string, sql: Sql): Promise<Practi
            review_id, visibility, pt_email
     from kimeu_clinician_notes
     where workshop_id = ${workshopId} and deleted_at is null
+      and (${personId}::uuid is null)
     order by created asc, note_id asc
   `) as unknown as NoteRow[];
 
@@ -185,7 +192,7 @@ async function load(user: AppUser, workshopId: string, sql: Sql): Promise<Practi
     const rd = text(row.rd);
     // RD-only accounts see only PTs explicitly assigned to them. No regional
     // inference from names, and blank RD assignments never grant sign-off.
-    if (user.roles.includes("RD") && !user.roles.includes("Admin") &&
+    if (!user.authorization && user.roles.includes("RD") && !user.roles.includes("Admin") &&
         !isAssignedRd(rd, user.nameInSheets, user.email)) continue;
     const recordKey = hash([workshopId, email, sessionDate]);
     const matchingNotes = noteRows.filter(n =>

@@ -12,5 +12,6 @@ export type SetupReadinessTrackingMode = typeof SetupReadinessTrackingMode[keyof
 export const SetupReadinessTrackingMode = {
   live: 'live',
   test: 'test',
+  postgres: 'postgres',
   unconfigured: 'unconfigured',
 } as const;

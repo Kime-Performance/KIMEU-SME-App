@@ -13,6 +13,37 @@ tags:
   - name: kimeu
     description: KIMEU workshop operations backed by Google Sheets
 paths:
+  /auth/supabase/session:
+    get:
+      operationId: getSupabaseSession
+      description: Verifies the caller's bearer token and resolves only their own access and assignments. Does not activate Supabase for business routes.
+      responses:
+        "200":
+          description: Verified request-local identity and permitted assignments
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SupabaseSession" }
+        "401":
+          description: Missing, invalid or revoked bearer token
+        "403":
+          description: Account pending setup
+        "503":
+          description: Role or assignment store unavailable
+  /auth/supabase/recovery:
+    post:
+      operationId: requestSupabaseRecovery
+      description: Enumeration-safe recovery. Delivery remains disabled until the approved authentication cutover.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordRecoveryInput" }
+      responses:
+        "202":
+          description: Identical acknowledgement regardless of account existence, throttling or delivery status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PasswordRecoveryAcknowledgement" }
   /kimeu/foundations-assessment:
     get:
       operationId: getKimeuFoundationsAssessment
@@ -388,6 +419,36 @@ paths:
           description: Test spreadsheet or service account is not configured
 components:
   schemas:
+    SupabaseSiteRole:
+      type: string
+      enum: [Admin, SME Lead, SME Assist, RD, Fellowship Reviewer, CEU Admin, PT]
+    SupabaseSession:
+      type: object
+      additionalProperties: false
+      required: [provider, email, siteRole, roles, personId, workshopIds]
+      properties:
+        provider: { type: string, enum: [supabase] }
+        email: { type: string, format: email }
+        siteRole: { $ref: "#/components/schemas/SupabaseSiteRole" }
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/SupabaseSiteRole" }
+        personId: { type: ["string", "null"] }
+        workshopIds:
+          type: array
+          items: { type: string }
+    PasswordRecoveryInput:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email: { type: string, maxLength: 254 }
+    PasswordRecoveryAcknowledgement:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message: { type: string }
     FoundationsAssessmentInput:
       type: object
       required: [email, result, revision]
@@ -707,7 +768,7 @@ components:
       properties:
         trackingMode:
           type: string
-          enum: [live, test, unconfigured]
+          enum: [live, test, postgres, unconfigured]
         configured:
           type: boolean
         sheetId:
@@ -724,6 +785,8 @@ components:
     AppUser:
       type: object
       properties:
+        siteRole:
+          $ref: "#/components/schemas/SupabaseSiteRole"
         email:
           type: string
         nameInSheets:

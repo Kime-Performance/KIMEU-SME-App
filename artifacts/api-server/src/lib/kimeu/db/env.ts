@@ -7,6 +7,9 @@
  */
 export function kimeuDataSource(): "postgres" | "sheets" {
   const value = process.env.KIMEU_DATA_SOURCE?.trim().toLowerCase();
+  if (value && value !== "postgres" && value !== "sheets") {
+    throw new Error("KIMEU_DATA_SOURCE must be either postgres or sheets; refusing an implicit data-source fallback.");
+  }
   return value === "postgres" ? "postgres" : "sheets";
 }
 

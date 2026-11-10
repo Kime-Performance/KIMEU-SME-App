@@ -1,6 +1,9 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import { cell, dataRows, headerIndex, headersFor, KimeuError, readTab } from "./sheets";
 import { classifyWorkshop } from "./calendar-matching";
+import { isPostgresMode } from "./db/env";
+import { readCatalog } from "./db/catalog";
+import { withRead } from "./db/transaction";
 
 type CalendarTime = { date?: string; dateTime?: string };
 type CalendarEvent = {
@@ -10,17 +13,26 @@ type CalendarEvent = {
 type CalendarPage = { items?: CalendarEvent[]; nextPageToken?: string };
 const connectors = new ReplitConnectors();
 
-export async function getUpcomingWorkshops() {
-  const calendarId = process.env.KIMEU_CALENDAR_ID;
-  if (!calendarId) throw new KimeuError("The KIMEU schedule calendar has not been selected.", 503, "CALENDAR_NOT_CONFIGURED");
+export async function getCalendarCatalog() {
+  if (isPostgresMode()) {
+    return withRead(async sql => (await readCatalog(sql)).map(course => ({
+      id: course.workshopId, name: course.name, stage: course.stage,
+    })));
+  }
   const catalogTab = await readTab("03a-KIMEU Workshops");
   const headers = headersFor(catalogTab);
   const idColumn = headerIndex(headers, "Workshop ID");
   const nameColumn = headerIndex(headers, "Workshop Name");
   const stageColumn = headerIndex(headers, "Stage");
-  const catalog = dataRows(catalogTab).map((row) => ({
+  return dataRows(catalogTab).map((row) => ({
     id: cell(row.values, idColumn), name: cell(row.values, nameColumn), stage: cell(row.values, stageColumn),
   })).filter((item) => item.id && item.name);
+}
+
+export async function getUpcomingWorkshops() {
+  const calendarId = process.env.KIMEU_CALENDAR_ID;
+  if (!calendarId) throw new KimeuError("The KIMEU schedule calendar has not been selected.", 503, "CALENDAR_NOT_CONFIGURED");
+  const catalog = await getCalendarCatalog();
   const now = new Date();
   const until = new Date(now);
   until.setUTCFullYear(until.getUTCFullYear() + 1);

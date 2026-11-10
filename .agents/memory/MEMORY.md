@@ -8,5 +8,6 @@
 - [Private access](private-access.md) — approved SMEs, RDs, and Fellowship reviewers only; director/admin access retained; email/password sign-in intended.
 - [SME roles and onboarding](workshop-roles-and-onboarding.md) — SME Assist leads Foundations; SME Lead leads Fellowship; Orientation and weekly Evaluation Retention are RD-led.
 - [Brand-book guidance](brand-book-guidance.md) — use the supplied KIME brand book, approved KIMEU marks, and black contrast for the SME app.
-- [Isolated UI fixtures](isolated-ui-fixtures.md) — standalone browser-test bundles must use one frontend React dependency instance.
+- [Isolated UI fixtures](isolated-ui-fixtures.md) — standalone browser tests must match the app's React resolution, JSX transform and Vite refresh setup.
 - [K-Star recognition](k-star-recognition.md) — optional KB-only highest-earned awards; preserve course evidence and distinguish cross-app verification.
+- [External Postgres access checks](external-postgres-access.md) — empty information_schema results can mean missing privileges, not missing tables; SELECT 1 does not establish app readiness.

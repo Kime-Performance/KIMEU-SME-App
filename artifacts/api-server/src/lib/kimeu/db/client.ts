@@ -1,9 +1,11 @@
 import postgres from "postgres";
 import { KimeuError } from "../sheets";
+import { truthDatabaseConnectionOptions } from "./connection-options";
 
 export type Sql = ReturnType<typeof postgres>;
 
 let sqlInstance: Sql | undefined;
+let transactionSqlInstance: Sql | undefined;
 
 /**
  * Resolve the Postgres-js client for the SME App data layer.
@@ -16,6 +18,23 @@ let sqlInstance: Sql | undefined;
  */
 export function getSql(): Sql {
   if (sqlInstance) return sqlInstance;
+  sqlInstance = createSql(0);
+  return sqlInstance;
+}
+
+/**
+ * Transactions exclusively reserve their own single connection. postgres-js
+ * requires a nonzero pipeline limit to invoke BEGIN's reservation callback.
+ * Keep this pool separate so ordinary reads never overlap its statements.
+ * All transaction statements in the data layer are awaited sequentially.
+ */
+export function getTransactionSql(): Sql {
+  if (transactionSqlInstance) return transactionSqlInstance;
+  transactionSqlInstance = createSql(1);
+  return transactionSqlInstance;
+}
+
+function createSql(maxPipeline: number): Sql {
   const url = process.env.KIMEU_TRUTH_DATABASE_URL;
   if (!url) {
     throw new KimeuError(
@@ -24,17 +43,17 @@ export function getSql(): Sql {
       "DB_NOT_CONFIGURED",
     );
   }
-  // Supabase pooler endpoints present a cert chain node rejects by default
-  // (SELF_SIGNED_CERT_IN_CHAIN). sslmode in the URL can override the ssl
-  // option, so strip it and let the explicit option govern: encrypt without
-  // CA verification. For strict checking use verify-full + Supabase's CA cert.
-  const pooledUrl = new URL(url);
-  pooledUrl.searchParams.delete("sslmode");
-  sqlInstance = postgres(pooledUrl.toString(), { prepare: false, max: 1, ssl: { rejectUnauthorized: false } });
-  return sqlInstance;
+  const { connectionString, options } = truthDatabaseConnectionOptions(
+    url,
+    process.env.KIMEU_TRUTH_DATABASE_CA_CERT,
+  );
+  // max_pipeline is supported by the runtime but omitted from its public types.
+  const clientOptions = { ...options, max_pipeline: maxPipeline };
+  return postgres(connectionString, clientOptions);
 }
 
 /** Used by tests to inject a mocked query executor. */
 export function setSql(instance: Sql | undefined): void {
   sqlInstance = instance;
+  transactionSqlInstance = instance;
 }

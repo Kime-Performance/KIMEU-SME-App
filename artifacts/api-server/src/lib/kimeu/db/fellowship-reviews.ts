@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { FellowshipReviewInput } from "@workspace/api-zod";
 import { requireRole, type AppUser } from "../access";
+import { ownPersonId } from "../auth/data-scope";
 import { KimeuError, normalizeEmail, todayInAppTimeZone } from "../sheets";
 import type { Sql } from "./client";
 import { withKimeuLock, withRead } from "./transaction";
@@ -38,6 +39,7 @@ function authorize(user: AppUser) {
 
 async function loadWorkspace(q: Sql, user: AppUser) {
   authorize(user);
+  const personId = ownPersonId(user);
   // Active clinical PTs come from v_kimeu_sme_roster (resolved, linked
   // identities only). identity_state = 'linked' filters out missing, inactive,
   // and ambiguous rows; those rows are kept in the view for diagnostics only.
@@ -50,6 +52,7 @@ async function loadWorkspace(q: Sql, user: AppUser) {
              v.full_name as name
       from v_kimeu_sme_roster v
       where v.identity_state = 'linked'
+        and (${personId}::uuid is null or v.person_id = ${personId}::uuid)
       order by v.person_id, v.canonical_email
     ) l
     order by l.name
@@ -61,6 +64,8 @@ async function loadWorkspace(q: Sql, user: AppUser) {
            specific_need, notes, status, last_updated::text as last_updated
     from kimeu_fellowship_reviews
     where deleted_at is null
+      and (${personId}::uuid is null or lower(pt_email) =
+        (select lower(email) from person where person_id = ${personId}::uuid))
     order by review_date desc nulls last, last_updated desc nulls last
   `;
   const workshopRows = await q<WorkshopRow[]>`
@@ -84,7 +89,7 @@ async function loadWorkspace(q: Sql, user: AppUser) {
     reviewType: r.review_type ?? "", result: r.result ?? "",
     score: r.score === null || r.score === undefined || `${r.score}`.trim() === "" || !Number.isFinite(Number(r.score))
       ? null : Number(r.score),
-    notes: r.notes ?? "", specificNeed: r.specific_need ?? "",
+    notes: personId ? "" : r.notes ?? "", specificNeed: personId ? "" : r.specific_need ?? "",
     workshopId: r.workshop_id_refocus || null,
     status: r.status ?? "", updatedAt: r.last_updated ?? "",
   }));

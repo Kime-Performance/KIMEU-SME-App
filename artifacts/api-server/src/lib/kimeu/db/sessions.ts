@@ -11,6 +11,7 @@ import {
   todayInAppTimeZone,
 } from "../sheets";
 import type { AppUser } from "../access";
+import { ownPersonId } from "../auth/data-scope";
 
 /**
  * Postgres data-layer slice for SME App sessions + live attendance.
@@ -177,7 +178,9 @@ function rosterPersonFromRow(
 export async function getRoster(
   session: SessionRecord,
   _force = false,
+  user?: AppUser,
 ): Promise<InternalRosterPerson[]> {
+  const personId = user ? ownPersonId(user) : null;
   if (!session.stage) {
     throw new KimeuError(
       "The session stage is blank. Verify the workshop ID in kimeu_workshops.",
@@ -194,13 +197,16 @@ export async function getRoster(
         p.email as pt_email,
         coalesce(p.full_name, '') as full_name,
         b.attended_sme as attended,
-        b.complete as computed_status,
+        case when b.attended_sme is true and b.practical_result = 'Pass' then 'Complete'
+             when b.attended_sme is true or b.practical_result is not null then 'In Progress'
+             else 'Not Started' end as computed_status,
         b.practical_result as practical_status
       from kimeu_foundations_blocks b
       join person p on p.person_id = b.person_id
       where b.workshop_id = ${session.workshopId}
         and b.session_date::text = ${session.sessionDate}
         and b.deleted_at is null
+        and (${personId}::uuid is null or b.person_id = ${personId}::uuid)
         and p.email is not null
     `;
     return rows.map((row) =>
@@ -208,7 +214,7 @@ export async function getRoster(
     );
   }
 
-  if (/fellowship|enrichment/i.test(session.stage)) {
+  if (/fellowship|advanced|enrichment/i.test(session.stage)) {
     const rows = await sql<RosterRow[]>`
       select
         r.person_id,
@@ -222,6 +228,7 @@ export async function getRoster(
       where r.workshop_id = ${session.workshopId}
         and r.session_date::text = ${session.sessionDate}
         and r.deleted_at is null
+        and (${personId}::uuid is null or r.person_id = ${personId}::uuid)
         and r.pt_email is not null
     `;
     return rows
@@ -259,16 +266,18 @@ function summaryFrom(
   };
 }
 
-export async function getSessionDetail(sessionId: string, force = false) {
+export async function getSessionDetail(sessionId: string, force = false, user?: AppUser) {
   const session = await getSessionRecord(sessionId, force);
-  const roster = await getRoster(session, force);
+  const roster = await getRoster(session, force, user);
+  const selfOnly = user ? ownPersonId(user) : null;
+  if (selfOnly && !roster.length) throw new KimeuError("That record is unavailable.", 404, "RECORD_NOT_FOUND");
   return {
     session: summaryFrom(session, roster),
     roster: roster.map(
       ({ rowNumber: _rowNumber, attendedColumn: _attendedColumn, sessionDateColumn: _dateColumn, personId: _personId, ...person }) => person,
     ),
-    sessionNotes: session.sessionNotes,
-    changesForNextSession: session.changesForNextSession,
+    sessionNotes: selfOnly ? "" : session.sessionNotes,
+    changesForNextSession: selfOnly ? "" : session.changesForNextSession,
     internalRoster: roster,
     internalSession: session,
   };
@@ -301,15 +310,16 @@ export async function getToday(user: AppUser) {
       .map(sessionRecordFromRow)
       .filter(
         (session) =>
-          user.roles.includes("Admin") ||
+          !!user.authorization || user.roles.includes("Admin") ||
           user.workshopIds.includes(session.workshopId),
       )
-      .map(async (session) => summaryFrom(session, await getRoster(session))),
+      .map(async (session) => summaryFrom(session, await getRoster(session, false, user))),
   );
+  const visible = ownPersonId(user) ? sessions.filter(s => s.rosterCount > 0) : sessions;
   return {
     date: today,
-    sessions,
-    dueCount: sessions.reduce(
+    sessions: visible,
+    dueCount: visible.reduce(
       (count, session) =>
         count + (session.sessionStatus === "Live" ? session.unmarkedCount : 0),
       0,

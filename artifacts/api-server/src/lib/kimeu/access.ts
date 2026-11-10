@@ -1,6 +1,13 @@
 import { clerkClient, getAuth } from "@clerk/express";
 import type { Request } from "express";
+import { requestActor, usesSupabaseAuth } from "./auth/request-context";
+import type { RequestActor } from "./auth/actor";
+import { permits } from "./auth/policy";
+import { routeGate } from "./auth/route-policy";
 import { canonicalRole, hasSiteRole, verifiedPrimaryEmail } from "./site-access-policy";
+import { isPostgresMode } from "./db/env";
+import { findActiveAppUser as postgresUser } from "./db/staff";
+import { getBasicReadiness as postgresBasic, getReadiness as postgresReadiness } from "./db/readiness";
 import {
   cell,
   getBasicReadiness,
@@ -24,6 +31,7 @@ export const KIMEU_ROLES = [
   "Fellowship Reviewer",
   "CEU Admin",
   "Admin",
+  "PT",
 ] as const;
 
 export type KimeuRole = (typeof KIMEU_ROLES)[number];
@@ -33,9 +41,12 @@ export type AppUser = {
   roles: string[];
   workshopIds: string[];
   active: boolean;
+  /** Server-created request context; never serialize this to a client. */
+  authorization?: { actor: RequestActor; method: string; assignment: boolean; capability: string };
 };
 
 export async function signedInEmail(req: Request): Promise<string> {
+  if (usesSupabaseAuth()) return (await requestActor(req)).principal.rosterEmail;
   const { userId } = getAuth(req);
   if (!userId) {
     throw new KimeuError("Sign in to continue.", 401, "SIGN_IN_REQUIRED");
@@ -74,6 +85,7 @@ function splitList(value: string): string[] {
 }
 
 export async function findActiveAppUser(email: string): Promise<AppUser | null> {
+  if (isPostgresMode()) return postgresUser(email);
   const readiness = getBasicReadiness();
   if (!readiness.configured) {
     throw new KimeuError(
@@ -118,6 +130,17 @@ export async function findActiveAppUser(email: string): Promise<AppUser | null> 
 }
 
 export async function requireActiveAppUser(req: Request): Promise<AppUser> {
+  if (usesSupabaseAuth()) {
+    if (!isPostgresMode()) throw new KimeuError("Supabase authentication requires the approved database.", 503, "DATABASE_REQUIRED");
+    const actor = await requestActor(req);
+    const rule = routeGate(req.method, req.path);
+    if (!rule) throw new KimeuError("This route is not authorized.", 403, "ROUTE_NOT_ALLOWED");
+    return {
+      email: actor.principal.rosterEmail, nameInSheets: actor.displayName ?? actor.principal.rosterEmail,
+      roles: actor.roles, workshopIds: actor.workshopIds, active: true,
+      authorization: { actor, method: req.method, assignment: rule.assignment, capability: rule.capability },
+    };
+  }
   const email = await signedInEmail(req);
   if (!hasKimeuDomain(email)) {
     throw new KimeuError(
@@ -145,6 +168,22 @@ export async function requireActiveAppUser(req: Request): Promise<AppUser> {
 }
 
 export function requireRole(user: AppUser, ...roles: KimeuRole[]): void {
+  if (user.authorization) {
+    // The deny-by-default route boundary already checked this exact method's
+    // capability. Reads are admitted for every supported ceiling; legacy
+    // role-named repository guards must not turn read-only PT into an RD.
+    if (user.authorization.method === "GET") return;
+    const actor = user.authorization.actor;
+    if (actor.principal.siteRole === "PT") throw new KimeuError("Your account has view-only access.", 403, "ROLE_NOT_ALLOWED");
+    const applicable = user.authorization.assignment ? actor.roles : [actor.principal.siteRole];
+    const allowed = roles.some(role => role === "Admin" ? applicable.includes("Admin")
+      : role === "RD" ? permits(applicable, user.authorization!.capability === "assessment" ? "assessment" : "practical")
+      : role === "Fellowship Reviewer" ? permits(applicable, "review")
+      : role === "SME Lead" || role === "SME Assist" ? permits(applicable, "attendance")
+      : applicable.includes(role as typeof applicable[number]));
+    if (!allowed) throw new KimeuError("Your role does not allow this action.", 403, "ROLE_NOT_ALLOWED");
+    return;
+  }
   if (user.roles.includes("Admin")) return;
   if (!roles.some((role) => user.roles.map(canonicalRole).includes(canonicalRole(role)))) {
     throw new KimeuError(
@@ -156,6 +195,7 @@ export function requireRole(user: AppUser, ...roles: KimeuRole[]): void {
 }
 
 export function requireWorkshopAccess(user: AppUser, workshopId: string): void {
+  if (user.authorization && (user.authorization.method === "GET" || !user.authorization.assignment)) return;
   if (user.roles.includes("Admin")) return;
   if (!user.workshopIds.includes(workshopId)) {
     throw new KimeuError(
@@ -167,6 +207,21 @@ export function requireWorkshopAccess(user: AppUser, workshopId: string): void {
 }
 
 export async function getBootstrapForRequest(req: Request) {
+  if (usesSupabaseAuth()) {
+    const user = await requireActiveAppUser(req);
+    const { authorization, ...publicUser } = user;
+    return { readiness: await postgresReadiness(), user: { ...publicUser,
+      siteRole: authorization!.actor.principal.siteRole }, access: "allowed" as const };
+  }
+  if (isPostgresMode()) {
+    const email = await signedInEmail(req);
+    if (!hasKimeuDomain(email)) return { readiness: postgresBasic(), user: null, access: "domain_denied" as const };
+    const user = await findActiveAppUser(email);
+    const readiness = await postgresReadiness();
+    if (!user) return { readiness, user: null, access: "inactive" as const };
+    if (!hasSiteRole(user.roles)) return { readiness, user: null, access: "role_denied" as const };
+    return { readiness, user, access: "allowed" as const };
+  }
   const email = await signedInEmail(req);
   if (!hasKimeuDomain(email)) {
     const readiness = await testCopyReadiness();

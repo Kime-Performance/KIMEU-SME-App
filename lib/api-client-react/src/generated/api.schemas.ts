@@ -5,6 +5,45 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type SupabaseSiteRole = typeof SupabaseSiteRole[keyof typeof SupabaseSiteRole];
+
+
+export const SupabaseSiteRole = {
+  Admin: 'Admin',
+  SME_Lead: 'SME Lead',
+  SME_Assist: 'SME Assist',
+  RD: 'RD',
+  Fellowship_Reviewer: 'Fellowship Reviewer',
+  CEU_Admin: 'CEU Admin',
+  PT: 'PT',
+} as const;
+
+export type SupabaseSessionProvider = typeof SupabaseSessionProvider[keyof typeof SupabaseSessionProvider];
+
+
+export const SupabaseSessionProvider = {
+  supabase: 'supabase',
+} as const;
+
+export interface SupabaseSession {
+  provider: SupabaseSessionProvider;
+  email: string;
+  siteRole: SupabaseSiteRole;
+  roles: SupabaseSiteRole[];
+  /** @nullable */
+  personId: string | null;
+  workshopIds: string[];
+}
+
+export interface PasswordRecoveryInput {
+  /** @maxLength 254 */
+  email: string;
+}
+
+export interface PasswordRecoveryAcknowledgement {
+  message: string;
+}
+
 export type FoundationsAssessmentInputResult = typeof FoundationsAssessmentInputResult[keyof typeof FoundationsAssessmentInputResult];
 
 
@@ -371,6 +410,7 @@ export type SetupReadinessTrackingMode = typeof SetupReadinessTrackingMode[keyof
 export const SetupReadinessTrackingMode = {
   live: 'live',
   test: 'test',
+  postgres: 'postgres',
   unconfigured: 'unconfigured',
 } as const;
 
@@ -385,6 +425,7 @@ export interface SetupReadiness {
 }
 
 export interface AppUser {
+  siteRole?: SupabaseSiteRole;
   email: string;
   nameInSheets: string;
   roles: string[];

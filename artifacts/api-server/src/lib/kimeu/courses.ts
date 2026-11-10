@@ -1,12 +1,20 @@
 import type { AppUser } from "./access";
 import { cell, dataRows, headerIndex, headersFor, KimeuError, readTab } from "./sheets";
 import { canLeadStage, canonicalRole } from "./site-access-policy";
+import { isPostgresMode } from "./db/env";
+import { findCourse, getCourses as postgresCourses } from "./db/catalog";
+import { withRead } from "./db/transaction";
 
 export const isRdAttendanceOnly = (id: string) => id === "EN-CAD" || id === "F-SURG-OBS";
 export const isRdOnboarding = (id: string) => id === "F-11" || id === "F-12" || isRdAttendanceOnly(id);
 
 export async function requireCourseWriter(user: AppUser, workshopId: string) {
   if (isRdOnboarding(workshopId)) throw new KimeuError("Use the RD onboarding sign-off page for this course.", 409, "USE_RD_ONBOARDING");
+  if (isPostgresMode()) {
+    const course = await withRead(sql => findCourse(sql, workshopId));
+    if (!canLeadStage(user.roles, course.stage)) throw new KimeuError("Your SME title does not permit leading this pathway.", 403, "SME_STAGE_NOT_ALLOWED");
+    return;
+  }
   const sheet = await readTab("03a-KIMEU Workshops");
   const h = headersFor(sheet);
   const row = dataRows(sheet).find(r => cell(r.values, headerIndex(h, "Workshop ID")) === workshopId);
@@ -17,6 +25,7 @@ export async function requireCourseWriter(user: AppUser, workshopId: string) {
 }
 
 export async function getCourses(user: AppUser) {
+  if (isPostgresMode()) return postgresCourses(user);
   const snapshot = await readTab("03a-KIMEU Workshops");
   const headers = headersFor(snapshot);
   const idColumn = headerIndex(headers, "Workshop ID");

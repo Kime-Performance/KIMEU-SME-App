@@ -1,4 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { usesSupabaseAuth } from "../lib/kimeu/auth/request-context";
+import { isPostgresMode } from "../lib/kimeu/db/env";
+import { appendClinicianNote } from "../lib/kimeu/db/notes";
 import { getUpcomingWorkshops } from "../lib/kimeu/calendar";
 import { getCourses, requireCourseWriter } from "../lib/kimeu/courses";
 import { getPracticals, savePractical, savePracticalSchedule } from "../lib/kimeu/practicals";
@@ -163,6 +166,10 @@ function authorRoleFor(user: AppUser, stage: string): string {
 }
 
 router.get("/kimeu/bootstrap", async (req, res): Promise<void> => {
+  if (usesSupabaseAuth()) {
+    res.json(GetKimeuBootstrapResponse.parse(await getBootstrapForRequest(req)));
+    return;
+  }
   const email = await signedInEmail(req);
   if (!hasKimeuDomain(email)) {
     const response = GetKimeuBootstrapResponse.parse({
@@ -209,7 +216,7 @@ router.get("/kimeu/sessions/:sessionId", async (req, res): Promise<void> => {
     "session ID",
   );
   const user = await requireActiveAppUser(req);
-  const detail = await getSessionDetail(params.sessionId);
+  const detail = await getSessionDetail(params.sessionId, false, user);
   requireAssignedSession(user, detail.session.workshopId);
   const { internalRoster: _roster, internalSession: _session, ...responseData } =
     detail;
@@ -314,6 +321,11 @@ router.post("/kimeu/clinician-notes", async (req, res): Promise<void> => {
     );
   }
 
+  if (isPostgresMode()) {
+    const result = await appendClinicianNote(user, authorRoleFor(user, session.stage), body);
+    res.status(201).json(AppendKimeuClinicianNoteResponse.parse(result));
+    return;
+  }
   const readiness = getBasicReadiness();
   if (!readiness.configured) {
     throw new KimeuError(

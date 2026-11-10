@@ -2,6 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 import type { FoundationsAssessmentInput } from "@workspace/api-zod";
 import { type AppUser, requireRole } from "./access";
 import { readCourseDirectory } from "./course-directory";
+import { isPostgresMode } from "./db/env";
+import * as postgresAssessment from "./db/foundations-assessment";
 import { isAssignedRd } from "./practical-rules";
 import { cell, dataRows, formatSheetTimestamp, headerIndex, headersFor, KimeuError, normalizeEmail, readTab, withPracticalWriteLock, writeMultipleInputCells } from "./sheets";
 
@@ -36,10 +38,12 @@ async function load(user: AppUser, fresh = false) {
 }
 
 export async function getFoundationsAssessment(user: AppUser) {
+  if (isPostgresMode()) return postgresAssessment.getFoundationsAssessment(user);
   return (await load(user)).workspace;
 }
 
 export async function saveFoundationsAssessment(user: AppUser, input: FoundationsAssessmentInput) {
+  if (isPostgresMode()) return postgresAssessment.saveFoundationsAssessment(user, input);
   requireRole(user, "RD");
   if (!["Pass", "Fail"].includes(input.result)) throw new KimeuError("Choose Pass or Fail.", 400, "ASSESSMENT_INVALID_RESULT");
   if (!user.nameInSheets.trim()) throw new KimeuError("Your Name in Sheets is required.", 409, "AUTHOR_REQUIRED");

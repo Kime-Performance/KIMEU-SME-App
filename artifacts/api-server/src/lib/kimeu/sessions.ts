@@ -258,8 +258,8 @@ function summaryFrom(
   };
 }
 
-export async function getSessionDetail(sessionId: string, force = false) {
-  if (isPostgresMode()) return dbSessions.getSessionDetail(sessionId, force);
+export async function getSessionDetail(sessionId: string, force = false, user?: AppUser) {
+  if (isPostgresMode()) return dbSessions.getSessionDetail(sessionId, force, user);
   const session = await getSessionRecord(sessionId, force);
   const roster = await getRoster(session, force);
   return {

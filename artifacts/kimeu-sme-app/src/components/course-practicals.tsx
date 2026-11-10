@@ -128,7 +128,7 @@ export function CoursePracticals({ workshopId, selectedEmail, onDirtyChange, onB
         const { status, message } = errorInfo(err);
         if (status === 409) setFormError({ text: 'This record changed since you opened it. Your draft is kept. Review the latest saved values before saving again; no page refresh is needed.', conflict: true });
         else if (status === 403) setFormError({ text: `Not permitted: ${message}`, conflict: false });
-        else setFormError({ text: `${message} Your draft is kept. Review the latest saved values before retrying, since the save may already have reached the sheet.`, conflict: true });
+        else setFormError({ text: `${message} Your draft is kept. Review the latest saved values before retrying, since the server may already have saved it.`, conflict: true });
       },
     });
   };

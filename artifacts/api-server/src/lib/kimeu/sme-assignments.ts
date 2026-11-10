@@ -5,7 +5,7 @@ import { getCourses, isRdOnboarding } from "./courses";
 import { canonicalRole, canLeadStage } from "./site-access-policy";
 import { cell, dataRows, formatSheetTimestamp, headerIndex, headersFor, KimeuError, normalizeEmail, readTab, withPracticalWriteLock, writeMultipleInputCells } from "./sheets";
 import { isPostgresMode } from "./db/env";
-import { getSmeAssignments as pgGetSmeAssignments } from "./db/sme-assignments";
+import { getSmeAssignments as pgGetSmeAssignments, saveSmeAssignment as pgSaveSmeAssignment } from "./db/sme-assignments";
 
 const TAB = "03h-App Users";
 const NOTES = "03g-Clinician Notes";
@@ -28,6 +28,7 @@ export async function getSmeAssignments(user: AppUser) {
 }
 
 export async function saveSmeAssignment(user: AppUser, input: SmeAssignmentInput) {
+  if (isPostgresMode()) return pgSaveSmeAssignment(user, input);
   requireRole(user, "Admin");
   return withPracticalWriteLock(async () => {
     const current = await getSmeAssignments(user);
